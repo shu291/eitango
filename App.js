@@ -11,7 +11,6 @@ import {
   Modal,
   PanResponder,
   Animated,
-  Alert,
   Platform,
   StatusBar,
   KeyboardAvoidingView,
@@ -19,9 +18,9 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
+// ファイル入出力と確認ダイアログはネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
+import { saveBackup, pickBackup } from './src/lib/backup';
+import { confirmDestructive } from './src/lib/confirm';
 import {
   localDateStr,
   getToday,
@@ -578,28 +577,19 @@ export default function App() {
     } else setToast('追加できる単語がありません');
   };
 
-  const deleteWord = (id) => {
-    Alert.alert('削除確認', 'この単語を削除しますか？', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '削除',
-        style: 'destructive',
-        onPress: () => setWords((ws) => ws.filter((x) => x.id !== id)),
-      },
-    ]);
+  const deleteWord = async (id) => {
+    const ok = await confirmDestructive({
+      title: '削除確認',
+      message: 'この単語を削除しますか？',
+    });
+    if (ok) setWords((ws) => ws.filter((x) => x.id !== id));
   };
 
   const exportData = async () => {
     try {
       const data = JSON.stringify({ w: words, s: streak, ld: lastDate, n: nid });
-      const uri = FileSystem.documentDirectory + '1200.json';
-      await FileSystem.writeAsStringAsync(uri, data);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/json', dialogTitle: '単語データを保存' });
-        setToast('保存しました');
-      } else {
-        setToast('共有が使えません');
-      }
+      const { message } = await saveBackup(data);
+      setToast(message);
     } catch (e) {
       setToast('保存失敗: ' + e.message);
     }
@@ -607,10 +597,8 @@ export default function App() {
 
   const importData = async () => {
     try {
-      const res = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
-      if (res.canceled) return;
-      const uri = res.assets[0].uri;
-      const content = await FileSystem.readAsStringAsync(uri);
+      const content = await pickBackup();
+      if (content == null) return;
       const d = JSON.parse(content);
       if (d.w?.length) {
         setWords(
@@ -1835,30 +1823,35 @@ export default function App() {
 }
 
 // シンプルなバーチャート（recharts代替）
+//
+// バーの高さは % ではなく px で出す。Web（react-native-web）では CSS の規則がそのまま効くため、
+// 親の高さが内容依存だと height: '46%' のようなパーセント指定が解決できず 0px に潰れる。
+// px なら両プラットフォームで同じ高さになる。
+const BAR_AREA = 80; // バーが伸びる領域の高さ(px)
+
 function BarChart7({ data }) {
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
     <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
       <Text className="font-semibold text-gray-800 mb-2">過去7日間の学習語数</Text>
-      <View className="flex-row items-end justify-between" style={{ height: 120, paddingHorizontal: 8 }}>
-        {data.map((d, i) => {
-          const h = (d.count / max) * 100;
-          return (
-            <View key={i} className="items-center" style={{ flex: 1 }}>
-              <Text className="text-xs text-gray-400 mb-1">{d.count > 0 ? d.count : ''}</Text>
+      <View className="flex-row items-end justify-between" style={{ paddingHorizontal: 8 }}>
+        {data.map((d, i) => (
+          <View key={i} className="items-center" style={{ flex: 1 }}>
+            <Text className="text-xs text-gray-400 mb-1">{d.count > 0 ? d.count : ''}</Text>
+            <View style={{ height: BAR_AREA, width: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
               <View
                 style={{
                   width: '60%',
-                  height: `${Math.max(2, h)}%`,
+                  height: Math.max(2, (d.count / max) * BAR_AREA),
                   backgroundColor: '#6366f1',
                   borderTopLeftRadius: 4,
                   borderTopRightRadius: 4,
                 }}
               />
-              <Text className="text-xs text-gray-400 mt-1">{d.date}</Text>
             </View>
-          );
-        })}
+            <Text className="text-xs text-gray-400 mt-1">{d.date}</Text>
+          </View>
+        ))}
       </View>
     </View>
   );

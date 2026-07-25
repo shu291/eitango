@@ -1,0 +1,56 @@
+name: Deploy web to GitHub Pages
+
+# main に push するたびに Web 版をビルドして GitHub Pages に公開する。
+# 手動で流したいときは Actions タブから "Run workflow"（workflow_dispatch）。
+#
+# 配信 URL は https://<ユーザー名>.github.io/eitango/ になる。
+# サブパス配信なので app.json の expo.experiments.baseUrl が "/eitango" である必要がある。
+# リポジトリ名を変えたら baseUrl も必ず合わせること（合っていないと真っ白な画面になる）。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時に複数のデプロイが走らないようにする（後から来たものを優先）
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # package-lock.json どおりに入れる（npm install ではなく ci）
+      - run: npm ci
+
+      - name: Web 版をビルド
+        run: npx expo export -p web
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

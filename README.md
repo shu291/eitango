@@ -143,11 +143,39 @@ Signing & Capabilities から手作業で入っており、`app.json` にこれ�
 
 詳細は [CLAUDE.md](CLAUDE.md) §6。
 
-## Web 版について
+## Web 版
 
-`package.json` に `"web": "expo start --web"` スクリプトはありますが、
-**`react-dom` / `react-native-web` / `@expo/metro-runtime` が未インストールのため、現状では起動しません。**
-また JSON の入出力に使っている `expo-file-system` は Web 非対応です。
+ブラウザでも動きます。`main` に push すると GitHub Actions が自動でビルドして
+GitHub Pages に公開します（[.github/workflows/deploy-web.yml](.github/workflows/deploy-web.yml)）。
+
+ローカルで確認する場合:
+
+```bash
+npm run web            # 開発サーバ
+npx expo export -p web # dist/ に本番ビルドを出力
+```
+
+### ネイティブとの実装の違い
+
+Web で動かない API があるため、次の 2 つはプラットフォームごとにファイルを分けています。
+Metro が Web ビルド時だけ `.web.js` を優先して解決するので、`App.js` 側に分岐はありません。
+
+| 機能 | ネイティブ | Web |
+|---|---|---|
+| データの保存／読込 | `src/lib/backup.js`<br>expo-file-system + expo-sharing + expo-document-picker | `src/lib/backup.web.js`<br>Blob ダウンロード + `<input type="file">` |
+| 削除の確認ダイアログ | `src/lib/confirm.js`<br>`Alert.alert` | `src/lib/confirm.web.js`<br>`window.confirm` |
+
+⚠️ **Web で `Alert.alert` は使わないこと。** react-native-web の `Alert` は `static alert() {}` という
+何もしない空実装なので、確認ダイアログが無反応になります（気づきにくい）。`confirmDestructive` を使ってください。
+
+⚠️ **高さのパーセント指定（`height: '50%'`）に注意。** Web では CSS の規則がそのまま効くため、
+親の高さが内容依存だと 0px に潰れます。ネイティブでは Yoga が解決するので気づけません。
+px で指定するのが安全です（`BarChart7` がこれで一度潰れました）。
+
+### 制限
+
+- 学習データはブラウザごとに保存されます。iOS アプリ版とは共有されません
+  （移したい場合は「保存」で JSON を書き出して「読込」で取り込む）
 
 ## データについて
 
