@@ -1,0 +1,66 @@
+# --- Node -------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+# package-lock.json はコミットする（無視しない）
+
+# --- Expo -------------------------------------------------------------------
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# --- Metro ------------------------------------------------------------------
+.metro-health-check*
+
+# --- 環境変数・秘密情報 -----------------------------------------------------
+.env
+.env.local
+.env*.local
+*.pem
+*.p8
+*.p12
+*.key
+*.jks
+*.mobileprovision
+*.keystore
+
+# --- OS / エディタ ----------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+
+# ---------------------------------------------------------------------------
+# ios/ はあえてコミットしている
+#
+# 一般的な Expo プロジェクトでは ios/ は prebuild で再生成できる生成物なので
+# 無視するのが定石。ただしこのプロジェクトでは
+# ios/app.xcodeproj/project.pbxproj に DEVELOPMENT_TEAM = 8PLVWBJM54 が
+# 手作業で入っており（app.json に再生成する記述が無い）、
+# `npx expo prebuild --clean` をやり直すと署名設定が失われる。
+#
+# 将来 ios/ を無視に切り替えるなら、その前に
+#   a) DEVELOPMENT_TEAM を注入する config plugin を書いて app.json に登録する、または
+#   b) EAS Build の credentials 管理に寄せる
+# のどちらかを済ませること。詳細は CLAUDE.md §6 を参照。
+#
+# ios/ 内の重い生成物（Pods/ build/ など）は prebuild が生成した ios/.gitignore が
+# 除外済み。あの ios/.gitignore は削除せずコミットしたまま残すこと。
+# 以下は保険としての重複指定。
+# ---------------------------------------------------------------------------
+ios/.DS_Store
+ios/build/
+ios/Pods/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/.xcode.env.local
+ios/*.hmap
+ios/*.ipa
+ios/DerivedData/
+
+# --- 将来 android/ を prebuild した場合 --------------------------------------
+/android/
