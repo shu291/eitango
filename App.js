@@ -44,6 +44,7 @@ import {
   clamp,
   calcProg,
   calcWeight,
+  speedFactor,
   getLevel,
   isWeak,
   isNew,
@@ -169,6 +170,9 @@ export default function App() {
   const cancelLongPress = useCallback(() => clearTimeout(longPress.current.timer), []);
   useEffect(() => () => clearTimeout(longPress.current.timer), []);
 
+  // フラッシュカードで、カードが表示された時刻。答えるまでの速さの計測に使う
+  const cardShownAt = useRef(0);
+
   // フラッシュカードドラッグ
   const pan = useRef(new Animated.Value(0)).current;
   const [dragOff, setDragOff] = useState(0);
@@ -218,10 +222,13 @@ export default function App() {
   // フラッシュカードで単語が出たら、その単語を発音する。
   // 依存に flipped を入れていないので、カードをめくり直しても鳴り直さない。
   // 他のモード（クイズ・タイピング等）では鳴らさない。
+  // あわせて、答えるまでの時間を測るためにカードが出た時刻を控える。
   useEffect(() => {
     if (scr !== 'flashcard') return;
     const w = sWords[sIdx];
-    if (w) speakWord(w.en);
+    if (!w) return;
+    cardShownAt.current = Date.now();
+    speakWord(w.en);
   }, [scr, sIdx, sWords]);
 
   // 画面が変わったときに音を止めることはしない。音は1秒未満で、
@@ -350,12 +357,13 @@ export default function App() {
     }
   };
 
-  const updWord = (id, ok, mode = 'quiz') => {
+  // elapsedMs を渡すと、正解時の獲得点が速さで増減する（フラッシュカードのみ使用）
+  const updWord = (id, ok, mode = 'quiz', elapsedMs) => {
     const td = getToday();
     setWords((ws) =>
       ws.map((w) => {
         if (w.id !== id) return w;
-        const { progress, streak: ns } = calcProg(w, ok, mode);
+        const { progress, streak: ns } = calcProg(w, ok, mode, elapsedMs);
         const dates = w.reviewedDates || [];
         const newDates = dates.includes(td) ? dates : [...dates, td];
         const cutoff = new Date();
@@ -480,10 +488,12 @@ export default function App() {
 
   const hFlash = (knew) => {
     const w = sWords[sIdx];
+    // カードが出てから答えるまでの時間。速いほど獲得点が増える（正解時のみ）
+    const elapsed = cardShownAt.current ? Date.now() - cardShownAt.current : undefined;
     const cur = words.find((x) => x.id === w.id) || w;
-    const { progress: np } = calcProg(cur, knew, 'flashcard');
-    updWord(w.id, knew, 'flashcard');
-    const nr = [...results, { word: w, correct: knew, delta: np - cur.progress }];
+    const { progress: np } = calcProg(cur, knew, 'flashcard', elapsed);
+    updWord(w.id, knew, 'flashcard', elapsed);
+    const nr = [...results, { word: w, correct: knew, delta: np - cur.progress, ms: elapsed }];
     setResults(nr);
     setDragOff(0);
     pan.setValue(0);
@@ -1184,6 +1194,7 @@ export default function App() {
           <Text className="text-center text-sm text-gray-400 mb-2">
             {sIdx + 1} / {sWords.length}
           </Text>
+          <Text className="text-center text-xs text-gray-400 mb-2">⚡ 早く答えるほど得点アップ</Text>
           <View className="flex-row justify-between mb-3 px-4">
             <Text className="text-xs text-rose-400">← 知らない</Text>
             <Text className="text-xs text-emerald-400">知ってた →</Text>
@@ -1494,6 +1505,13 @@ export default function App() {
                         <Text className="text-gray-600">{r.word.ja}</Text>
                       </View>
                       <View className="flex-row items-center" style={{ gap: 6 }}>
+                        {/* 正解時だけ、かかった時間と速さボーナスを出す（フラッシュカードのみ ms が入る） */}
+                        {r.correct && typeof r.ms === 'number' && (
+                          <>
+                            {speedFactor(r.ms) > 1.05 && <Text className="text-xs">⚡</Text>}
+                            <Text className="text-xs text-gray-400">{(r.ms / 1000).toFixed(1)}秒</Text>
+                          </>
+                        )}
                         {r.delta != null && r.delta !== 0 && (
                           <Text className={`text-xs font-bold ${r.delta > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                             {r.delta > 0 ? '+' : ''}

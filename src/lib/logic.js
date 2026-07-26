@@ -35,7 +35,37 @@ export const MODE_MULT = {
   matching: 1.0,
 };
 
-export const calcProg = (word, ok, mode = 'quiz') => {
+/** 速さボーナスの境目（ミリ秒）と倍率 */
+const SPEED_FAST_MS = 1500; // これより速ければ最大倍率
+const SPEED_SLOW_MS = 8000; // これより遅ければ最小倍率
+const SPEED_MAX = 1.6;
+const SPEED_MIN = 0.8;
+
+/**
+ * 正解までの速さから、獲得点の倍率を求める。
+ * 1.5秒以内なら 1.6倍、8秒以上かかると 0.8倍。その間はなだらかに変化する。
+ *
+ * すぐ答えられた＝しっかり覚えている、という考え方。時間が渡されない場合や
+ * 数値でない場合は 1（＝影響なし）を返すので、時間を測っていないモードは従来どおり。
+ *
+ * @param {number} [ms] カードが出てから答えるまでの時間
+ * @returns {number}
+ */
+export const speedFactor = (ms) => {
+  if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return 1;
+  if (ms <= SPEED_FAST_MS) return SPEED_MAX;
+  if (ms >= SPEED_SLOW_MS) return SPEED_MIN;
+  const t = (ms - SPEED_FAST_MS) / (SPEED_SLOW_MS - SPEED_FAST_MS);
+  return SPEED_MAX - (SPEED_MAX - SPEED_MIN) * t;
+};
+
+/**
+ * @param {object} word
+ * @param {boolean} ok
+ * @param {string} mode
+ * @param {number} [elapsedMs] 答えるまでにかかった時間。渡すと**正解時だけ**速さで増減する
+ */
+export const calcProg = (word, ok, mode = 'quiz', elapsedMs) => {
   const p = word.progress || 0;
   const s = word.streak || 0;
   const m = MODE_MULT[mode] || 1;
@@ -43,7 +73,9 @@ export const calcProg = (word, ok, mode = 'quiz') => {
     const isFirstCorrect = (word.correct || 0) === 0;
     let base = p < 20 ? 15 : p < 40 ? 12 : p < 60 ? 10 : p < 80 ? 7 : 4;
     base += Math.min(s * 2, 6);
-    let gain = Math.round(base * m);
+    // 速さボーナスは正解時のみ。間違えたときの減点は速さで変えない
+    // （早とちりで間違えた人の減点が軽くなってしまうため）
+    let gain = Math.round(base * m * speedFactor(elapsedMs));
     if (p > 90) gain = Math.max(1, Math.floor(gain / 2));
     let newProgress = Math.min(100, p + gain);
     if (isFirstCorrect) newProgress = Math.max(20, newProgress);
