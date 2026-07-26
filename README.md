@@ -190,6 +190,39 @@ npm run build:audio -- --force # 全部作り直す
 音声を変えたい場合は `scripts/build-audio.mjs` の `MODEL` を別の音声に差し替えます
 （`en_GB-alba-medium` ならイギリス英語など）。
 
+## ホーム画面に追加して使う
+
+スマホの Safari で https://shu291.github.io/eitango/ を開き、共有ボタン →「ホーム画面に追加」。
+アイコンから全画面で起動し、アドレスバーも出ません。7日で失効する iOS アプリ版と違い期限もありません。
+
+これを成り立たせているのが [public/index.html](public/index.html) のメタタグです。
+**Expo が既定で吐く HTML にはこれらが入っていません。** 無いと iOS はページの
+スクリーンショットをアイコンに使い、起動しても Safari のバーが残ります。
+
+| 指定 | 役割 |
+|---|---|
+| `apple-touch-icon` | ホーム画面のアイコン（180×180） |
+| `apple-mobile-web-app-capable` | 全画面で起動する（アドレスバーを消す） |
+| `apple-mobile-web-app-title` | アイコンの下に出る名前 |
+| `theme-color` | ステータスバー周りの色 |
+
+⚠️ `apple-touch-icon` のパスは `app.json` の `expo.experiments.baseUrl` と揃える必要があります。
+リポジトリ名を変えたら両方直してください。
+
+`viewport-fit=cover` と `black-translucent` はあえて使っていません。コンテンツがノッチや
+ホームインジケータの下に潜り、Web では safe-area のインセットが 0 になりうるためです。
+
+### アイコンを変えたいとき
+
+```bash
+pip install pillow   # 初回のみ
+python3 scripts/build-icon.py
+```
+
+`assets/icon.png` / `assets/adaptive-icon.png` / `assets/favicon.png` / `public/apple-touch-icon.png`
+がまとめて再生成されます。色や文字は [scripts/build-icon.py](scripts/build-icon.py) の先頭で変えられます。
+生成物はコミットしてください。
+
 ## Web 版
 
 ブラウザでも動きます。`main` に push すると GitHub Actions が自動でビルドして

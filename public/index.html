@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>英単語マスター</title>
+
+    <!--
+      ホーム画面に追加したときにアプリらしく見せるための指定。
+      これが無いと iOS はページのスクリーンショットをアイコンにし、
+      起動しても Safari のアドレスバーが残る。
+
+      注: パスの /eitango/ は app.json の expo.experiments.baseUrl と揃える必要がある。
+      リポジトリ名を変えたら両方直すこと。
+    -->
+    <link rel="apple-touch-icon" href="/eitango/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="英単語" />
+    <!--
+      status-bar-style は default のままにしている。black-translucent にすると
+      コンテンツがステータスバーの下まで伸びるので、セーフエリアの処理が要る。
+      Web 版では react-native-safe-area-context のインセットが 0 になりうるため、
+      ヘッダーが時刻表示と重なる危険があり、あえて避けている。
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#4f46e5" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>このアプリを使うには JavaScript を有効にしてください。</noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
