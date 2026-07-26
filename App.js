@@ -30,6 +30,7 @@ import {
   shuffleArr,
   clamp,
   calcProg,
+  calcWeight,
   getLevel,
   isWeak,
   isNew,
@@ -308,11 +309,10 @@ export default function App() {
   const weightedPick = (pool, n) => {
     const count = Math.min(n, pool.length);
     if (count <= 0) return [];
+    // 新規／苦手モードは getPool の時点で絞り込み済みなので、その中では均等に選ぶ
     if (wordSel !== 'normal') return shuffleArr(pool).slice(0, count);
-    const items = pool.map((w) => ({
-      w,
-      wt: w.progress >= 80 ? 1 : w.progress >= 50 ? 2.5 : w.progress >= 20 ? 4 : 3,
-    }));
+    // 通常モードは習熟度と間違い率で重みを付けて選ぶ（calcWeight を参照）
+    const items = pool.map((w) => ({ w, wt: calcWeight(w) }));
     const sel = [];
     const rem = [...items];
     while (sel.length < count && rem.length > 0) {

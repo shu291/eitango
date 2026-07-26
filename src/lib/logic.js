@@ -76,6 +76,45 @@ export const isWeak = (w) => {
   return rate < 0.5 || (w.incorrect >= 3 && w.progress < 50);
 };
 
+/**
+ * 通常モードで、その単語がどれだけ出題されやすいかの重み。
+ * 大きいほど出やすい。返す値はだいたい 0.4〜5 の範囲。
+ *
+ * 4つを掛け合わせて決める:
+ *   1. 習熟度   … 低いほど重い
+ *   2. 間違い率 … 高いほど重い。ただし試行回数が少ないと当てにならないので、
+ *                 回数に応じて効き目を割り引く（1回中1回ミスと20回中8回ミスを
+ *                 同列に扱わないため）
+ *   3. 未学習   … まだ一度も出ていない語が埋もれないよう下駄をはかせる
+ *   4. 連続正解 … 3連続以上で正解できている語は少し控える
+ *
+ * @param {{progress?: number, correct?: number, incorrect?: number, streak?: number}} w
+ * @returns {number}
+ */
+export const calcWeight = (w) => {
+  const correct = w.correct || 0;
+  const incorrect = w.incorrect || 0;
+  const attempts = correct + incorrect;
+  const progress = clamp(w.progress || 0, 0, 100);
+
+  // 習熟度 0% → 3.0 / 100% → 0.5
+  const byProgress = 3 - (progress / 100) * 2.5;
+
+  // 間違い率 0% → 1.0倍 / 100% → 最大3.0倍
+  // confidence は試行3回でおよそ0.5。回数を重ねるほど間違い率をそのまま信じる
+  const errorRate = attempts > 0 ? incorrect / attempts : 0;
+  const confidence = attempts / (attempts + 3);
+  const byError = 1 + errorRate * 2 * confidence;
+
+  // 未学習は 1.5倍。出題されないと永久に覚えられないため
+  const byNew = attempts === 0 ? 1.5 : 1;
+
+  // 3連続正解以上は 0.7倍。今は他の語に時間を使うべき
+  const byStreak = (w.streak || 0) >= 3 ? 0.7 : 1;
+
+  return byProgress * byError * byNew * byStreak;
+};
+
 export const parseLine = (line) => {
   const tr = line.trim();
   if (!tr) return null;
