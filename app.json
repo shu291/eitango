@@ -28,6 +28,9 @@
     },
     "experiments": {
       "baseUrl": "/eitango"
-    }
+    },
+    "plugins": [
+      "expo-audio"
+    ]
   }
 }

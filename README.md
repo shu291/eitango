@@ -3,6 +3,7 @@
 英単語を覚えるための iOS アプリ。6 つの学習モードと、覚え具合の可視化を備えています。
 
 - **学習モード** — フラッシュカード / 4 択クイズ / タイピング / 英訳（逆方向）/ マッチング / スピード
+- **発音** — 収録済み単語はローカル AI（Piper TTS）で生成した音声を同梱。自分で追加した単語は端末内蔵の読み上げが担当（→ [発音について](#発音について)）
 - **習熟度管理** — 単語ごとに 0〜100 の progress を持ち、6 段階（要復習 / 初級 / 学習中 / 定着 / マスター / 完璧）で表示
 - **苦手判定・連続学習日数・週次グラフ**
 - **単語の取り込み / 書き出し** — テキスト貼り付けによる一括登録、JSON でのバックアップと復元
@@ -143,6 +144,52 @@ Signing & Capabilities から手作業で入っており、`app.json` にこれ�
 
 詳細は [CLAUDE.md](CLAUDE.md) §6。
 
+## 発音について
+
+単語の発音は 2 段構えになっています。
+
+| | どの単語 | 音の出どころ | オフライン |
+|---|---|---|---|
+| 1 | 収録済みの 30 語 | `assets/audio/*.m4a`（ローカル AI で事前生成し、リポジトリに同梱） | ◎ |
+| 2 | 自分で追加した単語 | 端末内蔵の読み上げ（iOS は expo-speech、Web は Web Speech API） | 端末による |
+
+**アプリの実行時に AI は動きません。** ローカル AI は音声ファイルを作るときだけ開発マシンで使い、
+できあがった `.m4a` を同梱しています。だから iPhone でも公開 Web 版でも同じ音が鳴り、通信も要りません。
+
+自動再生（問題が出たら英語を読み上げる）は学習設定画面でオン／オフできます。
+⚠️ **タイピング（日→英）とスピードチャレンジでは自動再生しません。** 前者は英単語が答えなので
+読み上げると答えを教えてしまうためで、後者はテンポを崩すためです。
+
+### 音声の作り直し
+
+単語を追加・変更して収録音声も用意したいときだけ必要な作業です。普段は不要です。
+
+初回のみ、生成環境を用意します（`.tts-venv/` と `.tts-models/` は 300MB 超あるので git 管理外）:
+
+```bash
+brew install python@3.13
+$(brew --prefix python@3.13)/bin/python3.13 -m venv .tts-venv
+.tts-venv/bin/pip install piper-tts
+.tts-venv/bin/python -m piper.download_voices en_US-lessac-medium --download-dir .tts-models
+```
+
+🔶 Python 3.13 を指定しているのは、`onnxruntime`（Piper が内部で使う）が **3.14 に未対応**のためです。
+新しければよいわけではないので注意。
+
+用意できたら:
+
+```bash
+npm run build:audio            # 音声が無い単語だけ生成
+npm run build:audio -- --force # 全部作り直す
+```
+
+`src/lib/logic.js` の `INIT_WORDS` を読んで、`assets/audio/<単語>.m4a` と対応表
+`src/lib/audioMap.js` を書き出します。生成された `.m4a` と `audioMap.js` は**コミットしてください**
+（これが同梱される音声の実体です）。
+
+音声を変えたい場合は `scripts/build-audio.mjs` の `MODEL` を別の音声に差し替えます
+（`en_GB-alba-medium` ならイギリス英語など）。
+
 ## Web 版
 
 ブラウザでも動きます。`main` に push すると GitHub Actions が自動でビルドして
@@ -164,6 +211,7 @@ Metro が Web ビルド時だけ `.web.js` を優先して解決するので、`
 |---|---|---|
 | データの保存／読込 | `src/lib/backup.js`<br>expo-file-system + expo-sharing + expo-document-picker | `src/lib/backup.web.js`<br>Blob ダウンロード + `<input type="file">` |
 | 削除の確認ダイアログ | `src/lib/confirm.js`<br>`Alert.alert` | `src/lib/confirm.web.js`<br>`window.confirm` |
+| 発音の再生 | `src/lib/speech.js`<br>expo-audio + expo-speech | `src/lib/speech.web.js`<br>`Audio` + `speechSynthesis` |
 
 ⚠️ **Web で `Alert.alert` は使わないこと。** react-native-web の `Alert` は `static alert() {}` という
 何もしない空実装なので、確認ダイアログが無反応になります（気づきにくい）。`confirmDestructive` を使ってください。

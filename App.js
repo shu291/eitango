@@ -18,9 +18,10 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// ファイル入出力と確認ダイアログはネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
+// ファイル入出力・確認ダイアログ・発音はネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
 import { saveBackup, pickBackup } from './src/lib/backup';
 import { confirmDestructive } from './src/lib/confirm';
+import { speakWord, stopSpeaking } from './src/lib/speech';
 import {
   localDateStr,
   getToday,
@@ -110,6 +111,9 @@ export default function App() {
   const pan = useRef(new Animated.Value(0)).current;
   const [dragOff, setDragOff] = useState(0);
 
+  // 発音の自動再生。既定でオン（発音を聞きながら覚えるのが本来の使い方なので）
+  const [autoSpeak, setAutoSpeak] = useState(true);
+
   // 初回ロード
   useEffect(() => {
     (async () => {
@@ -121,6 +125,8 @@ export default function App() {
           if (typeof d.s === 'number') setStreak(d.s);
           if (d.ld) setLastDate(d.ld);
           if (typeof d.n === 'number') setNid(d.n);
+          // as は後から足した項目。古い保存データには入っていないので、その場合は既定値のまま
+          if (typeof d.as === 'boolean') setAutoSpeak(d.as);
         }
       } catch (e) {
         console.log('load err', e);
@@ -136,11 +142,29 @@ export default function App() {
     const t = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ w: words, s: streak, ld: lastDate, n: nid })
+        JSON.stringify({ w: words, s: streak, ld: lastDate, n: nid, as: autoSpeak })
       ).catch(() => {});
     }, 500);
     return () => clearTimeout(t);
-  }, [words, streak, lastDate, nid, loaded]);
+  }, [words, streak, lastDate, nid, autoSpeak, loaded]);
+
+  // 出題単語が変わったら自動で発音する。
+  // 英単語が「問題」として出ている画面だけが対象。タイピング（日→英）は英語が答えなので
+  // ここで読み上げると答えを教えてしまうため除外している。
+  // スピードチャレンジも、テンポを崩すうえ音が重なるので対象外。
+  useEffect(() => {
+    if (!autoSpeak) return;
+    if (scr !== 'flashcard' && scr !== 'quiz' && scr !== 'reverse') return;
+    const w = sWords[sIdx];
+    if (w) speakWord(w.en);
+  }, [scr, sIdx, autoSpeak, sWords]);
+
+  // 学習画面から離れたら鳴っている音を止める
+  useEffect(() => {
+    if (scr === 'dashboard' || scr === 'results' || scr === 'study') stopSpeaking();
+  }, [scr]);
+
+  useEffect(() => () => stopSpeaking(), []);
 
   useEffect(() => () => { if (tRef.current) clearInterval(tRef.current); }, []);
   useEffect(() => {
@@ -693,6 +717,18 @@ export default function App() {
     );
   };
 
+  // 発音ボタン。押した単語を読み上げる（事前生成の音声があればそれを鳴らす）
+  const SpeakButton = ({ word, size = 20, color = '#6366f1', hitSlop = 10 }) => (
+    <TouchableOpacity
+      onPress={() => speakWord(word)}
+      hitSlop={hitSlop}
+      accessibilityLabel={`${word} を発音`}
+      className="p-1"
+    >
+      <Icon name="volume-high" size={size} color={color} />
+    </TouchableOpacity>
+  );
+
   // ===================== Dashboard =====================
   const renderDash = () => (
     <ScrollView>
@@ -976,6 +1012,26 @@ export default function App() {
             </View>
           </View>
 
+          {/* 自動再生。日→英タイピングは答えを教えてしまうので、そこでは鳴らさない（対象外の旨を明記） */}
+          <TouchableOpacity
+            onPress={() => setAutoSpeak((v) => !v)}
+            className="bg-white rounded-xl p-4 flex-row items-center border border-gray-200"
+            style={{ gap: 12 }}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: autoSpeak }}
+          >
+            <Icon name={autoSpeak ? 'volume-high' : 'volume-mute'} size={22} color={autoSpeak ? '#6366f1' : '#9ca3af'} />
+            <View className="flex-1">
+              <Text className="font-semibold text-gray-800">発音を自動再生</Text>
+              <Text className="text-xs text-gray-400 mt-0.5">
+                {autoSpeak ? '問題が出たら英語を読み上げます' : 'スピーカーを押したときだけ再生します'}
+              </Text>
+            </View>
+            <View className={`w-12 h-7 rounded-full justify-center ${autoSpeak ? 'bg-indigo-600' : 'bg-gray-300'}`} style={{ padding: 3 }}>
+              <View className="w-5 h-5 rounded-full bg-white" style={{ marginLeft: autoSpeak ? 20 : 0 }} />
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={startFromConfig}
             className="bg-indigo-600 rounded-xl py-4 flex-row items-center justify-center"
@@ -1033,7 +1089,10 @@ export default function App() {
               >
                 {!flipped ? (
                   <>
-                    <Text className="text-3xl font-bold text-gray-800">{w.en}</Text>
+                    <View className="flex-row items-center" style={{ gap: 10 }}>
+                      <Text className="text-3xl font-bold text-gray-800">{w.en}</Text>
+                      <SpeakButton word={w.en} size={24} />
+                    </View>
                     <View className="mt-2">
                       <LvBadge w={w} />
                     </View>
@@ -1041,7 +1100,10 @@ export default function App() {
                   </>
                 ) : (
                   <>
-                    <Text className="text-lg text-gray-400 mb-2">{w.en}</Text>
+                    <View className="flex-row items-center mb-2" style={{ gap: 8 }}>
+                      <Text className="text-lg text-gray-400">{w.en}</Text>
+                      <SpeakButton word={w.en} size={18} color="#9ca3af" />
+                    </View>
                     <Text className="text-3xl font-bold text-indigo-600">{w.ja}</Text>
                     <View className="mt-2">
                       <LvBadge w={w} />
@@ -1079,7 +1141,10 @@ export default function App() {
           </Text>
           <View className="bg-white rounded-3xl items-center justify-center mb-5" style={{ height: 192, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
             <Text className="text-sm text-gray-400 mb-2">この単語の意味は？</Text>
-            <Text className="text-3xl font-bold text-gray-800">{w.en}</Text>
+            <View className="flex-row items-center" style={{ gap: 10 }}>
+              <Text className="text-3xl font-bold text-gray-800">{w.en}</Text>
+              <SpeakButton word={w.en} size={24} />
+            </View>
             <View className="mt-2"><LvBadge w={w} /></View>
           </View>
           <View style={{ gap: 10 }}>
@@ -1126,7 +1191,11 @@ export default function App() {
             </Text>
             <View className="bg-white rounded-3xl items-center justify-center mb-5" style={{ height: 192, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
               <Text className="text-sm text-gray-400 mb-2">{isRev ? '日本語の意味を入力' : '英語で入力'}</Text>
-              <Text className={`text-3xl font-bold ${isRev ? 'text-gray-800' : 'text-indigo-600'}`}>{display}</Text>
+              <View className="flex-row items-center" style={{ gap: 10 }}>
+                <Text className={`text-3xl font-bold ${isRev ? 'text-gray-800' : 'text-indigo-600'}`}>{display}</Text>
+                {/* 日→英では英単語が答えなので、解答前に発音ボタンは出さない */}
+                {isRev && <SpeakButton word={w.en} size={24} />}
+              </View>
               <View className="mt-2"><LvBadge w={w} /></View>
             </View>
             <TextInput
@@ -1145,12 +1214,16 @@ export default function App() {
                   <View className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex-row items-center" style={{ gap: 8 }}>
                     <Icon name="checkmark" size={20} color="#047857" />
                     <Text className="text-emerald-700 font-semibold">正解！</Text>
+                    <View className="flex-1" />
+                    <SpeakButton word={w.en} size={20} color="#047857" />
                   </View>
                 ) : (
                   <View className="bg-rose-50 border border-rose-200 rounded-xl p-4">
                     <View className="flex-row items-center" style={{ gap: 8 }}>
                       <Icon name="close" size={20} color="#be123c" />
                       <Text className="text-rose-700 font-semibold">不正解</Text>
+                      <View className="flex-1" />
+                      <SpeakButton word={w.en} size={20} color="#be123c" />
                     </View>
                     <Text className="mt-1 text-sm text-rose-700">
                       正解: <Text className="font-bold">{answer}</Text>
@@ -1389,6 +1462,7 @@ export default function App() {
               <Text className="text-sm text-gray-500">{w.ja}</Text>
             </View>
             <View className="flex-row" style={{ gap: 2 }}>
+              <SpeakButton word={w.en} size={16} color="#6366f1" hitSlop={6} />
               <TouchableOpacity onPress={() => { setEditId(w.id); setEditEn(w.en); setEditJa(w.ja); }} className="p-1.5">
                 <Icon name="create" size={14} color="#9ca3af" />
               </TouchableOpacity>

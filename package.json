@@ -6,16 +6,19 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:audio": "node scripts/build-audio.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "expo": "~54.0.33",
+    "expo-audio": "~1.1.1",
     "expo-document-picker": "^14.0.7",
     "expo-file-system": "^19.0.16",
     "expo-sharing": "^14.0.7",
+    "expo-speech": "~14.0.8",
     "expo-status-bar": "~3.0.9",
     "nativewind": "^4.1.23",
     "react": "19.1.0",
