@@ -2097,10 +2097,10 @@ export default function App() {
 
         <View className="bg-white border-t border-gray-100 flex-row">
           {[
-            { k: 'shelf', s: 'shelf', i: 'library', l: '本棚' },
             { k: 'home', s: 'dashboard', i: 'home', l: 'ホーム' },
             { k: 'study', s: 'study', i: 'brain', l: '学習' },
             { k: 'words', s: 'words', i: 'book', l: '単語帳' },
+            { k: 'shelf', s: 'shelf', i: 'library', l: '本棚' },
             { k: 'stats', s: 'stats', i: 'trending-up', l: '統計' },
           ].map((t) => {
             const active = aTab === t.k;
