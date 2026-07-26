@@ -1513,24 +1513,28 @@ export default function App() {
                 </View>
               )}
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                <View className="flex-row" style={{ gap: 4 }}>
-                  {filterTabs.map((t) => {
-                    const active = wordFilter === t.k;
-                    return (
-                      <TouchableOpacity
-                        key={t.k}
-                        onPress={() => setWordFilter(t.k)}
-                        className={`px-3 py-2 rounded-full ${active ? (t.k === 'weak' ? 'bg-rose-500' : 'bg-indigo-600') : 'bg-gray-100'}`}
-                      >
-                        <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-gray-600'}`}>
-                          {t.l} ({t.n})
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </ScrollView>
+              {/*
+                以前はここを横スクロールの ScrollView にしていたが、Web では
+                ScrollView が flex: 1 1 auto を持つため、下の単語リストに押し潰されて
+                高さ 5.6px になりタブが見えなくなっていた。
+                折り返す普通の行にすれば潰れず、幅が足りなければ2段になる。
+              */}
+              <View className="flex-row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                {filterTabs.map((t) => {
+                  const active = wordFilter === t.k;
+                  return (
+                    <TouchableOpacity
+                      key={t.k}
+                      onPress={() => setWordFilter(t.k)}
+                      className={`px-3 py-2 rounded-full ${active ? (t.k === 'weak' ? 'bg-rose-500' : 'bg-indigo-600') : 'bg-gray-100'}`}
+                    >
+                      <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-gray-600'}`}>
+                        {t.l} ({t.n})
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               <View className="bg-white rounded-xl flex-row items-center px-4 py-3 mb-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
                 <Icon name="search" size={18} color="#9ca3af" />
