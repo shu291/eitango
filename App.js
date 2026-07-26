@@ -71,7 +71,10 @@ export default function App() {
 
   const [scr, setScr] = useState('dashboard');
   const [streak, setStreak] = useState(0);
-  const [lastDate, setLastDate] = useState(getToday());
+  // 「最後に学習した日」。まだ一度も学習していなければ null。
+  // ここを getToday() で初期化すると、学習していないのに「今日はもう学習済み」と
+  // みなされてしまい、連続日数が永久に加算されない（実際にその不具合があった）。
+  const [lastDate, setLastDate] = useState(null);
   const [toast, setToast] = useState('');
   const [loaded, setLoaded] = useState(false);
 
@@ -173,6 +176,9 @@ export default function App() {
   // フラッシュカードで、カードが表示された時刻。答えるまでの速さの計測に使う
   const cardShownAt = useRef(0);
 
+  // 連続日数を今日ぶん数えたか（同じ操作で二重に加算しないための見張り）
+  const countedDay = useRef(null);
+
   // フラッシュカードドラッグ
   const pan = useRef(new Animated.Value(0)).current;
   const [dragOff, setDragOff] = useState(0);
@@ -271,6 +277,14 @@ export default function App() {
   const weakWords = useMemo(() => words.filter(isWeak).sort((a, b) => a.progress - b.progress), [words]);
   const avgP = words.length ? Math.round(words.reduce((s, w) => s + w.progress, 0) / words.length) : 0;
 
+  // 画面に出す連続日数。
+  // 最後の学習が今日でも昨日でもなければ連続は切れているので 0 を出す。
+  // （保存値をそのまま出すと、何日も空けたのに古い記録が残って見える）
+  const shownStreak = useMemo(() => {
+    if (!lastDate) return 0;
+    return lastDate === getToday() || lastDate === getYesterday() ? streak : 0;
+  }, [streak, lastDate]);
+
   const aTab = useMemo(() => {
     if (scr === 'shelf') return 'shelf';
     if (scr === 'dashboard') return 'home';
@@ -351,10 +365,13 @@ export default function App() {
 
   const recStreak = () => {
     const t = getToday();
-    if (lastDate !== t) {
-      setStreak((prev) => (lastDate === getYesterday() ? prev + 1 : 1));
-      setLastDate(t);
-    }
+    // 1回の操作で updWord が複数回走っても二重に数えないよう、ref でも見張る
+    // （state の反映は非同期なので lastDate だけでは防げないことがある）
+    if (countedDay.current === t) return;
+    countedDay.current = t;
+    if (lastDate === t) return; // 今日はすでに記録済み
+    setStreak((prev) => (lastDate === getYesterday() ? prev + 1 : 1));
+    setLastDate(t);
   };
 
   // elapsedMs を渡すと、正解時の獲得点が速さで増減する（フラッシュカードのみ使用）
@@ -894,7 +911,7 @@ export default function App() {
               <Icon name="flame" size={22} color="#f97316" />
             </View>
             <View>
-              <Text className="text-2xl font-bold text-gray-800">{streak}</Text>
+              <Text className="text-2xl font-bold text-gray-800">{shownStreak}</Text>
               <Text className="text-xs text-gray-500">連続日数</Text>
             </View>
           </View>
@@ -1983,7 +2000,7 @@ export default function App() {
           <View className="flex-row" style={{ gap: 8 }}>
             <View className="flex-1 bg-white rounded-2xl p-3 items-center" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
               <Icon name="flame" size={20} color="#f97316" />
-              <Text className="text-xl font-bold text-gray-800 mt-1">{streak}</Text>
+              <Text className="text-xl font-bold text-gray-800 mt-1">{shownStreak}</Text>
               <Text className="text-xs text-gray-500">連続日数</Text>
             </View>
             <View className="flex-1 bg-white rounded-2xl p-3 items-center" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
