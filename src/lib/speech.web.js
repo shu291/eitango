@@ -12,9 +12,6 @@ import { AUDIO } from './audioMap';
 /** 単語 → 音声ファイル名のキー。scripts/build-audio.mjs の keyOf と必ず揃えること。 */
 const keyOf = (word) => String(word ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
-/** 事前生成の音声を持っているか */
-export const hasRecordedAudio = (word) => Boolean(AUDIO[keyOf(word)]);
-
 let current = null;
 
 const stopCurrent = () => {
