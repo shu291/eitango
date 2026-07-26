@@ -143,11 +143,10 @@ export default function App() {
     return () => clearTimeout(t);
   }, [words, streak, lastDate, nid, loaded]);
 
-  // 発音は単語帳でだけ鳴らす。そこを離れたら止める
-  useEffect(() => {
-    if (scr !== 'words') stopSpeaking();
-  }, [scr]);
-
+  // 画面が変わったときに音を止めることは**しない**。
+  // フラッシュカードの最後の1枚は、答えると同時に結果画面へ移るため、
+  // 画面遷移で止める作りにすると最後の発音だけ鳴らずに終わってしまう。
+  // 音は1秒未満で、speakWord が次を鳴らす前に前の音を止めるので鳴りっぱなしにもならない。
   useEffect(() => () => stopSpeaking(), []);
 
   useEffect(() => () => { if (tRef.current) clearInterval(tRef.current); }, []);
@@ -402,6 +401,10 @@ export default function App() {
 
   const hFlash = (knew) => {
     const w = sWords[sIdx];
+    // 答えたら発音する。知ってた／知らないどちらでも鳴らす
+    // （正解かどうかに関係なく、正しい音を耳に入れてから次に進むため）。
+    // スワイプもボタンもここを通るので、両方これ1か所で効く。
+    speakWord(w.en);
     const cur = words.find((x) => x.id === w.id) || w;
     const { progress: np } = calcProg(cur, knew, 'flashcard');
     updWord(w.id, knew, 'flashcard');
