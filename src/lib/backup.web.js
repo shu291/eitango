@@ -26,12 +26,15 @@ export const saveBackup = async (json) => {
 };
 
 /**
- * ファイル選択ダイアログを出して、選ばれた JSON の中身を返す。
+ * ファイル選択ダイアログを出して、選ばれた JSON の中身とファイル名を返す。
  * キャンセル時は null。
+ *
+ * ファイル名も返すのは、取り込んだ単語帳の名前に使うため
+ * （target1900.json → 「target1900」という単語帳になる）。
  *
  * 注: input[type=file] にはキャンセルを知らせる標準イベントが長く無かった。
  * 新しめのブラウザは cancel イベントを出すので併用し、どちらでも解決するようにしている。
- * @returns {Promise<string | null>}
+ * @returns {Promise<{content: string, name: string} | null>}
  */
 export const pickBackup = () =>
   new Promise((resolve, reject) => {
@@ -52,7 +55,7 @@ export const pickBackup = () =>
       const file = input.files && input.files[0];
       if (!file) return finish(resolve, null);
       const reader = new FileReader();
-      reader.onload = () => finish(resolve, String(reader.result));
+      reader.onload = () => finish(resolve, { content: String(reader.result), name: file.name });
       reader.onerror = () => finish(reject, reader.error || new Error('読み込みに失敗しました'));
       reader.readAsText(file);
     });

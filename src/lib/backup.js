@@ -27,8 +27,9 @@ export const saveBackup = async (json) => {
 };
 
 /**
- * JSON ファイルを選ばせて中身を返す。キャンセル時は null。
- * @returns {Promise<string | null>}
+ * JSON ファイルを選ばせて中身とファイル名を返す。キャンセル時は null。
+ * ファイル名は、取り込んだ単語帳の名前に使う。
+ * @returns {Promise<{content: string, name: string} | null>}
  */
 export const pickBackup = async () => {
   const res = await DocumentPicker.getDocumentAsync({
@@ -36,5 +37,6 @@ export const pickBackup = async () => {
     copyToCacheDirectory: true,
   });
   if (res.canceled) return null;
-  return FileSystem.readAsStringAsync(res.assets[0].uri);
+  const asset = res.assets[0];
+  return { content: await FileSystem.readAsStringAsync(asset.uri), name: asset.name || '' };
 };

@@ -8,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   FlatList,
+  Image,
   Modal,
   PanResponder,
   Animated,
@@ -22,6 +23,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveBackup, pickBackup } from './src/lib/backup';
 import { confirmDestructive } from './src/lib/confirm';
 import { speakWord, stopSpeaking } from './src/lib/speech';
+import { pickPhoto } from './src/lib/photo';
+import {
+  STORAGE_KEY_V1,
+  STORAGE_KEY_V2,
+  makeDeck,
+  nextDeckId,
+  uniqueDeckName,
+  normalizeState,
+  planImport,
+  deckNameFromFile,
+  buildState,
+} from './src/lib/decks';
 import {
   localDateStr,
   getToday,
@@ -49,13 +62,39 @@ const Icon = ({ name, size = 20, color = '#000', style }) => {
 };
 
 export default function App() {
-  const [words, setWords] = useState(INIT_WORDS);
+  // ===== 本棚 =====
+  // 単語帳は複数持てる。既存の画面はすべて「選択中の1冊」だけを見ればよいように、
+  // words / nid は選択中の単語帳を指す値として下で組み立てている。
+  const [decks, setDecks] = useState(() => [makeDeck({ id: 1, name: 'マイ単語帳', words: INIT_WORDS, nid: 31 })]);
+  const [activeId, setActiveId] = useState(1);
+
   const [scr, setScr] = useState('dashboard');
   const [streak, setStreak] = useState(0);
   const [lastDate, setLastDate] = useState(getToday());
-  const [nid, setNid] = useState(31);
   const [toast, setToast] = useState('');
   const [loaded, setLoaded] = useState(false);
+
+  const activeDeck = useMemo(
+    () => decks.find((d) => d.id === activeId) || decks[0],
+    [decks, activeId]
+  );
+  const words = activeDeck ? activeDeck.words : [];
+  const nid = activeDeck ? activeDeck.nid : 1;
+
+  // 選択中の単語帳の中身だけを書き換える。
+  // 既存コードは setWords(配列) / setWords(関数) の両方を使うので、どちらも受ける。
+  const updateActive = useCallback(
+    (patch) => setDecks((ds) => ds.map((d) => (d.id === activeId ? { ...d, ...patch(d) } : d))),
+    [activeId]
+  );
+  const setWords = useCallback(
+    (v) => updateActive((d) => ({ words: typeof v === 'function' ? v(d.words) : v })),
+    [updateActive]
+  );
+  const setNid = useCallback(
+    (v) => updateActive((d) => ({ nid: typeof v === 'function' ? v(d.nid) : v })),
+    [updateActive]
+  );
 
   // 学習設定
   const [cfgMode, setCfgMode] = useState(null);
@@ -108,21 +147,30 @@ export default function App() {
   const [listHideJa, setListHideJa] = useState(true);
   const [revealed, setRevealed] = useState(new Set());
 
+  // 本棚（どの単語帳の名前を編集中か。null なら編集していない）
+  const [editDeckId, setEditDeckId] = useState(null);
+  const [editDeckName, setEditDeckName] = useState('');
+
   // フラッシュカードドラッグ
   const pan = useRef(new Animated.Value(0)).current;
   const [dragOff, setDragOff] = useState(0);
 
-  // 初回ロード
+  // 初回ロード。
+  // 新形式(v2)が無ければ旧形式(v1)から移行する。v1 のデータは消さずに残すので、
+  // 万一移行に失敗しても元データは失われない。
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        const rawV2 = await AsyncStorage.getItem(STORAGE_KEY_V2);
+        const raw = rawV2 || (await AsyncStorage.getItem(STORAGE_KEY_V1));
         if (raw) {
-          const d = JSON.parse(raw);
-          if (d.w?.length) setWords(d.w);
-          if (typeof d.s === 'number') setStreak(d.s);
-          if (d.ld) setLastDate(d.ld);
-          if (typeof d.n === 'number') setNid(d.n);
+          const state = normalizeState(JSON.parse(raw));
+          if (state) {
+            setDecks(state.decks);
+            setActiveId(state.active);
+            setStreak(state.s);
+            if (state.ld) setLastDate(state.ld);
+          }
         }
       } catch (e) {
         console.log('load err', e);
@@ -132,17 +180,22 @@ export default function App() {
     })();
   }, []);
 
-  // 自動保存
+  // 自動保存。
+  // 表紙写真を入れると保存量が増えるため、上限超過（QuotaExceededError）は
+  // 握りつぶさずユーザーに知らせる。黙って保存されないのが一番まずい。
   useEffect(() => {
     if (!loaded) return;
     const t = setTimeout(() => {
       AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ w: words, s: streak, ld: lastDate, n: nid })
-      ).catch(() => {});
+        STORAGE_KEY_V2,
+        JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate }))
+      ).catch((e) => {
+        const quota = String(e?.name || e?.message || '').toLowerCase().includes('quota');
+        setToast(quota ? '保存できません。表紙写真を減らしてください' : '保存に失敗しました');
+      });
     }, 500);
     return () => clearTimeout(t);
-  }, [words, streak, lastDate, nid, loaded]);
+  }, [decks, activeId, streak, lastDate, loaded]);
 
   // フラッシュカードで単語が出たら、その単語を発音する。
   // 依存に flipped を入れていないので、カードをめくり直しても鳴り直さない。
@@ -194,6 +247,7 @@ export default function App() {
   const avgP = words.length ? Math.round(words.reduce((s, w) => s + w.progress, 0) / words.length) : 0;
 
   const aTab = useMemo(() => {
+    if (scr === 'shelf') return 'shelf';
     if (scr === 'dashboard') return 'home';
     if (['study', 'config', 'flashcard', 'quiz', 'typing', 'reverse', 'matching', 'speed', 'results'].includes(scr)) return 'study';
     if (scr === 'words') return 'words';
@@ -599,9 +653,10 @@ export default function App() {
     if (ok) setWords((ws) => ws.filter((x) => x.id !== id));
   };
 
+  // 本棚まるごと1ファイルに書き出す（単語帳が何冊あってもこれ1つで済む）
   const exportData = async () => {
     try {
-      const data = JSON.stringify({ w: words, s: streak, ld: lastDate, n: nid });
+      const data = JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate }));
       const { message } = await saveBackup(data);
       setToast(message);
     } catch (e) {
@@ -609,31 +664,103 @@ export default function App() {
     }
   };
 
+  /**
+   * ファイルを読み込む。中身によって動きが変わる:
+   *   単語の一覧だけのファイル → 本棚に1冊として**追加**（今ある単語帳は消えない）
+   *   本棚まるごとのファイル   → 本棚全体を置き換え（確認を取る）
+   */
   const importData = async () => {
     try {
-      const content = await pickBackup();
-      if (content == null) return;
-      const d = JSON.parse(content);
-      if (d.w?.length) {
-        setWords(
-          d.w.map((w) => ({
-            ...w,
-            progress: w.progress || 0,
-            correct: w.correct || 0,
-            incorrect: w.incorrect || 0,
-            streak: w.streak || 0,
-            reviewedDates: w.reviewedDates || (w.lastReviewed ? [w.lastReviewed] : []),
-          }))
-        );
-        if (d.s != null) setStreak(d.s);
-        if (d.ld) setLastDate(d.ld);
-        if (d.n) setNid(d.n);
-        setScr('dashboard');
-        setToast(d.w.length + '語読み込みました');
-      } else setToast('無効なファイルです');
+      const picked = await pickBackup();
+      if (picked == null) return;
+      const content = typeof picked === 'string' ? picked : picked.content;
+      const fileName = typeof picked === 'string' ? '' : picked.name;
+
+      const plan = planImport(JSON.parse(content), deckNameFromFile(fileName));
+      if (!plan) return setToast('単語帳として読めないファイルです');
+
+      if (plan.mode === 'replace') {
+        const ok = await confirmDestructive({
+          title: '本棚を復元',
+          message: `今ある単語帳（${decks.length}冊）をすべて置き換えます。よろしいですか？`,
+          confirmLabel: '復元する',
+        });
+        if (!ok) return;
+        setDecks(plan.decks);
+        setActiveId(plan.decks[0].id);
+        setScr('shelf');
+        return setToast(`${plan.decks.length}冊を復元しました`);
+      }
+
+      // 追加：既存の単語帳はそのまま残す
+      const src = plan.decks[0];
+      const deck = makeDeck({
+        ...src,
+        id: nextDeckId(decks),
+        name: uniqueDeckName(decks, src.name),
+      });
+      setDecks((ds) => [...ds, deck]);
+      setActiveId(deck.id);
+      setScr('shelf');
+      setToast(`「${deck.name}」を${deck.words.length}語で追加しました`);
     } catch (e) {
       setToast('読み込み失敗: ' + e.message);
     }
+  };
+
+  // ===== 本棚の操作 =====
+
+  const selectDeck = (id) => {
+    setActiveId(id);
+    setScr('dashboard');
+  };
+
+  const createDeck = () => {
+    const deck = makeDeck({ id: nextDeckId(decks), name: uniqueDeckName(decks, '新しい単語帳'), words: [] });
+    setDecks((ds) => [...ds, deck]);
+    setActiveId(deck.id);
+    setEditDeckId(deck.id);
+    setEditDeckName(deck.name);
+    setToast('空の単語帳を作りました');
+  };
+
+  const renameDeck = (id, name) => {
+    const trimmed = String(name).trim();
+    if (!trimmed) return setToast('名前を入れてください');
+    setDecks((ds) => ds.map((d) => (d.id === id ? { ...d, name: trimmed } : d)));
+    setEditDeckId(null);
+  };
+
+  const changeCover = async (id) => {
+    try {
+      const uri = await pickPhoto();
+      // ネイティブ版は未対応で常に null。Web でキャンセルしたときも null
+      if (uri == null) return;
+      setDecks((ds) => ds.map((d) => (d.id === id ? { ...d, cover: uri } : d)));
+      setToast('表紙を変えました');
+    } catch (e) {
+      setToast('写真を読み込めませんでした');
+    }
+  };
+
+  const removeCover = (id) => {
+    setDecks((ds) => ds.map((d) => (d.id === id ? { ...d, cover: null } : d)));
+    setToast('表紙を外しました');
+  };
+
+  const deleteDeck = async (id) => {
+    if (decks.length <= 1) return setToast('最後の1冊は削除できません');
+    const target = decks.find((d) => d.id === id);
+    const ok = await confirmDestructive({
+      title: '単語帳を削除',
+      message: `「${target.name}」（${target.words.length}語）と、その学習記録を削除します。元に戻せません。`,
+    });
+    if (!ok) return;
+    const rest = decks.filter((d) => d.id !== id);
+    setDecks(rest);
+    if (activeId === id) setActiveId(rest[0].id);
+    setEditDeckId(null);
+    setToast('削除しました');
   };
 
   const toggleReveal = (key) => {
@@ -724,7 +851,13 @@ export default function App() {
     <ScrollView>
       <View className="bg-indigo-600 px-5 pt-8 pb-12">
         <Text className="text-2xl font-bold text-white mb-1">📚 英単語マスター</Text>
-        <Text className="text-indigo-200 text-sm">今日も頑張りましょう！</Text>
+        {/* 今どの単語帳をやっているか。押すと本棚に行って切り替えられる */}
+        <TouchableOpacity onPress={() => setScr('shelf')} className="flex-row items-center" style={{ gap: 4 }}>
+          <Text className="text-indigo-200 text-sm" numberOfLines={1}>
+            {activeDeck ? activeDeck.name : '単語帳なし'}
+          </Text>
+          <Icon name="chevron-forward" size={14} color="#c7d2fe" />
+        </TouchableOpacity>
       </View>
       <View className="px-4 -mt-6 pb-4" style={{ gap: 12 }}>
         <View className="flex-row" style={{ gap: 12 }}>
@@ -1630,6 +1763,135 @@ export default function App() {
     );
   };
 
+  // ===================== 本棚 =====================
+  const renderShelf = () => {
+    // 表紙写真が無いときは、名前から色を決めて頭文字を出す（毎回同じ色になる）
+    const coverColors = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+    const colorOf = (name) => {
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 997;
+      return coverColors[h % coverColors.length];
+    };
+
+    return (
+      <ScrollView>
+        <View className="bg-indigo-600 px-5 pt-8 pb-12">
+          <Text className="text-2xl font-bold text-white mb-1">🗂 本棚</Text>
+          <Text className="text-indigo-200 text-sm">
+            {decks.length}冊 ／ 全{decks.reduce((s, d) => s + d.words.length, 0)}語
+          </Text>
+        </View>
+
+        <View className="px-4 -mt-6 pb-4" style={{ gap: 12 }}>
+          <View className="flex-row" style={{ flexWrap: 'wrap', gap: 12 }}>
+            {decks.map((d) => {
+              const isActive = d.id === activeId;
+              const done = d.words.filter((w) => w.progress >= 80).length;
+              const pct = d.words.length ? Math.round((d.words.reduce((s, w) => s + w.progress, 0) / d.words.length)) : 0;
+              const editing = editDeckId === d.id;
+              return (
+                <View
+                  key={d.id}
+                  className={`bg-white rounded-2xl overflow-hidden ${isActive ? 'border-2 border-indigo-600' : 'border border-gray-100'}`}
+                  style={{ width: '47%', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 5 }}
+                >
+                  <TouchableOpacity onPress={() => selectDeck(d.id)} activeOpacity={0.8}>
+                    {/* 表紙。写真が無ければ色＋頭文字 */}
+                    <View style={{ height: 96, backgroundColor: colorOf(d.name) }} className="items-center justify-center">
+                      {d.cover ? (
+                        <Image source={{ uri: d.cover }} style={{ width: '100%', height: 96 }} resizeMode="cover" />
+                      ) : (
+                        <Text className="text-white text-3xl font-black">{d.name.trim().charAt(0) || '?'}</Text>
+                      )}
+                    </View>
+
+                    <View className="px-3 pt-2 pb-1">
+                      {editing ? (
+                        <TextInput
+                          value={editDeckName}
+                          onChangeText={setEditDeckName}
+                          onSubmitEditing={() => renameDeck(d.id, editDeckName)}
+                          onBlur={() => renameDeck(d.id, editDeckName)}
+                          autoFocus
+                          className="border-b border-indigo-400 text-sm font-bold text-gray-800 pb-1"
+                        />
+                      ) : (
+                        <Text className="text-sm font-bold text-gray-800" numberOfLines={2}>
+                          {d.name}
+                        </Text>
+                      )}
+                      <Text className="text-xs text-gray-400 mt-1">
+                        {d.words.length}語 ・ マスター{done}
+                      </Text>
+                      <View className="bg-gray-100 rounded-full mt-2" style={{ height: 5 }}>
+                        <View className="bg-indigo-500 rounded-full" style={{ height: 5, width: `${pct}%` }} />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  <View className="flex-row px-2 pb-2 pt-1" style={{ gap: 2 }}>
+                    <TouchableOpacity onPress={() => changeCover(d.id)} className="p-1.5" accessibilityLabel="表紙の写真を変える">
+                      <Icon name="image" size={15} color="#6366f1" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => { setEditDeckId(d.id); setEditDeckName(d.name); }}
+                      className="p-1.5"
+                      accessibilityLabel="名前を変える"
+                    >
+                      <Icon name="create" size={15} color="#9ca3af" />
+                    </TouchableOpacity>
+                    {d.cover && (
+                      <TouchableOpacity onPress={() => removeCover(d.id)} className="p-1.5" accessibilityLabel="表紙を外す">
+                        <Icon name="close-circle" size={15} color="#9ca3af" />
+                      </TouchableOpacity>
+                    )}
+                    <View className="flex-1" />
+                    <TouchableOpacity onPress={() => deleteDeck(d.id)} className="p-1.5" accessibilityLabel="この単語帳を削除">
+                      <Icon name="trash" size={15} color="#9ca3af" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {isActive && (
+                    <View className="bg-indigo-600 py-1">
+                      <Text className="text-white text-xs font-bold text-center">学習中</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+
+            {/* 追加カード */}
+            <TouchableOpacity
+              onPress={createDeck}
+              className="bg-white rounded-2xl border-2 border-dashed border-gray-300 items-center justify-center"
+              style={{ width: '47%', minHeight: 150 }}
+            >
+              <Icon name="add" size={30} color="#9ca3af" />
+              <Text className="text-gray-400 text-xs mt-1 font-semibold">新しい単語帳</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
+            <Text className="font-semibold text-gray-800 mb-1">ファイルから追加</Text>
+            <Text className="text-xs text-gray-400 mb-3">
+              単語だけのファイルは1冊として追加します。本棚ごと書き出したファイルなら、全体を元に戻します。
+            </Text>
+            <View className="flex-row" style={{ gap: 8 }}>
+              <TouchableOpacity onPress={importData} className="flex-1 bg-amber-50 rounded-xl p-3 flex-row items-center justify-center" style={{ gap: 8 }}>
+                <Icon name="cloud-upload" size={18} color="#b45309" />
+                <Text className="text-amber-700 text-sm font-semibold">読込</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={exportData} className="flex-1 bg-emerald-50 rounded-xl p-3 flex-row items-center justify-center" style={{ gap: 8 }}>
+                <Icon name="download" size={18} color="#047857" />
+                <Text className="text-emerald-700 text-sm font-semibold">本棚を保存</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  };
+
   // ===================== Stats =====================
   const renderStats = () => {
     const lvDist = [
@@ -1813,6 +2075,7 @@ export default function App() {
           {scr === 'speed' && renderSpeed()}
           {scr === 'results' && renderResults()}
           {scr === 'words' && renderWords()}
+          {scr === 'shelf' && renderShelf()}
           {scr === 'stats' && renderStats()}
         </View>
 
@@ -1834,6 +2097,7 @@ export default function App() {
 
         <View className="bg-white border-t border-gray-100 flex-row">
           {[
+            { k: 'shelf', s: 'shelf', i: 'library', l: '本棚' },
             { k: 'home', s: 'dashboard', i: 'home', l: 'ホーム' },
             { k: 'study', s: 'study', i: 'brain', l: '学習' },
             { k: 'words', s: 'words', i: 'book', l: '単語帳' },
