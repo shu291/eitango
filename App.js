@@ -150,6 +150,24 @@ export default function App() {
   // 本棚（どの単語帳の名前を編集中か。null なら編集していない）
   const [editDeckId, setEditDeckId] = useState(null);
   const [editDeckName, setEditDeckName] = useState('');
+  // 長押しで開く編集メニューの対象。null なら閉じている
+  const [menuDeckId, setMenuDeckId] = useState(null);
+
+  // 長押しの判定は自前でやる。
+  // TouchableOpacity の onLongPress は react-native-web では発火しないことを実測で確認したため
+  // （マウスで900ms押しても反応せず、離すと通常タップ扱いになった）。
+  // onPressIn/onPressOut は効くので、その間の時間を測る。
+  const longPress = useRef({ timer: null, fired: false });
+  const startLongPress = useCallback((onFire) => {
+    longPress.current.fired = false;
+    clearTimeout(longPress.current.timer);
+    longPress.current.timer = setTimeout(() => {
+      longPress.current.fired = true;
+      onFire();
+    }, 450);
+  }, []);
+  const cancelLongPress = useCallback(() => clearTimeout(longPress.current.timer), []);
+  useEffect(() => () => clearTimeout(longPress.current.timer), []);
 
   // フラッシュカードドラッグ
   const pan = useRef(new Animated.Value(0)).current;
@@ -1765,6 +1783,7 @@ export default function App() {
 
   // ===================== 本棚 =====================
   const renderShelf = () => {
+    const menuDeck = decks.find((d) => d.id === menuDeckId) || null;
     // 表紙写真が無いときは、名前から色を決めて頭文字を出す（毎回同じ色になる）
     const coverColors = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
     const colorOf = (name) => {
@@ -1783,91 +1802,83 @@ export default function App() {
         </View>
 
         <View className="px-4 -mt-6 pb-4" style={{ gap: 12 }}>
+          <Text className="text-xs text-gray-400">タップで切り替え ／ 長押しで編集</Text>
+
           <View className="flex-row" style={{ flexWrap: 'wrap', gap: 12 }}>
             {decks.map((d) => {
               const isActive = d.id === activeId;
-              const done = d.words.filter((w) => w.progress >= 80).length;
               const pct = d.words.length ? Math.round((d.words.reduce((s, w) => s + w.progress, 0) / d.words.length)) : 0;
               const editing = editDeckId === d.id;
               return (
-                <View
-                  key={d.id}
-                  className={`bg-white rounded-2xl overflow-hidden ${isActive ? 'border-2 border-indigo-600' : 'border border-gray-100'}`}
-                  style={{ width: '47%', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 5 }}
-                >
-                  <TouchableOpacity onPress={() => selectDeck(d.id)} activeOpacity={0.8}>
-                    {/* 表紙。写真が無ければ色＋頭文字 */}
-                    <View style={{ height: 96, backgroundColor: colorOf(d.name) }} className="items-center justify-center">
+                <View key={d.id} style={{ width: '47%' }}>
+                  <TouchableOpacity
+                    onPressIn={() => startLongPress(() => setMenuDeckId(d.id))}
+                    onPressOut={cancelLongPress}
+                    // 長押しが成立していたら、指を離したときの通常タップは無視する
+                    onPress={() => { if (!longPress.current.fired) selectDeck(d.id); }}
+                    activeOpacity={0.85}
+                    // 長押しで iOS のテキスト選択メニューが出ないようにする
+                    style={{ userSelect: 'none' }}
+                  >
+                    {/* 本の表紙。写真は切り取らずに全体を見せる（余白は単語帳の色で埋める） */}
+                    <View
+                      className={`rounded-2xl overflow-hidden ${isActive ? 'border-2 border-indigo-600' : ''}`}
+                      style={{ aspectRatio: 3 / 4, backgroundColor: colorOf(d.name), shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6 }}
+                    >
                       {d.cover ? (
-                        <Image source={{ uri: d.cover }} style={{ width: '100%', height: 96 }} resizeMode="cover" />
+                        <Image source={{ uri: d.cover }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
                       ) : (
-                        <Text className="text-white text-3xl font-black">{d.name.trim().charAt(0) || '?'}</Text>
+                        <View className="flex-1 items-center justify-center">
+                          <Text className="text-white font-black" style={{ fontSize: 56 }}>
+                            {d.name.trim().charAt(0) || '?'}
+                          </Text>
+                        </View>
                       )}
-                    </View>
 
-                    <View className="px-3 pt-2 pb-1">
-                      {editing ? (
-                        <TextInput
-                          value={editDeckName}
-                          onChangeText={setEditDeckName}
-                          onSubmitEditing={() => renameDeck(d.id, editDeckName)}
-                          onBlur={() => renameDeck(d.id, editDeckName)}
-                          autoFocus
-                          className="border-b border-indigo-400 text-sm font-bold text-gray-800 pb-1"
-                        />
-                      ) : (
-                        <Text className="text-sm font-bold text-gray-800" numberOfLines={2}>
-                          {d.name}
-                        </Text>
-                      )}
-                      <Text className="text-xs text-gray-400 mt-1">
-                        {d.words.length}語 ・ マスター{done}
-                      </Text>
-                      <View className="bg-gray-100 rounded-full mt-2" style={{ height: 5 }}>
-                        <View className="bg-indigo-500 rounded-full" style={{ height: 5, width: `${pct}%` }} />
+                      {/* 名前と語数は写真の上に重ねる。読めるように暗い帯を敷く */}
+                      <View
+                        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17,24,39,0.72)', paddingHorizontal: 10, paddingTop: 6, paddingBottom: 8 }}
+                      >
+                        {editing ? (
+                          <TextInput
+                            value={editDeckName}
+                            onChangeText={setEditDeckName}
+                            onSubmitEditing={() => renameDeck(d.id, editDeckName)}
+                            onBlur={() => renameDeck(d.id, editDeckName)}
+                            autoFocus
+                            className="text-white text-sm font-bold border-b border-white pb-1"
+                          />
+                        ) : (
+                          <Text className="text-white text-sm font-bold" numberOfLines={2}>
+                            {d.name}
+                          </Text>
+                        )}
+                        <Text className="text-gray-300 text-xs mt-0.5">{d.words.length}語 ・ {pct}%</Text>
+                        <View className="bg-white/30 rounded-full mt-1.5" style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.3)' }}>
+                          <View className="bg-white rounded-full" style={{ height: 4, width: `${pct}%` }} />
+                        </View>
                       </View>
+
+                      {isActive && (
+                        <View style={{ position: 'absolute', top: 8, right: 8 }} className="bg-indigo-600 rounded-full px-2 py-1">
+                          <Text className="text-white text-xs font-bold">学習中</Text>
+                        </View>
+                      )}
                     </View>
                   </TouchableOpacity>
-
-                  <View className="flex-row px-2 pb-2 pt-1" style={{ gap: 2 }}>
-                    <TouchableOpacity onPress={() => changeCover(d.id)} className="p-1.5" accessibilityLabel="表紙の写真を変える">
-                      <Icon name="image" size={15} color="#6366f1" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => { setEditDeckId(d.id); setEditDeckName(d.name); }}
-                      className="p-1.5"
-                      accessibilityLabel="名前を変える"
-                    >
-                      <Icon name="create" size={15} color="#9ca3af" />
-                    </TouchableOpacity>
-                    {d.cover && (
-                      <TouchableOpacity onPress={() => removeCover(d.id)} className="p-1.5" accessibilityLabel="表紙を外す">
-                        <Icon name="close-circle" size={15} color="#9ca3af" />
-                      </TouchableOpacity>
-                    )}
-                    <View className="flex-1" />
-                    <TouchableOpacity onPress={() => deleteDeck(d.id)} className="p-1.5" accessibilityLabel="この単語帳を削除">
-                      <Icon name="trash" size={15} color="#9ca3af" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {isActive && (
-                    <View className="bg-indigo-600 py-1">
-                      <Text className="text-white text-xs font-bold text-center">学習中</Text>
-                    </View>
-                  )}
                 </View>
               );
             })}
 
             {/* 追加カード */}
-            <TouchableOpacity
-              onPress={createDeck}
-              className="bg-white rounded-2xl border-2 border-dashed border-gray-300 items-center justify-center"
-              style={{ width: '47%', minHeight: 150 }}
-            >
-              <Icon name="add" size={30} color="#9ca3af" />
-              <Text className="text-gray-400 text-xs mt-1 font-semibold">新しい単語帳</Text>
+            <TouchableOpacity onPress={createDeck} style={{ width: '47%' }}>
+              <View
+                className="rounded-2xl border-2 border-dashed border-gray-300 items-center justify-center bg-white"
+                style={{ aspectRatio: 3 / 4 }}
+              >
+                <Icon name="add" size={30} color="#9ca3af" />
+                <Text className="text-gray-400 text-xs mt-1 font-semibold">新しい単語帳</Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -1888,6 +1899,47 @@ export default function App() {
             </View>
           </View>
         </View>
+
+        {/* 長押しで出す編集メニュー */}
+        <Modal visible={menuDeck !== null} transparent animationType="fade" onRequestClose={() => setMenuDeckId(null)}>
+          <Pressable
+            onPress={() => setMenuDeckId(null)}
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}
+          >
+            {/* 中身のタップでは閉じないよう、押しても何もしない Pressable で包む */}
+            <Pressable onPress={() => {}} className="bg-white rounded-t-3xl px-4 pt-4 pb-8">
+              <Text className="text-center text-gray-800 font-bold mb-1" numberOfLines={1}>
+                {menuDeck ? menuDeck.name : ''}
+              </Text>
+              <Text className="text-center text-gray-400 text-xs mb-4">
+                {menuDeck ? `${menuDeck.words.length}語` : ''}
+              </Text>
+
+              {[
+                { i: 'image', l: menuDeck && menuDeck.cover ? '表紙の写真を変える' : '表紙に写真を付ける', on: () => changeCover(menuDeckId) },
+                ...(menuDeck && menuDeck.cover
+                  ? [{ i: 'close-circle', l: '表紙を外す', on: () => removeCover(menuDeckId) }]
+                  : []),
+                { i: 'create', l: '名前を変える', on: () => { setEditDeckId(menuDeckId); setEditDeckName(menuDeck.name); } },
+                { i: 'trash', l: 'この単語帳を削除', on: () => deleteDeck(menuDeckId), danger: true },
+              ].map((it) => (
+                <TouchableOpacity
+                  key={it.l}
+                  onPress={() => { const id = menuDeckId; setMenuDeckId(null); setTimeout(() => it.on(id), 0); }}
+                  className="flex-row items-center py-3.5"
+                  style={{ gap: 12 }}
+                >
+                  <Icon name={it.i} size={20} color={it.danger ? '#e11d48' : '#4b5563'} />
+                  <Text className={`text-base ${it.danger ? 'text-rose-600' : 'text-gray-700'}`}>{it.l}</Text>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity onPress={() => setMenuDeckId(null)} className="bg-gray-100 rounded-xl py-3 mt-2">
+                <Text className="text-center text-gray-600 font-semibold">閉じる</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </ScrollView>
     );
   };
