@@ -45,6 +45,7 @@ import {
   calcProg,
   calcWeight,
   speedFactor,
+  streakFromDates,
   getLevel,
   isWeak,
   isNew,
@@ -277,13 +278,30 @@ export default function App() {
   const weakWords = useMemo(() => words.filter(isWeak).sort((a, b) => a.progress - b.progress), [words]);
   const avgP = words.length ? Math.round(words.reduce((s, w) => s + w.progress, 0) / words.length) : 0;
 
+  // 全単語帳を通して「学習した日」を集める。連続日数を数え直すのに使う
+  const studiedDates = useMemo(() => {
+    const set = new Set();
+    for (const d of decks) {
+      for (const w of d.words) {
+        if (w.reviewedDates) for (const day of w.reviewedDates) set.add(day);
+      }
+    }
+    return set;
+  }, [decks]);
+
   // 画面に出す連続日数。
-  // 最後の学習が今日でも昨日でもなければ連続は切れているので 0 を出す。
-  // （保存値をそのまま出すと、何日も空けたのに古い記録が残って見える）
+  //
+  // 保存しているカウンタと、各単語に残っている学習履歴の**大きいほう**を採る。
+  //   - カウンタ … 30日より長い連続も持てるが、壊れると復元できない
+  //   - 履歴     … 約30日ぶんしか無いが、実際の記録なので確実
+  // 以前カウンタが加算されない不具合があり0のまま止まっていたため、履歴から拾い直す。
+  //
+  // カウンタ側は、最後の学習が今日でも昨日でもなければ連続が切れているので 0 とみなす。
   const shownStreak = useMemo(() => {
-    if (!lastDate) return 0;
-    return lastDate === getToday() || lastDate === getYesterday() ? streak : 0;
-  }, [streak, lastDate]);
+    const alive = lastDate === getToday() || lastDate === getYesterday();
+    const stored = lastDate && alive ? streak : 0;
+    return Math.max(stored, streakFromDates(studiedDates, getToday()));
+  }, [streak, lastDate, studiedDates]);
 
   const aTab = useMemo(() => {
     if (scr === 'shelf') return 'shelf';

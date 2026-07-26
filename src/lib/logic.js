@@ -147,6 +147,34 @@ export const calcWeight = (w) => {
   return byProgress * byError * byNew * byStreak;
 };
 
+/**
+ * 「学習した日」の集合から連続日数を数える。
+ *
+ * 連続日数のカウンタは1つの数値で持っているため、不具合や機種変で壊れると復元できない。
+ * 一方どの単語にも `reviewedDates`（学習した日）が残っているので、そこから数え直せる。
+ *
+ * 今日まだ学習していなければ昨日から遡る（今日やれば続く、という扱い）。
+ *
+ * 注: reviewedDates は30日で切り捨てているため、ここで数えられるのも約30日まで。
+ * それより長い連続は保存済みのカウンタ側が保持する。
+ *
+ * @param {Set<string>} dateSet 'YYYY-MM-DD' の集合
+ * @param {string} todayStr
+ * @returns {number}
+ */
+export const streakFromDates = (dateSet, todayStr) => {
+  if (!dateSet || dateSet.size === 0) return 0;
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const cursor = new Date(y, m - 1, d);
+  if (!dateSet.has(todayStr)) cursor.setDate(cursor.getDate() - 1);
+  let n = 0;
+  while (dateSet.has(localDateStr(cursor))) {
+    n++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return n;
+};
+
 /** 英字を含むか。含んでいれば英単語の側とみなす */
 const hasLatin = (s) => /[A-Za-z]/.test(s);
 
