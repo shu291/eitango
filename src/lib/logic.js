@@ -115,12 +115,36 @@ export const calcWeight = (w) => {
   return byProgress * byError * byNew * byStreak;
 };
 
+/** 英字を含むか。含んでいれば英単語の側とみなす */
+const hasLatin = (s) => /[A-Za-z]/.test(s);
+
+/**
+ * 行頭に付いた「印」を落とす。
+ *
+ * 単語帳からコピーすると `新	26	hire	～を雇う` のように、
+ * チェック印（新／★／済 など）や通し番号が英単語の前に並ぶことがある。
+ * 英字を含まない要素が続く限り読み飛ばして、英単語から始まるようにする。
+ *
+ * ただし落としすぎると行が壊れるので、**英単語と意味の2つが残るときだけ**実際に落とす。
+ * 例えば `りんご	apple`（日本語が先）は、落とすと意味が無くなるので元のまま返す。
+ *
+ * @param {string[]} parts
+ * @returns {string[]}
+ */
+const dropLeadingMarkers = (parts) => {
+  let i = 0;
+  while (i < parts.length && !hasLatin(parts[i])) i++;
+  // 英字を含む要素が無い、またはそれが最後で意味が残らない場合は触らない
+  if (i === 0 || i >= parts.length - 1) return parts;
+  return parts.slice(i);
+};
+
 export const parseLine = (line) => {
   const tr = line.trim();
   if (!tr) return null;
   for (const sep of [',', '\t', '　']) {
     if (tr.includes(sep)) {
-      const p = tr.split(sep).map((s) => s.trim()).filter(Boolean);
+      const p = dropLeadingMarkers(tr.split(sep).map((s) => s.trim()).filter(Boolean));
       if (p.length >= 2) {
         let i = /^\d+$/.test(p[0]) ? 1 : 0;
         if (p.length - i >= 2) {
@@ -131,7 +155,12 @@ export const parseLine = (line) => {
       }
     }
   }
-  let cl = tr.replace(/^\d+[\s.、)\]】:：]+/, '').trim();
+  // 半角スペース区切りの場合も、行頭の印（新／★／通し番号など）を落としてから境目を探す
+  const ws = tr.split(/\s+/).filter(Boolean);
+  const kept = dropLeadingMarkers(ws);
+  let cl = (kept.length < ws.length ? kept.join(' ') : tr)
+    .replace(/^\d+[\s.、)\]】:：]+/, '')
+    .trim();
   if (!cl) cl = tr;
   const ji = cl.search(JA_REGEX);
   if (ji > 0) {
@@ -139,7 +168,7 @@ export const parseLine = (line) => {
     const ja = cl.substring(ji).trim();
     if (en && ja) return { en, ja };
   }
-  const p = tr.split(/\s{2,}/).map((s) => s.trim()).filter(Boolean);
+  const p = dropLeadingMarkers(tr.split(/\s{2,}/).map((s) => s.trim()).filter(Boolean));
   if (p.length >= 2) {
     let i = /^\d+$/.test(p[0]) ? 1 : 0;
     if (p.length - i >= 2) {
