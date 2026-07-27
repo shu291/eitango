@@ -109,6 +109,10 @@ export default function App() {
   const [rST, setRST] = useState('1');
   const [rET, setRET] = useState('30');
   const [numQ, setNumQ] = useState(10);
+  // ダブルタップモード（フラッシュカードのみ）。
+  // オンだと「知ってた／知らない」の1回目のタップでは判定せず、意味を出すだけにする。
+  // 意味を確かめてからもう一度押して判定する＝誤タップで進んでしまうのを防ぐ。
+  const [dblTap, setDblTap] = useState(false);
 
   // 学習中
   const [sWords, setSWords] = useState([]);
@@ -199,6 +203,7 @@ export default function App() {
             setActiveId(state.active);
             setStreak(state.s);
             if (state.ld) setLastDate(state.ld);
+            setDblTap(state.dt === true);
           }
         }
       } catch (e) {
@@ -217,14 +222,14 @@ export default function App() {
     const t = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY_V2,
-        JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate }))
+        JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap }))
       ).catch((e) => {
         const quota = String(e?.name || e?.message || '').toLowerCase().includes('quota');
         setToast(quota ? '保存できません。表紙写真を減らしてください' : '保存に失敗しました');
       });
     }, 500);
     return () => clearTimeout(t);
-  }, [decks, activeId, streak, lastDate, loaded]);
+  }, [decks, activeId, streak, lastDate, dblTap, loaded]);
 
   // フラッシュカードで単語が出たら、その単語を発音する。
   // 依存に flipped を入れていないので、カードをめくり直しても鳴り直さない。
@@ -719,7 +724,7 @@ export default function App() {
   // 本棚まるごと1ファイルに書き出す（単語帳が何冊あってもこれ1つで済む）
   const exportData = async () => {
     try {
-      const data = JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate }));
+      const data = JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap }));
       const { message } = await saveBackup(data);
       setToast(message);
     } catch (e) {
@@ -870,6 +875,23 @@ export default function App() {
       },
     })
   ).current;
+  /**
+   * 「知ってた／知らない」ボタンが押されたときの入口。
+   *
+   * ダブルタップモードがオンで、まだ意味が出ていない場合は判定せず意味を出すだけにする。
+   * 意味が出ている状態でもう一度押されたら判定する（＝実質ダブルタップ）。
+   * カードを直接タップして意味を出した後は、ボタン1回で判定してよい（もう意味を見ているため）。
+   *
+   * 次のカードに進むとき flipped は false に戻るので、カードごとに必ず1回目は意味表示になる。
+   */
+  const hFlashTap = (knew) => {
+    if (dblTap && !flipped) {
+      setFlipped(true);
+      return;
+    }
+    hFlash(knew);
+  };
+
   const hFlashRef = useRef(hFlash);
   useEffect(() => {
     hFlashRef.current = hFlash;
@@ -1198,6 +1220,30 @@ export default function App() {
             </View>
           </View>
 
+          {/* ダブルタップモードはフラッシュカードにしか効かないので、そのときだけ出す */}
+          {cfgMode === 'flashcard' && (
+            <TouchableOpacity
+              onPress={() => setDblTap((v) => !v)}
+              className="bg-white rounded-xl p-4 flex-row items-center border border-gray-200"
+              style={{ gap: 12 }}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: dblTap }}
+            >
+              <Icon name="hand-left" size={22} color={dblTap ? '#6366f1' : '#9ca3af'} />
+              <View className="flex-1">
+                <Text className="font-semibold text-gray-800">ダブルタップモード</Text>
+                <Text className="text-xs text-gray-400 mt-0.5">
+                  {dblTap
+                    ? '1回目のタップで意味を表示、もう一度押すと判定'
+                    : '「知ってた／知らない」を1回押すとすぐ判定'}
+                </Text>
+              </View>
+              <View className={`w-12 h-7 rounded-full justify-center ${dblTap ? 'bg-indigo-600' : 'bg-gray-300'}`} style={{ padding: 3 }}>
+                <View className="w-5 h-5 rounded-full bg-white" style={{ marginLeft: dblTap ? 20 : 0 }} />
+              </View>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             onPress={startFromConfig}
             className="bg-indigo-600 rounded-xl py-4 flex-row items-center justify-center"
@@ -1275,15 +1321,25 @@ export default function App() {
             </Pressable>
           </Animated.View>
           <View className="flex-row mt-5" style={{ gap: 12 }}>
-            <TouchableOpacity onPress={() => hFlash(false)} className="flex-1 bg-rose-100 rounded-xl py-3.5 flex-row items-center justify-center" style={{ gap: 8 }}>
+            <TouchableOpacity onPress={() => hFlashTap(false)} className="flex-1 bg-rose-100 rounded-xl py-3.5 flex-row items-center justify-center" style={{ gap: 8 }}>
               <Icon name="close" size={20} color="#be123c" />
               <Text className="text-rose-700 font-semibold">知らない</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => hFlash(true)} className="flex-1 bg-emerald-100 rounded-xl py-3.5 flex-row items-center justify-center" style={{ gap: 8 }}>
+            <TouchableOpacity onPress={() => hFlashTap(true)} className="flex-1 bg-emerald-100 rounded-xl py-3.5 flex-row items-center justify-center" style={{ gap: 8 }}>
               <Icon name="checkmark" size={20} color="#047857" />
               <Text className="text-emerald-700 font-semibold">知ってた</Text>
             </TouchableOpacity>
           </View>
+
+          {/* いま1回目なのか2回目なのかが分かるようにする */}
+          {dblTap && (
+            <View className="flex-row items-center justify-center mt-3" style={{ gap: 6 }}>
+              <Icon name={flipped ? 'checkmark-circle' : 'information-circle'} size={14} color={flipped ? '#059669' : '#9ca3af'} />
+              <Text className={`text-xs ${flipped ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+                {flipped ? 'もう一度押すと判定されます' : '1回押すと意味が出ます（判定されません）'}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     );

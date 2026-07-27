@@ -71,6 +71,7 @@ export const normalizeState = (raw, { defaultName = 'マイ単語帳' } = {}) =>
       active,
       s: typeof raw.s === 'number' ? raw.s : 0,
       ld: raw.ld || null,
+      dt: raw.dt === true, // ダブルタップモード。後から足した項目なので既定はオフ
     };
   }
 
@@ -82,6 +83,7 @@ export const normalizeState = (raw, { defaultName = 'マイ単語帳' } = {}) =>
       active: 1,
       s: typeof raw.s === 'number' ? raw.s : 0,
       ld: raw.ld || null,
+      dt: false,
     };
   }
 
@@ -125,10 +127,11 @@ export const deckNameFromFile = (fileName) => {
 };
 
 /** 保存する形（v2）に組み立てる */
-export const buildState = ({ decks, active, s, ld }) => ({
+export const buildState = ({ decks, active, s, ld, dt }) => ({
   v: 2,
   decks,
   active,
   s,
   ld,
+  dt: dt === true,
 });
