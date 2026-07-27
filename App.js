@@ -22,7 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ファイル入出力・確認ダイアログ・発音はネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
 import { saveBackup, pickBackup } from './src/lib/backup';
 import { confirmDestructive } from './src/lib/confirm';
-import { speakWord, stopSpeaking } from './src/lib/speech';
+import { speakWord, stopSpeaking, setSpeechVolume } from './src/lib/speech';
 import { pickPhoto } from './src/lib/photo';
 import {
   STORAGE_KEY_V1,
@@ -108,11 +108,15 @@ export default function App() {
   const [rEnd, setREnd] = useState(30);
   const [rST, setRST] = useState('1');
   const [rET, setRET] = useState('30');
-  const [numQ, setNumQ] = useState(10);
+  // 出題数の既定は「全」（9999 は全件を意味する番兵。実際は対象単語数で頭打ちになる）
+  const [numQ, setNumQ] = useState(9999);
   // ダブルタップモード（フラッシュカードのみ）。
   // オンだと「知ってた／知らない」の1回目のタップでは判定せず、意味を出すだけにする。
   // 意味を確かめてからもう一度押して判定する＝誤タップで進んでしまうのを防ぐ。
   const [dblTap, setDblTap] = useState(false);
+
+  // 読み上げの音量（0〜1）。iPhone 本体の音量とは別に、アプリ内だけで下げられる
+  const [volume, setVolume] = useState(1);
 
   // 学習中
   const [sWords, setSWords] = useState([]);
@@ -204,6 +208,7 @@ export default function App() {
             setStreak(state.s);
             if (state.ld) setLastDate(state.ld);
             setDblTap(state.dt === true);
+            if (typeof state.vol === 'number') setVolume(state.vol);
           }
         }
       } catch (e) {
@@ -222,14 +227,14 @@ export default function App() {
     const t = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY_V2,
-        JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap }))
+        JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume }))
       ).catch((e) => {
         const quota = String(e?.name || e?.message || '').toLowerCase().includes('quota');
         setToast(quota ? '保存できません。表紙写真を減らしてください' : '保存に失敗しました');
       });
     }, 500);
     return () => clearTimeout(t);
-  }, [decks, activeId, streak, lastDate, dblTap, loaded]);
+  }, [decks, activeId, streak, lastDate, dblTap, volume, loaded]);
 
   // フラッシュカードで単語が出たら、その単語を発音する。
   // 依存に flipped を入れていないので、カードをめくり直しても鳴り直さない。
@@ -282,6 +287,11 @@ export default function App() {
   const totalAccuracy = totalCorrect + totalIncorrect > 0 ? Math.round((totalCorrect / (totalCorrect + totalIncorrect)) * 100) : 0;
   const weakWords = useMemo(() => words.filter(isWeak).sort((a, b) => a.progress - b.progress), [words]);
   const avgP = words.length ? Math.round(words.reduce((s, w) => s + w.progress, 0) / words.length) : 0;
+
+  // 音量の設定を再生側へ渡す
+  useEffect(() => {
+    setSpeechVolume(volume);
+  }, [volume]);
 
   // 全単語帳を通して「学習した日」を集める。連続日数を数え直すのに使う
   const studiedDates = useMemo(() => {
@@ -471,7 +481,7 @@ export default function App() {
     setRST('1');
     setRET(String(words.length));
     setWordSel('normal');
-    setNumQ(10);
+    setNumQ(9999);
     setScr('config');
   };
 
@@ -724,7 +734,7 @@ export default function App() {
   // 本棚まるごと1ファイルに書き出す（単語帳が何冊あってもこれ1つで済む）
   const exportData = async () => {
     try {
-      const data = JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap }));
+      const data = JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume }));
       const { message } = await saveBackup(data);
       setToast(message);
     } catch (e) {
@@ -1014,7 +1024,7 @@ export default function App() {
                 setREnd(words.length);
                 setRST('1');
                 setRET(String(words.length));
-                setNumQ(10);
+                setNumQ(9999);
                 setScr('config');
               }}
               className="bg-rose-500 rounded-xl py-2.5 mt-3"
@@ -1035,6 +1045,46 @@ export default function App() {
               <Icon name="brain" size={18} color="#7c3aed" />
               <Text className="text-violet-700 text-sm font-medium">4択クイズ</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+
+        {/*
+          発音の音量。iPhone 本体の音量は変えず、アプリの中だけで下げられる。
+          スライダーは追加ライブラリが要るので、押すだけで決まる4段階にしてある。
+        */}
+        <View className="bg-white rounded-2xl p-5" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="font-semibold text-gray-800">発音の音量</Text>
+            <Text className="text-xs text-gray-400">端末の音量は変わりません</Text>
+          </View>
+          <View className="flex-row" style={{ gap: 6 }}>
+            {[
+              { v: 0, i: 'volume-mute', l: '消音' },
+              { v: 0.3, i: 'volume-low', l: '小' },
+              { v: 0.6, i: 'volume-medium', l: '中' },
+              { v: 1, i: 'volume-high', l: '大' },
+            ].map((o) => {
+              const active = Math.abs(volume - o.v) < 0.01;
+              return (
+                <TouchableOpacity
+                  key={o.l}
+                  onPress={() => {
+                    setVolume(o.v);
+                    // 変えた音量ですぐ聞けるように、見本を1語鳴らす（消音のときは鳴らさない）
+                    if (o.v > 0) {
+                      setSpeechVolume(o.v);
+                      speakWord(words[0] ? words[0].en : 'sample');
+                    }
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl border-2 items-center ${active ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}`}
+                  style={{ gap: 2 }}
+                  accessibilityLabel={`音量 ${o.l}`}
+                >
+                  <Icon name={o.i} size={18} color={active ? '#fff' : '#9ca3af'} />
+                  <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-gray-500'}`}>{o.l}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -1102,17 +1152,19 @@ export default function App() {
     const isMat = cfgMode === 'matching';
     const dNQ = isMat ? Math.min(6, poolInfo.pool) : actualNumQ;
     return (
+      // 「学習を開始」までスクロールせずに届くよう、余白と文字を詰めてある。
+      // 要素を足すときは実機幅（375×812）で開始ボタンが見えるか確かめること。
       <ScrollView>
         <Header title="学習設定" back="study" />
-        <View className="px-4 py-5" style={{ gap: 20 }}>
-          <View className="bg-indigo-50 rounded-xl p-3">
-            <Text className="font-bold text-indigo-700 text-lg text-center">{mn[cfgMode]}</Text>
+        <View className="px-4 py-3" style={{ gap: 12 }}>
+          <View className="bg-indigo-50 rounded-lg py-1.5">
+            <Text className="font-bold text-indigo-700 text-center">{mn[cfgMode]}</Text>
           </View>
 
           <View>
-            <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-              <Icon name="filter" size={16} color="#374151" />
-              <Text className="font-semibold text-gray-800">出題モード</Text>
+            <View className="flex-row items-center mb-1.5" style={{ gap: 6 }}>
+              <Icon name="filter" size={14} color="#374151" />
+              <Text className="font-semibold text-gray-800 text-sm">出題モード</Text>
             </View>
             <View className="flex-row" style={{ gap: 8 }}>
               {[
@@ -1130,9 +1182,9 @@ export default function App() {
                   : 'bg-white border-gray-200';
                 const tc = active ? (mi.k === 'new' ? 'text-emerald-700' : mi.k === 'weak' ? 'text-rose-700' : 'text-indigo-700') : 'text-gray-600';
                 return (
-                  <TouchableOpacity key={mi.k} onPress={() => setWordSel(mi.k)} className={`flex-1 rounded-xl p-3 border-2 ${bg}`}>
+                  <TouchableOpacity key={mi.k} onPress={() => setWordSel(mi.k)} className={`flex-1 rounded-xl py-2 px-2 border-2 ${bg}`}>
                     <Text className={`font-semibold text-sm text-center ${tc}`}>{mi.l}</Text>
-                    <Text className={`text-xs mt-0.5 text-center ${tc} opacity-70`}>{mi.d}</Text>
+                    <Text className={`text-xs text-center ${tc} opacity-70`}>{mi.d}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1140,51 +1192,46 @@ export default function App() {
           </View>
 
           <View>
-            <Text className="font-semibold text-gray-800 mb-2">📖 出題範囲（全{words.length}語）</Text>
+            <Text className="font-semibold text-gray-800 text-sm mb-1.5">📖 出題範囲（全{words.length}語）</Text>
             <View className="flex-row items-center" style={{ gap: 8 }}>
-              <View className="flex-1">
-                <Text className="text-xs text-gray-500">開始</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  value={rST}
-                  onChangeText={setRST}
-                  onBlur={handleRSBlur}
-                  className="bg-white border-2 border-gray-200 rounded-lg py-2 px-3 text-center font-bold"
-                />
-              </View>
-              <Text className="text-gray-400 mt-5">〜</Text>
-              <View className="flex-1">
-                <Text className="text-xs text-gray-500">終了</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  value={rET}
-                  onChangeText={setRET}
-                  onBlur={handleREBlur}
-                  className="bg-white border-2 border-gray-200 rounded-lg py-2 px-3 text-center font-bold"
-                />
-              </View>
+              <TextInput
+                keyboardType="number-pad"
+                value={rST}
+                onChangeText={setRST}
+                onBlur={handleRSBlur}
+                className="flex-1 bg-white border-2 border-gray-200 rounded-lg py-1.5 px-3 text-center font-bold"
+              />
+              <Text className="text-gray-400">〜</Text>
+              <TextInput
+                keyboardType="number-pad"
+                value={rET}
+                onChangeText={setRET}
+                onBlur={handleREBlur}
+                className="flex-1 bg-white border-2 border-gray-200 rounded-lg py-1.5 px-3 text-center font-bold"
+              />
             </View>
           </View>
 
           {!isMat && (
             <View>
-              <Text className="font-semibold text-gray-800 mb-2">📝 出題数</Text>
+              <Text className="font-semibold text-gray-800 text-sm mb-1.5">📝 出題数</Text>
+              {/* 「全」を先頭に置いている。既定が全なので、選択中のものが左端に来るほうが分かりやすい */}
               <View className="flex-row" style={{ gap: 6 }}>
-                {[10, 20, 30, 50, 9999].map((n) => {
+                {[9999, 10, 20, 30, 50].map((n) => {
                   const active = numQ === n;
                   const label = n === 9999 ? '全' : String(n);
                   return (
                     <TouchableOpacity
                       key={n}
                       onPress={() => setNumQ(n)}
-                      className={`flex-1 py-3 rounded-xl border-2 ${active ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}`}
+                      className={`flex-1 py-2 rounded-xl border-2 ${active ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}`}
                     >
                       <Text className={`text-center font-bold ${active ? 'text-white' : 'text-gray-500'}`}>{label}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-              <View className="flex-row items-center mt-2" style={{ gap: 8 }}>
+              <View className="flex-row items-center mt-1.5" style={{ gap: 8 }}>
                 <Text className="text-xs text-gray-500">カスタム</Text>
                 <TextInput
                   keyboardType="number-pad"
@@ -1195,51 +1242,42 @@ export default function App() {
                     else if (t === '') setNumQ(1);
                   }}
                   placeholder="例: 15"
-                  className="flex-1 bg-white border-2 border-gray-200 rounded-lg py-2 px-3 text-center font-bold"
+                  className="flex-1 bg-white border-2 border-gray-200 rounded-lg py-1.5 px-3 text-center font-bold"
                 />
                 <Text className="text-xs text-gray-500">問</Text>
               </View>
             </View>
           )}
 
-          <View className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-sm text-gray-600">出題範囲</Text>
-              <Text className="font-bold text-gray-800">No.{rStart}〜{rEnd}（{poolInfo.total}語）</Text>
-            </View>
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-sm text-gray-600">対象単語</Text>
-              <Text className="font-bold text-indigo-600">{poolInfo.pool}語</Text>
-            </View>
-            <View className="flex-row justify-between items-center">
-              <Text className="text-sm text-gray-600">出題数</Text>
-              <Text className="text-2xl font-black text-indigo-600">
-                {dNQ}
-                <Text className="text-sm text-gray-400 font-normal"> 問</Text>
-              </Text>
-            </View>
+          {/* 3行あった要約を1行にまとめて縦幅を稼いでいる */}
+          <View className="bg-indigo-50 rounded-xl px-3 py-2 border border-indigo-100 flex-row items-center justify-between">
+            <Text className="text-xs text-gray-600">
+              No.{rStart}〜{rEnd} ／ 対象<Text className="font-bold text-indigo-600">{poolInfo.pool}</Text>語
+            </Text>
+            <Text className="text-xl font-black text-indigo-600">
+              {dNQ}
+              <Text className="text-xs text-gray-400 font-normal"> 問</Text>
+            </Text>
           </View>
 
           {/* ダブルタップモードはフラッシュカードにしか効かないので、そのときだけ出す */}
           {cfgMode === 'flashcard' && (
             <TouchableOpacity
               onPress={() => setDblTap((v) => !v)}
-              className="bg-white rounded-xl p-4 flex-row items-center border border-gray-200"
-              style={{ gap: 12 }}
+              className="bg-white rounded-xl px-3 py-2 flex-row items-center border border-gray-200"
+              style={{ gap: 10 }}
               accessibilityRole="switch"
               accessibilityState={{ checked: dblTap }}
             >
-              <Icon name="hand-left" size={22} color={dblTap ? '#6366f1' : '#9ca3af'} />
+              <Icon name="hand-left" size={18} color={dblTap ? '#6366f1' : '#9ca3af'} />
               <View className="flex-1">
-                <Text className="font-semibold text-gray-800">ダブルタップモード</Text>
-                <Text className="text-xs text-gray-400 mt-0.5">
-                  {dblTap
-                    ? '1回目のタップで意味を表示、もう一度押すと判定'
-                    : '「知ってた／知らない」を1回押すとすぐ判定'}
+                <Text className="font-semibold text-gray-800 text-sm">ダブルタップモード</Text>
+                <Text className="text-xs text-gray-400">
+                  {dblTap ? '1回目で意味を表示、もう一度で判定' : '1回押すとすぐ判定'}
                 </Text>
               </View>
-              <View className={`w-12 h-7 rounded-full justify-center ${dblTap ? 'bg-indigo-600' : 'bg-gray-300'}`} style={{ padding: 3 }}>
-                <View className="w-5 h-5 rounded-full bg-white" style={{ marginLeft: dblTap ? 20 : 0 }} />
+              <View className={`w-11 h-6 rounded-full justify-center ${dblTap ? 'bg-indigo-600' : 'bg-gray-300'}`} style={{ padding: 3 }}>
+                <View className="w-4 h-4 rounded-full bg-white" style={{ marginLeft: dblTap ? 20 : 0 }} />
               </View>
             </TouchableOpacity>
           )}

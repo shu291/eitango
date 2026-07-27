@@ -14,6 +14,23 @@ import { AUDIO } from './audioMap';
 /** 単語 → 音声ファイル名のキー。scripts/build-audio.mjs の keyOf と必ず揃えること。 */
 const keyOf = (word) => String(word ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
+/**
+ * 読み上げの音量（0〜1）。端末の音量とは別に、アプリ内だけで下げられる。
+ */
+let volume = 1;
+
+/** @param {number} v 0〜1 */
+export const setSpeechVolume = (v) => {
+  volume = Math.max(0, Math.min(1, Number(v) || 0));
+  if (current) {
+    try {
+      current.volume = volume;
+    } catch {
+      // 再生が終わっている場合は無視してよい
+    }
+  }
+};
+
 // マナーモードでも発音が聞こえるようにする。学習アプリなので鳴らないと機能しない。
 // 1度だけ実行すればよく、失敗しても再生自体は試みる。
 let audioModeReady = null;
@@ -46,6 +63,7 @@ const stopCurrent = () => {
 export const speakWord = async (word) => {
   const text = String(word ?? '').trim();
   if (!text) return;
+  if (volume === 0) return; // 消音
 
   stopCurrent();
   Speech.stop();
@@ -55,6 +73,7 @@ export const speakWord = async (word) => {
     try {
       await ensureAudioMode();
       const player = createAudioPlayer(asset);
+      player.volume = volume;
       current = player;
       player.play();
       return;
@@ -65,7 +84,7 @@ export const speakWord = async (word) => {
   }
 
   try {
-    Speech.speak(text, { language: 'en-US', rate: 0.9 });
+    Speech.speak(text, { language: 'en-US', rate: 0.9, volume });
   } catch {
     // 読み上げも使えない端末では黙って諦める
   }

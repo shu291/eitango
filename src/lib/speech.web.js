@@ -42,6 +42,18 @@ const getPlayer = () => {
 
 let unlocked = false;
 
+/**
+ * 読み上げの音量（0〜1）。iPhone 本体の音量とは別に、アプリ内だけで下げられる。
+ * 端末の音量を変えずに小さくしたい、という用途のために持っている。
+ */
+let volume = 1;
+
+/** @param {number} v 0〜1 */
+export const setSpeechVolume = (v) => {
+  volume = Math.max(0, Math.min(1, Number(v) || 0));
+  if (player) player.volume = volume;
+};
+
 /** 最初のユーザー操作で、音声と読み上げを解錠する */
 const unlock = () => {
   if (unlocked) return;
@@ -93,6 +105,7 @@ const speakWithSynth = (text) => {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'en-US';
   u.rate = 0.9;
+  u.volume = volume;
   const enVoice = window.speechSynthesis.getVoices().find((v) => v.lang?.startsWith('en'));
   if (enVoice) u.voice = enVoice;
   window.speechSynthesis.speak(u);
@@ -106,6 +119,7 @@ const speakWithSynth = (text) => {
 export const speakWord = async (word) => {
   const text = String(word ?? '').trim();
   if (!text || !hasDom) return;
+  if (volume === 0) return; // 消音のときは鳴らさない（読み上げも含めて止める）
 
   cancelSynth();
 
@@ -116,6 +130,7 @@ export const speakWord = async (word) => {
       a.pause();
       a.src = Asset.fromModule(mod).uri;
       a.currentTime = 0;
+      a.volume = volume;
       await a.play();
       return;
     } catch {
