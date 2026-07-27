@@ -46,6 +46,9 @@ import {
   calcWeight,
   speedFactor,
   streakFromDates,
+  addStudyTime,
+  sumStudyTime,
+  formatDuration,
   getLevel,
   isWeak,
   isNew,
@@ -117,6 +120,10 @@ export default function App() {
 
   // 読み上げの音量（0〜1）。iPhone 本体の音量とは別に、アプリ内だけで下げられる
   const [volume, setVolume] = useState(1);
+
+  // 学習時間の記録 { 'YYYY-MM-DD': { ms, n } }。
+  // 時間を測れるのはフラッシュカードだけなので、積まれるのもそのぶんだけ
+  const [timeLog, setTimeLog] = useState({});
 
   // 学習中
   const [sWords, setSWords] = useState([]);
@@ -209,6 +216,7 @@ export default function App() {
             if (state.ld) setLastDate(state.ld);
             setDblTap(state.dt === true);
             if (typeof state.vol === 'number') setVolume(state.vol);
+            if (state.time) setTimeLog(state.time);
           }
         }
       } catch (e) {
@@ -227,14 +235,14 @@ export default function App() {
     const t = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY_V2,
-        JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume }))
+        JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume, time: timeLog }))
       ).catch((e) => {
         const quota = String(e?.name || e?.message || '').toLowerCase().includes('quota');
         setToast(quota ? '保存できません。表紙写真を減らしてください' : '保存に失敗しました');
       });
     }, 500);
     return () => clearTimeout(t);
-  }, [decks, activeId, streak, lastDate, dblTap, volume, loaded]);
+  }, [decks, activeId, streak, lastDate, dblTap, volume, timeLog, loaded]);
 
   // フラッシュカードで単語が出たら、その単語を発音する。
   // 依存に flipped を入れていないので、カードをめくり直しても鳴り直さない。
@@ -339,6 +347,20 @@ export default function App() {
     }
     return d;
   }, [words]);
+
+  // 今日の学習時間（ホーム画面用）
+  const todayTime = useMemo(() => sumStudyTime(timeLog, [getToday()]), [timeLog]);
+
+  // 直近7日の日付キー（学習時間の集計に使う）
+  const last7keys = useMemo(() => {
+    const d = [];
+    for (let i = 6; i >= 0; i--) {
+      const dt = new Date();
+      dt.setDate(dt.getDate() - i);
+      d.push(localDateStr(dt));
+    }
+    return d;
+  }, []);
 
   const poolInfo = useMemo(() => {
     const s = clamp(rStart, 1, words.length);
@@ -543,6 +565,11 @@ export default function App() {
     const cur = words.find((x) => x.id === w.id) || w;
     const { progress: np } = calcProg(cur, knew, 'flashcard', elapsed);
     updWord(w.id, knew, 'flashcard', elapsed);
+    // 学習時間として積む。カードを開いたまま放置された分は addStudyTime 側で頭打ちになる
+    if (typeof elapsed === 'number') {
+      const td = getToday();
+      setTimeLog((log) => addStudyTime(log, td, elapsed, td));
+    }
     const nr = [...results, { word: w, correct: knew, delta: np - cur.progress, ms: elapsed }];
     setResults(nr);
     setDragOff(0);
@@ -734,7 +761,7 @@ export default function App() {
   // 本棚まるごと1ファイルに書き出す（単語帳が何冊あってもこれ1つで済む）
   const exportData = async () => {
     try {
-      const data = JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume }));
+      const data = JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume, time: timeLog }));
       const { message } = await saveBackup(data);
       setToast(message);
     } catch (e) {
@@ -969,12 +996,17 @@ export default function App() {
             <View className="bg-blue-100 p-2.5 rounded-xl">
               <Icon name="locate" size={22} color="#3b82f6" />
             </View>
-            <View>
+            <View className="flex-1">
               <Text className="text-2xl font-bold text-gray-800">
                 {todayN}
                 <Text className="text-xs text-gray-400">語</Text>
               </Text>
               <Text className="text-xs text-gray-500">今日の学習</Text>
+              {/* 学習時間はフラッシュカードでしか測れないので、記録があるときだけ出す。
+                  1行に並べるとカード幅に収まらず見切れるため、行を分けている */}
+              {todayTime.n > 0 && (
+                <Text className="text-xs text-indigo-500 font-semibold">{formatDuration(todayTime.ms)}</Text>
+              )}
             </View>
           </View>
         </View>
@@ -2093,6 +2125,11 @@ export default function App() {
 
   // ===================== Stats =====================
   const renderStats = () => {
+    // 学習時間。フラッシュカードで計った時間だけが入っている
+    const tToday = sumStudyTime(timeLog, [getToday()]);
+    const t7 = sumStudyTime(timeLog, last7keys);
+    const tAll = sumStudyTime(timeLog);
+
     const lvDist = [
       { name: '完璧(90%↑)', count: words.filter((w) => w.progress >= 90).length, color: '#9333ea' },
       { name: 'マスター(80-89%)', count: words.filter((w) => w.progress >= 80 && w.progress < 90).length, color: '#10b981' },
@@ -2120,6 +2157,47 @@ export default function App() {
               <Text className="text-xl font-bold text-gray-800 mt-1">{todayN}</Text>
               <Text className="text-xs text-gray-500">今日学習</Text>
             </View>
+          </View>
+
+          {/* 学習時間。計測できるのはフラッシュカードだけなので、その旨を明記する */}
+          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="font-semibold text-gray-800">⏱ 学習時間</Text>
+              <Text className="text-xs text-gray-400">フラッシュカードのみ計測</Text>
+            </View>
+
+            <View className="flex-row items-end justify-between mb-3">
+              <View>
+                <Text className="text-xs text-gray-500 mb-0.5">今日</Text>
+                <Text className="text-3xl font-black text-indigo-600">{formatDuration(tToday.ms)}</Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-xs text-gray-500 mb-0.5">1語あたり</Text>
+                <Text className="text-2xl font-black text-gray-800">
+                  {tToday.n > 0 ? (tToday.avgMs / 1000).toFixed(1) : '—'}
+                  <Text className="text-sm text-gray-400 font-normal"> 秒</Text>
+                </Text>
+              </View>
+            </View>
+
+            <View className="flex-row border-t border-gray-100 pt-3" style={{ gap: 8 }}>
+              {[
+                { l: '今日の語数', v: `${tToday.n}語` },
+                { l: '7日間', v: formatDuration(t7.ms) },
+                { l: '累計', v: formatDuration(tAll.ms) },
+              ].map((it) => (
+                <View key={it.l} className="flex-1 items-center">
+                  <Text className="text-sm font-bold text-gray-800">{it.v}</Text>
+                  <Text className="text-xs text-gray-400 mt-0.5">{it.l}</Text>
+                </View>
+              ))}
+            </View>
+
+            {tAll.n === 0 && (
+              <Text className="text-xs text-gray-400 text-center mt-3">
+                フラッシュカードで学習すると記録がたまります
+              </Text>
+            )}
           </View>
 
           <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>

@@ -175,6 +175,79 @@ export const streakFromDates = (dateSet, todayStr) => {
   return n;
 };
 
+// ===== 学習時間の記録 =====
+//
+// 時間を測れるのはフラッシュカードだけ（カードが出てから答えるまでを計っている）。
+// 他のモードは計測していないので、ここに積むのはフラッシュカードぶんだけ。
+//
+// 形は { 'YYYY-MM-DD': { ms: 合計ミリ秒, n: 語数 } }。
+
+/**
+ * 1語に費やした時間として数える上限（ミリ秒）。
+ *
+ * カードを開いたまま放置されると、その1語だけで何十分も加算されてしまい
+ * 「勉強時間」が実態とかけ離れる。長考しても1分と見なして頭打ちにする。
+ */
+export const MAX_WORD_MS = 60000;
+
+/** 30日より古い記録は捨てる（単語の reviewedDates と同じ扱い） */
+const TIME_KEEP_DAYS = 30;
+
+/**
+ * 学習時間の記録に1語ぶん足した新しい記録を返す（元は変更しない）。
+ * @param {object} log 既存の記録
+ * @param {string} day 'YYYY-MM-DD'
+ * @param {number} ms その語にかかった時間
+ * @param {string} [todayStr] 古い記録を捨てる基準日。省略時は day
+ * @returns {object}
+ */
+export const addStudyTime = (log, day, ms, todayStr) => {
+  const capped = Math.max(0, Math.min(Number(ms) || 0, MAX_WORD_MS));
+  const base = log && typeof log === 'object' ? log : {};
+  const prev = base[day] || { ms: 0, n: 0 };
+  const next = { ...base, [day]: { ms: prev.ms + capped, n: prev.n + 1 } };
+
+  // 古い日を落とす
+  const cutoff = new Date(`${todayStr || day}T00:00:00`);
+  cutoff.setDate(cutoff.getDate() - TIME_KEEP_DAYS);
+  const cutStr = localDateStr(cutoff);
+  const trimmed = {};
+  for (const k of Object.keys(next)) if (k >= cutStr) trimmed[k] = next[k];
+  return trimmed;
+};
+
+/**
+ * 期間をまとめた合計を返す。
+ * @param {object} log
+ * @param {string[]} [days] 対象の日。省略すると全期間
+ * @returns {{ms: number, n: number, avgMs: number}}
+ */
+export const sumStudyTime = (log, days) => {
+  const base = log && typeof log === 'object' ? log : {};
+  const keys = days || Object.keys(base);
+  let ms = 0;
+  let n = 0;
+  for (const k of keys) {
+    const e = base[k];
+    if (e) {
+      ms += e.ms || 0;
+      n += e.n || 0;
+    }
+  }
+  return { ms, n, avgMs: n > 0 ? ms / n : 0 };
+};
+
+/** ミリ秒を「1時間5分」「12分34秒」「45秒」のように読みやすくする */
+export const formatDuration = (ms) => {
+  const total = Math.max(0, Math.round((Number(ms) || 0) / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}時間${m}分`;
+  if (m > 0) return `${m}分${s}秒`;
+  return `${s}秒`;
+};
+
 /** 英字を含むか。含んでいれば英単語の側とみなす */
 const hasLatin = (s) => /[A-Za-z]/.test(s);
 

@@ -73,6 +73,8 @@ export const normalizeState = (raw, { defaultName = 'マイ単語帳' } = {}) =>
       ld: raw.ld || null,
       dt: raw.dt === true, // ダブルタップモード。後から足した項目なので既定はオフ
       vol: typeof raw.vol === 'number' ? Math.max(0, Math.min(1, raw.vol)) : 1, // 読み上げの音量
+      // 学習時間の記録 { 'YYYY-MM-DD': { ms, n } }。フラッシュカードのみ計測している
+      time: raw.time && typeof raw.time === 'object' ? raw.time : {},
     };
   }
 
@@ -86,6 +88,7 @@ export const normalizeState = (raw, { defaultName = 'マイ単語帳' } = {}) =>
       ld: raw.ld || null,
       dt: false,
       vol: 1,
+      time: {},
     };
   }
 
@@ -129,7 +132,7 @@ export const deckNameFromFile = (fileName) => {
 };
 
 /** 保存する形（v2）に組み立てる */
-export const buildState = ({ decks, active, s, ld, dt, vol }) => ({
+export const buildState = ({ decks, active, s, ld, dt, vol, time }) => ({
   v: 2,
   decks,
   active,
@@ -137,4 +140,5 @@ export const buildState = ({ decks, active, s, ld, dt, vol }) => ({
   ld,
   dt: dt === true,
   vol: typeof vol === 'number' ? vol : 1,
+  time: time || {},
 });
