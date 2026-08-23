@@ -18,7 +18,7 @@
 | スタイリング | NativeWind v4 + Tailwind v3（`className` を使う） |
 | 言語 | **JavaScript のみ**。TypeScript の型定義ファイルは無い |
 | ルーティング | ライブラリ未使用。`scr` という state による条件レンダリング |
-| ストレージ | **AsyncStorage 一択**。キーは `@eitango_state_v1` の 1 つだけ |
+| ストレージ | キーは `@eitango_state_v2` の 1 つだけ。ネイティブは AsyncStorage、**Web は IndexedDB**（`src/lib/storage.web.js`。localStorage は iPhone で 5MB 上限のため使わない） |
 | 復習アルゴリズム | **SM-2 ではない**（独自ポイント制。詳細は §3） |
 | git | **リポジトリが存在しない**（`.git` なし、`.gitignore` なし） |
 | テスト / Lint | 無し |
@@ -175,9 +175,22 @@ quality（手ごたえ 2〜5）は答えるまでの速さから `srQuality()` �
 
 ### ストレージ
 
-- **AsyncStorage**（`@react-native-async-storage/async-storage` v2.2.0）。
-  **SQLite / MMKV / expo-sqlite は未使用**（package.json にも無い）。
-- **キーは 1 つだけ**: `const STORAGE_KEY = '@eitango_state_v1';`（`App.js:40`）
+> 【2026-08-24 更新】Web の保存先を localStorage から **IndexedDB** に移した。
+> localStorage は iPhone の Safari で 5MB 固定で、単語を数千語入れると上限に当たり
+> `QuotaExceededError` で**以降の学習が一切保存されなくなる**（実際に発生）。
+> `src/lib/storage.js` / `storage.web.js` に分けてあるので、App.js 側に分岐は無い。
+
+- ネイティブ … **AsyncStorage**（`@react-native-async-storage/async-storage` v2.2.0）
+- Web … **IndexedDB**（`eitango` DB の `kv` ストア）
+- **SQLite / MMKV / expo-sqlite は未使用**（package.json にも無い）。
+
+⚠️ **Web で AsyncStorage を直接使わないこと。** Web 実装は localStorage をそのまま使うので、
+5MB の問題がそのまま戻る。必ず `src/lib/storage.js` の `getItem` / `setItem` を通す。
+
+⚠️ 旧データの引き継ぎは `getItem` の中で行う（IndexedDB に無ければ localStorage を見る）。
+localStorage 側は控えとして消さない。
+
+- **キーは 1 つだけ**: `@eitango_state_v2`（旧 `@eitango_state_v1` からは初回に移行）
 - 保存される値（キー名が 1 文字に圧縮されている点に注意）:
 
   ```js

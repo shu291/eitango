@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Storage from './src/lib/storage';
 // ファイル入出力・確認ダイアログ・発音はネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
 import { saveBackup, pickBackup } from './src/lib/backup';
 import { confirmDestructive } from './src/lib/confirm';
@@ -55,6 +55,7 @@ import {
   addStudyTime,
   sumStudyTime,
   formatDuration,
+  formatBytes,
   getLevel,
   isWeak,
   isNew,
@@ -211,8 +212,8 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const rawV2 = await AsyncStorage.getItem(STORAGE_KEY_V2);
-        const raw = rawV2 || (await AsyncStorage.getItem(STORAGE_KEY_V1));
+        const rawV2 = await Storage.getItem(STORAGE_KEY_V2);
+        const raw = rawV2 || (await Storage.getItem(STORAGE_KEY_V1));
         if (raw) {
           const parsed = JSON.parse(raw);
           const state = normalizeState(parsed);
@@ -239,21 +240,56 @@ export default function App() {
   }, []);
 
   // 自動保存。
-  // 表紙写真を入れると保存量が増えるため、上限超過（QuotaExceededError）は
-  // 握りつぶさずユーザーに知らせる。黙って保存されないのが一番まずい。
+  // 上限超過（QuotaExceededError）は握りつぶさずユーザーに知らせる。
+  // 黙って保存されないのが一番まずい。
+  //
+  // 保存先は Web だと IndexedDB（src/lib/storage.web.js）。以前は localStorage で、
+  // iPhone の 5MB 上限に当たって保存できなくなることがあった。
   useEffect(() => {
     if (!loaded) return;
     const t = setTimeout(() => {
-      AsyncStorage.setItem(
+      Storage.setItem(
         STORAGE_KEY_V2,
         JSON.stringify(buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume, time: timeLog }))
       ).catch((e) => {
         const quota = String(e?.name || e?.message || '').toLowerCase().includes('quota');
-        setToast(quota ? '保存できません。表紙写真を減らしてください' : '保存に失敗しました');
+        // 何が容量を食っているかは場合によるので、写真と決めつけない。
+        // 実際の内訳は「データ管理」の保存データの大きさで見られる
+        setToast(quota ? '保存領域がいっぱいです。データ管理で大きさを確認してください' : '保存に失敗しました');
       });
     }, 500);
     return () => clearTimeout(t);
   }, [decks, activeId, streak, lastDate, dblTap, volume, timeLog, loaded]);
+
+  // 保存データの大きさ。何が容量を食っているかを「データ管理」に出すために測る。
+  //
+  // 全部を JSON 化するので安くはない。ホーム画面を開いている間だけ、
+  // 変更が落ち着いてから測る（学習中に毎回測ると重くなる）。
+  const [dataSize, setDataSize] = useState(null);
+  useEffect(() => {
+    if (scr !== 'dashboard' || !loaded) return;
+    const t = setTimeout(() => {
+      const cover = decks.reduce((n, d) => n + (d.cover ? d.cover.length : 0), 0);
+      const total = JSON.stringify(
+        buildState({ decks, active: activeId, s: streak, ld: lastDate, dt: dblTap, vol: volume, time: timeLog })
+      ).length;
+      setDataSize({
+        cover,
+        words: Math.max(0, total - cover),
+        total,
+        wordCnt: decks.reduce((n, d) => n + d.words.length, 0),
+        coverCnt: decks.filter((d) => !!d.cover).length,
+      });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [scr, loaded, decks, activeId, streak, lastDate, dblTap, volume, timeLog]);
+
+  // 端末側の空き容量。ブラウザが教えてくれる場合だけ出す（ネイティブは常に null）
+  const [quota, setQuota] = useState(null);
+  useEffect(() => {
+    if (scr !== 'dashboard') return;
+    Storage.estimateQuota().then(setQuota).catch(() => {});
+  }, [scr]);
 
   // フラッシュカードで単語が出たら、その単語を発音する。
   // 依存に flipped を入れていないので、カードをめくり直しても鳴り直さない。
@@ -1270,6 +1306,37 @@ export default function App() {
               <Text className="text-amber-700 text-sm font-medium">読込</Text>
             </TouchableOpacity>
           </View>
+
+          {/*
+            保存データの大きさ。「保存できません」が出たときに、
+            単語と表紙写真のどちらが容量を食っているかを自分で見られるようにしている。
+          */}
+          {dataSize && (
+            <View className="mt-3 pt-3 border-t border-gray-100">
+              <View className="flex-row justify-between items-center mb-1.5">
+                <Text className="text-xs font-medium text-gray-600">保存データの大きさ</Text>
+                <Text className="text-xs font-bold text-gray-700">{formatBytes(dataSize.total * 2)}</Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-xs text-gray-400">単語 {dataSize.wordCnt}語</Text>
+                <Text className="text-xs text-gray-400">{formatBytes(dataSize.words * 2)}</Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-xs text-gray-400">表紙写真 {dataSize.coverCnt}枚</Text>
+                <Text className="text-xs text-gray-400">{formatBytes(dataSize.cover * 2)}</Text>
+              </View>
+              {/*
+                使用量（quota.used）は出さない。ブラウザ側の集計が遅れていて、
+                すぐ上の「保存データの大きさ」と食い違って見えるため。
+                知りたいのは「まだどれだけ入るか」なので上限だけ出す。
+              */}
+              {quota && (
+                <Text className="text-xs text-gray-400 mt-1.5">
+                  この端末で保存できる上限 約{formatBytes(quota.quota)}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
         <BarChart7 data={last7} />

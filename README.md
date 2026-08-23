@@ -640,6 +640,7 @@ Metro が Web ビルド時だけ `.web.js` を優先して解決するので、`
 | データの保存／読込 | `src/lib/backup.js`<br>expo-file-system + expo-sharing + expo-document-picker | `src/lib/backup.web.js`<br>Blob ダウンロード + `<input type="file">` |
 | 削除の確認ダイアログ | `src/lib/confirm.js`<br>`Alert.alert` | `src/lib/confirm.web.js`<br>`window.confirm` |
 | 発音の再生 | `src/lib/speech.js`<br>expo-audio + expo-speech | `src/lib/speech.web.js`<br>`Audio` + `speechSynthesis` |
+| 学習データの保存先 | `src/lib/storage.js`<br>AsyncStorage | `src/lib/storage.web.js`<br>**IndexedDB**（下記参照） |
 
 ⚠️ **Web で `Alert.alert` は使わないこと。** react-native-web の `Alert` は `static alert() {}` という
 何もしない空実装なので、確認ダイアログが無反応になります（気づきにくい）。`confirmDestructive` を使ってください。
@@ -648,6 +649,39 @@ Metro が Web ビルド時だけ `.web.js` を優先して解決するので、`
 親の高さが内容依存だと 0px に潰れます。ネイティブでは Yoga が解決するので気づけません。
 px で指定するのが安全です（`BarChart7` がこれで一度潰れました）。
 
+### ⚠️ Web の保存先は IndexedDB（localStorage ではない）
+
+**`localStorage` は iPhone の Safari で 5MB 固定です。** 単語を数千語入れると届いてしまい、
+上限に当たると `setItem` が `QuotaExceededError` を投げて、**それ以降の学習が一切
+保存されなくなります**（実際に「保存できません」が出た。原因は単語の入れすぎ）。
+黙って失敗するのではなくエラーは出ますが、気づかず使い続けると学習記録が丸ごと消えます。
+
+そのため Web の保存先は **IndexedDB** にしてあります（`src/lib/storage.web.js`）。
+上限は端末の空き容量しだいで、iPhone でも数百MB〜数GBあります。5MB とは桁が2つ違います。
+
+⚠️ **AsyncStorage を Web で直接使わないこと。** AsyncStorage の Web 実装は
+localStorage をそのまま使うので、5MB の問題がそのまま戻ってきます。
+`src/lib/storage.js` の `getItem` / `setItem` を経由してください。
+
+**古いデータの引き継ぎ**は `getItem` の中でやっています。IndexedDB に無ければ
+localStorage を見るので、移行用のコードを別に走らせる必要はありません
+（読めた値は次の自動保存で IndexedDB 側に書かれます）。
+localStorage 側は**消しません**。移行がうまくいかなかったときの控えとして残します。
+
+### 保存データの大きさを見る
+
+ホームの「データ管理」に内訳を出しています。
+
+```
+保存データの大きさ            5.8 MB
+  単語 8000語                5.8 MB
+  表紙写真 0枚               0 B
+この端末で保存できる上限 約2.9 GB
+```
+
+⚠️ 使用量ではなく**上限**を出しています。`navigator.storage.estimate()` の `usage` は
+ブラウザ側の集計が遅れていて、すぐ上の「保存データの大きさ」と食い違って見えるためです。
+
 ### 制限
 
 - 学習データはブラウザごとに保存されます。iOS アプリ版とは共有されません
@@ -655,6 +689,10 @@ px で指定するのが安全です（`BarChart7` がこれで一度潰れま�
 
 ## データについて
 
-- 学習データは端末内の AsyncStorage にのみ保存されます（キー: `@eitango_state_v1`）
+- 学習データは端末内にのみ保存されます（キー: `@eitango_state_v2`）
+  - ネイティブ … AsyncStorage
+  - Web … IndexedDB（`eitango` データベースの `kv` ストア）
 - **アプリを削除するとデータは消えます。** 端末間の同期もありません
 - アプリ内の JSON エクスポート機能でバックアップを取れます。復元も同じくアプリ内から
+- ⚠️ 「保存できません」が出たら、**そのとき画面にある内容はまだ保存されていません。**
+  先に「保存」で JSON を書き出してからアプリを閉じること

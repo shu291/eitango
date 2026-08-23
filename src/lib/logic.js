@@ -438,6 +438,23 @@ export const formatDuration = (ms) => {
   return `${s}秒`;
 };
 
+/**
+ * バイト数を「1.2 MB」のような読める文字にする。
+ *
+ * 保存データの大きさを出すのに使う。JSON の**文字数**から呼ぶときは
+ * 2倍して渡すこと（ブラウザは保存領域を UTF-16＝1文字2バイトで数えるため）。
+ *
+ * @param {number} bytes
+ * @returns {string}
+ */
+export const formatBytes = (bytes) => {
+  if (typeof bytes !== 'number' || !isFinite(bytes) || bytes < 0) return '—';
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+};
+
 /** 英字を含むか。含んでいれば英単語の側とみなす */
 const hasLatin = (s) => /[A-Za-z]/.test(s);
 
