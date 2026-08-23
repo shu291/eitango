@@ -8,22 +8,34 @@
 // 取り込み（読込）で渡される JSON も同じ2種類がありうるので、
 // どちらでも受けられるようにしてある。
 
+import { backfillSchedule, SR_DEFAULT_EF } from './logic';
+
 export const STORAGE_KEY_V1 = '@eitango_state_v1';
 export const STORAGE_KEY_V2 = '@eitango_state_v2';
 
-/** 単語1件を、欠けている項目を埋めた形にそろえる */
-export const normalizeWord = (w, fallbackId) => ({
-  ...w,
-  id: typeof w.id === 'number' ? w.id : fallbackId,
-  en: String(w.en ?? ''),
-  ja: String(w.ja ?? ''),
-  progress: w.progress || 0,
-  correct: w.correct || 0,
-  incorrect: w.incorrect || 0,
-  streak: w.streak || 0,
-  lastReviewed: w.lastReviewed ?? null,
-  reviewedDates: w.reviewedDates || (w.lastReviewed ? [w.lastReviewed] : []),
-});
+/**
+ * 単語1件を、欠けている項目を埋めた形にそろえる。
+ *
+ * 間隔反復の項目（due / ivl / ef）は後から足したので、古いデータには入っていない。
+ * 学習済みなのに予定が無い単語には backfillSchedule が予定を後付けするので、
+ * 間隔反復を入れる前に覚えた単語もそのまま復習モードに乗る。
+ */
+export const normalizeWord = (w, fallbackId) =>
+  backfillSchedule({
+    ...w,
+    id: typeof w.id === 'number' ? w.id : fallbackId,
+    en: String(w.en ?? ''),
+    ja: String(w.ja ?? ''),
+    progress: w.progress || 0,
+    correct: w.correct || 0,
+    incorrect: w.incorrect || 0,
+    streak: w.streak || 0,
+    lastReviewed: w.lastReviewed ?? null,
+    reviewedDates: w.reviewedDates || (w.lastReviewed ? [w.lastReviewed] : []),
+    due: w.due ?? null,
+    ivl: typeof w.ivl === 'number' ? w.ivl : 0,
+    ef: typeof w.ef === 'number' ? w.ef : SR_DEFAULT_EF,
+  });
 
 /** 単語帳を1冊作る。nid（次に採番する単語ID）は省略時に単語から求める */
 export const makeDeck = ({ id, name, words = [], cover = null, nid }) => {

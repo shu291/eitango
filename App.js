@@ -40,12 +40,17 @@ import {
   getToday,
   getYesterday,
   getDaysAgo,
+  addDays,
+  daysBetween,
   shuffleArr,
   clamp,
   calcProg,
   calcWeight,
   speedFactor,
   streakFromDates,
+  nextSchedule,
+  isDue,
+  formatDue,
   addStudyTime,
   sumStudyTime,
   formatDuration,
@@ -296,6 +301,38 @@ export default function App() {
   const weakWords = useMemo(() => words.filter(isWeak).sort((a, b) => a.progress - b.progress), [words]);
   const avgP = words.length ? Math.round(words.reduce((s, w) => s + w.progress, 0) / words.length) : 0;
 
+  // ===== 間隔反復 =====
+  // 今日やるべき単語（復習日が来ているもの）。期限を過ぎたものほど前に並べる
+  const dueWords = useMemo(() => {
+    const td = getToday();
+    return words
+      .filter((w) => isDue(w, td))
+      .sort((a, b) => String(a.due).localeCompare(String(b.due)));
+  }, [words]);
+
+  // 予定が付いている単語の数（＝一度は学習した単語）
+  const scheduledCnt = useMemo(() => words.filter((w) => !!w.due).length, [words]);
+
+  // 今日ぶんを終えたときに「次はいつか」を出すための、一番近い予定日
+  const nextDueDay = useMemo(() => {
+    const td = getToday();
+    let best = null;
+    for (const w of words) if (w.due && w.due > td && (!best || w.due < best)) best = w.due;
+    return best;
+  }, [words]);
+
+  // これから7日ぶんの復習予定（統計画面のグラフ用）。
+  // 今日の欄には期限を過ぎたぶんも含める（放置した単語が消えて見えないように）
+  const dueForecast = useMemo(() => {
+    const td = getToday();
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = addDays(td, i);
+      const count = words.filter((w) => (i === 0 ? isDue(w, td) : w.due === day)).length;
+      const [, m, d] = day.split('-');
+      return { date: `${Number(m)}/${Number(d)}`, count };
+    });
+  }, [words]);
+
   // 音量の設定を再生側へ渡す
   useEffect(() => {
     setSpeechVolume(volume);
@@ -363,15 +400,20 @@ export default function App() {
   }, []);
 
   const poolInfo = useMemo(() => {
+    const td = getToday();
     const s = clamp(rStart, 1, words.length);
     const e = clamp(rEnd, s, words.length);
     const range = words.slice(s - 1, e);
     const nw = range.filter(isNew);
     const wk = range.filter(isWeak);
+    const du = range.filter((w) => isDue(w, td));
     let pool = range;
     if (wordSel === 'new') pool = nw.length > 0 ? nw : range;
     else if (wordSel === 'weak') pool = wk.length > 0 ? wk : range;
-    return { total: range.length, pool: pool.length, nw: nw.length, wk: wk.length };
+    // 復習だけは対象が無くても範囲全体に広げない。
+    // 「今日の復習は0語」と出したのに全部出題されては意味が逆になる
+    else if (wordSel === 'due') pool = du;
+    return { total: range.length, pool: pool.length, nw: nw.length, wk: wk.length, du: du.length };
   }, [words, rStart, rEnd, wordSel]);
 
   const actualNumQ = Math.min(numQ, poolInfo.pool);
@@ -415,6 +457,7 @@ export default function App() {
     if (wordFilter === 'weak') base = base.filter(isWeak);
     else if (wordFilter === 'new') base = base.filter(isNew);
     else if (wordFilter === 'mastered') base = base.filter((w) => w.progress >= 80);
+    else if (wordFilter === 'due') base = base.filter((w) => isDue(w, getToday()));
     return base;
   }, [words, search, wordFilter]);
 
@@ -436,6 +479,10 @@ export default function App() {
       ws.map((w) => {
         if (w.id !== id) return w;
         const { progress, streak: ns } = calcProg(w, ok, mode, elapsedMs);
+        // 次回復習日は **streak を更新する前の w** から計算する。
+        // nextSchedule は w.streak を「これまでの連続正解数」として読むため、
+        // 更新後の値を渡すと間隔が1段階ぶん先走る
+        const { due, ivl, ef } = nextSchedule(w, ok, td, elapsedMs);
         const dates = w.reviewedDates || [];
         const newDates = dates.includes(td) ? dates : [...dates, td];
         const cutoff = new Date();
@@ -450,6 +497,9 @@ export default function App() {
           incorrect: w.incorrect + (ok ? 0 : 1),
           lastReviewed: td,
           reviewedDates: trimmed,
+          due,
+          ivl,
+          ef,
         };
       })
     );
@@ -461,10 +511,19 @@ export default function App() {
   const weightedPick = (pool, n) => {
     const count = Math.min(n, pool.length);
     if (count <= 0) return [];
+    // 復習モードは復習日が早い（＝より長く放置している）ものから順に出す。
+    // 出題数を絞ったときに、期限を過ぎた単語が後回しにならないようにするため
+    if (wordSel === 'due') {
+      return [...pool].sort((a, b) => String(a.due).localeCompare(String(b.due))).slice(0, count);
+    }
     // 新規／苦手モードは getPool の時点で絞り込み済みなので、その中では均等に選ぶ
     if (wordSel !== 'normal') return shuffleArr(pool).slice(0, count);
+    // 出題数が「全」のときは結局どの語も選ばれるので、重み付けを回さず並べ替えるだけにする。
+    // 下の抽選は O(n²) で、1900語だと数百万回まわって目に見えて待たされる
+    if (count >= pool.length) return shuffleArr(pool);
     // 通常モードは習熟度と間違い率で重みを付けて選ぶ（calcWeight を参照）
-    const items = pool.map((w) => ({ w, wt: calcWeight(w) }));
+    const td = getToday();
+    const items = pool.map((w) => ({ w, wt: calcWeight(w, td) }));
     const sel = [];
     const rem = [...items];
     while (sel.length < count && rem.length > 0) {
@@ -492,25 +551,32 @@ export default function App() {
     } else if (wordSel === 'weak') {
       const f = pool.filter(isWeak);
       if (f.length > 0) pool = f;
+    } else if (wordSel === 'due') {
+      // 復習は該当が無ければ 0 語のまま返す（poolInfo と同じ理由でフォールバックしない）
+      const td = getToday();
+      pool = pool.filter((w) => isDue(w, td));
     }
     return pool;
   };
 
-  const openConfig = (mode) => {
+  // sel を渡すと出題モード（通常／新規／苦手／復習）を選んだ状態で設定画面を開く
+  const openConfig = (mode, sel = 'normal') => {
     setCfgMode(mode);
     setRStart(1);
     setREnd(words.length);
     setRST('1');
     setRET(String(words.length));
-    setWordSel('normal');
+    setWordSel(sel);
     setNumQ(9999);
     setScr('config');
   };
 
   const startFromConfig = () => {
     const pool = getPool();
-    if (pool.length < 2) {
-      setToast('対象単語が不足しています');
+    // 復習モードは「今日ぶんを終わらせる」のが目的なので、残り1語でも始められる
+    const minWords = wordSel === 'due' ? 1 : 2;
+    if (pool.length < minWords) {
+      setToast(wordSel === 'due' ? '今日の復習はもうありません' : '対象単語が不足しています');
       return;
     }
     if (['quiz', 'speed'].includes(cfgMode) && words.length < 4) {
@@ -1011,6 +1077,72 @@ export default function App() {
           </View>
         </View>
 
+        {/*
+          今日の復習（間隔反復）。
+          忘れる直前に復習するのが一番効率がよいので、ホーム画面の上のほうに置いている。
+          まだ一度も学習していない単語帳では予定が1件も無いので、そのときは出さない。
+        */}
+        {scheduledCnt > 0 && (
+          <View
+            className={`rounded-2xl p-5 border ${
+              dueWords.length > 0 ? 'bg-indigo-50 border-indigo-100' : 'bg-emerald-50 border-emerald-100'
+            }`}
+          >
+            <View className="flex-row justify-between items-center mb-3">
+              <View className="flex-row items-center" style={{ gap: 6 }}>
+                <Icon
+                  name={dueWords.length > 0 ? 'calendar' : 'checkmark-circle'}
+                  size={18}
+                  color={dueWords.length > 0 ? '#4f46e5' : '#059669'}
+                />
+                <Text className={`font-semibold ${dueWords.length > 0 ? 'text-indigo-700' : 'text-emerald-700'}`}>
+                  今日の復習
+                </Text>
+              </View>
+              {dueWords.length > 0 && (
+                <View className="bg-indigo-100 px-2.5 py-1 rounded-full">
+                  <Text className="text-indigo-600 text-xs font-bold">{dueWords.length}語</Text>
+                </View>
+              )}
+            </View>
+
+            {dueWords.length > 0 ? (
+              <>
+                <View style={{ gap: 6 }}>
+                  {dueWords.slice(0, 3).map((w) => {
+                    const over = daysBetween(getToday(), w.due);
+                    return (
+                      <View key={w.id} className="flex-row items-center justify-between bg-white/70 rounded-lg px-3 py-2">
+                        <Text className="text-sm font-medium text-gray-800">{w.en}</Text>
+                        <View className="flex-row items-center" style={{ gap: 8 }}>
+                          <Text className="text-xs text-gray-500" numberOfLines={1}>
+                            {w.ja}
+                          </Text>
+                          {/* 期限を過ぎているものは何日放置しているかを出す */}
+                          {over < 0 && <Text className="text-xs font-bold text-rose-500">{-over}日超過</Text>}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+                {dueWords.length > 3 && (
+                  <Text className="text-xs text-gray-400 mt-2 text-center">ほか {dueWords.length - 3} 語</Text>
+                )}
+                <TouchableOpacity onPress={() => openConfig('flashcard', 'due')} className="bg-indigo-600 rounded-xl py-2.5 mt-3">
+                  <Text className="text-white text-sm font-bold text-center">復習を始める</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text className="text-sm text-emerald-700">
+                今日の復習は終わりました 🎉
+                {nextDueDay && (
+                  <Text className="text-emerald-600">{`\n次は${formatDue(nextDueDay, getToday())}（${scheduledCnt}語が予定に乗っています）`}</Text>
+                )}
+              </Text>
+            )}
+          </View>
+        )}
+
         <View className="bg-white rounded-2xl p-5" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className="font-semibold text-gray-800">全体の進捗</Text>
@@ -1198,25 +1330,28 @@ export default function App() {
               <Icon name="filter" size={14} color="#374151" />
               <Text className="font-semibold text-gray-800 text-sm">出題モード</Text>
             </View>
-            <View className="flex-row" style={{ gap: 8 }}>
+            {/* 4つ並ぶので、375px 幅でも折り返さないよう文字と余白を1段階詰めてある */}
+            <View className="flex-row" style={{ gap: 6 }}>
               {[
-                { k: 'normal', l: '🎯 通常', d: 'バランス' },
-                { k: 'new', l: '✨ 新規', d: `${poolInfo.nw}語` },
-                { k: 'weak', l: '💪 苦手', d: `${poolInfo.wk}語` },
+                { k: 'normal', l: '🎯 通常', d: 'バランス', on: 'bg-indigo-50 border-indigo-500', tx: 'text-indigo-700' },
+                { k: 'new', l: '✨ 新規', d: `${poolInfo.nw}語`, on: 'bg-emerald-50 border-emerald-500', tx: 'text-emerald-700' },
+                { k: 'weak', l: '💪 苦手', d: `${poolInfo.wk}語`, on: 'bg-rose-50 border-rose-500', tx: 'text-rose-700' },
+                { k: 'due', l: '📅 復習', d: `${poolInfo.du}語`, on: 'bg-violet-50 border-violet-500', tx: 'text-violet-700' },
               ].map((mi) => {
                 const active = wordSel === mi.k;
-                const bg = active
-                  ? mi.k === 'new'
-                    ? 'bg-emerald-50 border-emerald-500'
-                    : mi.k === 'weak'
-                    ? 'bg-rose-50 border-rose-500'
-                    : 'bg-indigo-50 border-indigo-500'
-                  : 'bg-white border-gray-200';
-                const tc = active ? (mi.k === 'new' ? 'text-emerald-700' : mi.k === 'weak' ? 'text-rose-700' : 'text-indigo-700') : 'text-gray-600';
+                const tc = active ? mi.tx : 'text-gray-600';
                 return (
-                  <TouchableOpacity key={mi.k} onPress={() => setWordSel(mi.k)} className={`flex-1 rounded-xl py-2 px-2 border-2 ${bg}`}>
-                    <Text className={`font-semibold text-sm text-center ${tc}`}>{mi.l}</Text>
-                    <Text className={`text-xs text-center ${tc} opacity-70`}>{mi.d}</Text>
+                  <TouchableOpacity
+                    key={mi.k}
+                    onPress={() => setWordSel(mi.k)}
+                    className={`flex-1 rounded-xl py-2 px-1 border-2 ${active ? mi.on : 'bg-white border-gray-200'}`}
+                  >
+                    <Text className={`font-semibold text-xs text-center ${tc}`} numberOfLines={1}>
+                      {mi.l}
+                    </Text>
+                    <Text className={`text-xs text-center ${tc} opacity-70`} numberOfLines={1}>
+                      {mi.d}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1283,8 +1418,20 @@ export default function App() {
 
           {/* 3行あった要約を1行にまとめて縦幅を稼いでいる */}
           <View className="bg-indigo-50 rounded-xl px-3 py-2 border border-indigo-100 flex-row items-center justify-between">
-            <Text className="text-xs text-gray-600">
-              No.{rStart}〜{rEnd} ／ 対象<Text className="font-bold text-indigo-600">{poolInfo.pool}</Text>語
+            <Text className="text-xs text-gray-600 flex-1 pr-2">
+              {wordSel === 'due' ? (
+                poolInfo.du > 0 ? (
+                  <>
+                    復習日が来た<Text className="font-bold text-indigo-600">{poolInfo.du}</Text>語だけ出題します
+                  </>
+                ) : (
+                  '今日の復習はもうありません'
+                )
+              ) : (
+                <>
+                  No.{rStart}〜{rEnd} ／ 対象<Text className="font-bold text-indigo-600">{poolInfo.pool}</Text>語
+                </>
+              )}
             </Text>
             <Text className="text-xl font-black text-indigo-600">
               {dNQ}
@@ -1705,6 +1852,7 @@ export default function App() {
   const renderWords = () => {
     const filterTabs = [
       { k: 'all', l: '全て', n: words.length },
+      { k: 'due', l: '今日の復習', n: dueWords.length },
       { k: 'weak', l: '苦手', n: weakWords.length },
       { k: 'new', l: '未学習', n: newCnt },
       { k: 'mastered', l: 'マスター', n: mast },
@@ -1760,9 +1908,15 @@ export default function App() {
             </View>
             <Text className={`text-xs font-bold ${lv.c}`}>{w.progress}%</Text>
           </View>
-          <View className="flex-row items-center" style={{ gap: 8 }}>
+          <View className="flex-row items-center" style={{ gap: 8, flexWrap: 'wrap' }}>
             <LvBadge w={w} />
             <Text className="text-xs text-gray-400">✓{w.correct} ✗{w.incorrect}</Text>
+            {/* 次回復習日。一度も学習していない単語には予定が付かないので出ない */}
+            {w.due && (
+              <Text className={`text-xs ${isDue(w, getToday()) ? 'font-bold text-violet-600' : 'text-gray-400'}`}>
+                📅 {formatDue(w.due, getToday())}
+              </Text>
+            )}
           </View>
         </View>
       );
@@ -2130,6 +2284,9 @@ export default function App() {
     const t7 = sumStudyTime(timeLog, last7keys);
     const tAll = sumStudyTime(timeLog);
 
+    // 復習予定のグラフで、一番高いバーに合わせる基準
+    const dueMax = Math.max(1, ...dueForecast.map((d) => d.count));
+
     const lvDist = [
       { name: '完璧(90%↑)', count: words.filter((w) => w.progress >= 90).length, color: '#9333ea' },
       { name: 'マスター(80-89%)', count: words.filter((w) => w.progress >= 80 && w.progress < 90).length, color: '#10b981' },
@@ -2197,6 +2354,49 @@ export default function App() {
               <Text className="text-xs text-gray-400 text-center mt-3">
                 フラッシュカードで学習すると記録がたまります
               </Text>
+            )}
+          </View>
+
+          {/*
+            復習予定（間隔反復）。
+            バーの高さは % ではなく px で出す。Web ではパーセント指定が 0px に潰れる
+            （BarChart7 と同じ理由。README の「Web 版 / ネイティブとの実装の違い」参照）。
+          */}
+          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
+            <View className="flex-row justify-between items-center mb-1">
+              <Text className="font-semibold text-gray-800">📅 これからの復習予定</Text>
+              <Text className="text-xs text-gray-400">予定あり {scheduledCnt} 語</Text>
+            </View>
+            {scheduledCnt === 0 ? (
+              <Text className="text-xs text-gray-400 text-center py-6">学習すると復習の予定が入ります</Text>
+            ) : (
+              <>
+                <Text className="text-xs text-gray-400 mb-3">
+                  忘れそうな頃に出します。「今日」には期限を過ぎたぶんも含みます
+                </Text>
+                <View className="flex-row items-end justify-between" style={{ paddingHorizontal: 4 }}>
+                  {dueForecast.map((d, i) => (
+                    <View key={d.date} className="items-center" style={{ flex: 1 }}>
+                      <Text className="text-xs text-gray-400 mb-1">{d.count > 0 ? d.count : ''}</Text>
+                      <View style={{ height: 64, width: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <View
+                          style={{
+                            width: '60%',
+                            height: Math.max(2, (d.count / dueMax) * 64),
+                            // 今日ぶんだけ色を変えて「今やるもの」を目立たせる
+                            backgroundColor: i === 0 ? '#7c3aed' : '#c4b5fd',
+                            borderTopLeftRadius: 4,
+                            borderTopRightRadius: 4,
+                          }}
+                        />
+                      </View>
+                      <Text className={`text-xs mt-1 ${i === 0 ? 'font-bold text-violet-600' : 'text-gray-400'}`}>
+                        {i === 0 ? '今日' : d.date}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </>
             )}
           </View>
 

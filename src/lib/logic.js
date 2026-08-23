@@ -13,6 +13,25 @@ export const getDaysAgo = (n) => {
   return localDateStr(d);
 };
 
+/** 'YYYY-MM-DD' に n 日足した 'YYYY-MM-DD'。不正な文字列なら null */
+export const addDays = (dateStr, n) => {
+  const [y, m, d] = String(dateStr || '').split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return localDateStr(dt);
+};
+
+/** b - a を日数で返す（a より b が後なら正）。不正な文字列なら null */
+export const daysBetween = (a, b) => {
+  const pa = String(a || '').split('-').map(Number);
+  const pb = String(b || '').split('-').map(Number);
+  if (!pa[0] || !pb[0]) return null;
+  const da = new Date(pa[0], pa[1] - 1, pa[2]);
+  const db = new Date(pb[0], pb[1] - 1, pb[2]);
+  return Math.round((db - da) / 86400000);
+};
+
 export const shuffleArr = (a) => {
   const b = [...a];
   for (let i = b.length - 1; i > 0; i--) {
@@ -110,20 +129,22 @@ export const isWeak = (w) => {
 
 /**
  * 通常モードで、その単語がどれだけ出題されやすいかの重み。
- * 大きいほど出やすい。返す値はだいたい 0.4〜5 の範囲。
+ * 大きいほど出やすい。返す値はだいたい 0.15〜6 の範囲。
  *
- * 4つを掛け合わせて決める:
+ * 5つを掛け合わせて決める:
  *   1. 習熟度   … 低いほど重い
  *   2. 間違い率 … 高いほど重い。ただし試行回数が少ないと当てにならないので、
  *                 回数に応じて効き目を割り引く（1回中1回ミスと20回中8回ミスを
  *                 同列に扱わないため）
  *   3. 未学習   … まだ一度も出ていない語が埋もれないよう下駄をはかせる
  *   4. 連続正解 … 3連続以上で正解できている語は少し控える
+ *   5. 直近性   … さっき出したばかりの語を控える（recencyFactor 参照）
  *
- * @param {{progress?: number, correct?: number, incorrect?: number, streak?: number}} w
+ * @param {{progress?: number, correct?: number, incorrect?: number, streak?: number, due?: string, lastReviewed?: string}} w
+ * @param {string} [todayStr] 直近性の判定に使う基準日
  * @returns {number}
  */
-export const calcWeight = (w) => {
+export const calcWeight = (w, todayStr = getToday()) => {
   const correct = w.correct || 0;
   const incorrect = w.incorrect || 0;
   const attempts = correct + incorrect;
@@ -144,7 +165,35 @@ export const calcWeight = (w) => {
   // 3連続正解以上は 0.7倍。今は他の語に時間を使うべき
   const byStreak = (w.streak || 0) >= 3 ? 0.7 : 1;
 
-  return byProgress * byError * byNew * byStreak;
+  return byProgress * byError * byNew * byStreak * recencyFactor(w, todayStr);
+};
+
+/**
+ * さっき出したばかりの単語を続けて出さないための重み。
+ *
+ * これが無いと、同じ日に2回3回と学習したときに **1回目で答えたばかりの単語が
+ * そのまま2回目にも出てくる**（実測で「同じ語が5セッション連続」が起きていた）。
+ * 「同じような単語ばかり出る」と感じる主な原因がこれ。
+ *
+ * 間隔反復の `due`（次回復習日）をそのまま流用する。予定が先の語ほど下げ、
+ * 復習日が来ている語は少し後押しする。
+ *
+ * ⚠️ 未学習の語（`due` が無い）は 1 を返して影響を与えない。
+ * ここで下げてしまうと、まだ一度も出ていない語が永久に出なくなる。
+ *
+ * @param {object} w
+ * @param {string} todayStr
+ * @returns {number} 0.25〜1.3
+ */
+export const recencyFactor = (w, todayStr) => {
+  if (!w.due) return 1;
+  // 今日もう出した語は大きく下げる。同じセッション内・連続セッションでの重複を防ぐ
+  if (w.lastReviewed === todayStr) return 0.25;
+  const left = daysBetween(todayStr, w.due);
+  if (left === null) return 1;
+  if (left <= 0) return 1.3; // 復習日が来ている＝そろそろ忘れる頃
+  // 予定が先の語ほど下げる。7日先で 0.37、それ以上は 0.35 で頭打ち
+  return clamp(1 - left * 0.09, 0.35, 1);
 };
 
 /**
@@ -175,6 +224,143 @@ export const streakFromDates = (dateSet, todayStr) => {
   return n;
 };
 
+// ===== 間隔反復（忘却曲線） =====
+//
+// 「この単語は次にいつ復習すべきか」を決める部分。SM-2（Anki が使っているのと
+// 同じ系統のアルゴリズム）を、このアプリに合わせて調整して使っている。
+//
+// 考え方: 正解し続けた単語ほど復習の間隔を伸ばし、間違えた単語は明日また出す。
+// 忘れる直前に復習するのが一番効率がよい、という研究にもとづく。
+//
+// 既存の習熟度（progress 0〜100）は**そのまま残して併存**させている。
+//   - progress … 「どれくらい覚えているか」の目安。表示と重み付けに使う
+//   - 間隔反復 … 「次にいつ出すか」の予定。復習モードの出題対象を決める
+// 片方だけでは足りない（progress は日付を持たず、間隔反復は習熟度を表さない）。
+//
+// 単語が持つ項目（すべて後から足したものなので、無い場合の既定値がある）:
+//   due  … 次回復習日 'YYYY-MM-DD'。null なら未スケジュール（＝一度も学習していない）
+//   ivl  … 現在の間隔（日数）
+//   ef   … 難易度係数。覚えやすい単語ほど大きく、間隔が速く伸びる
+
+export const SR_MIN_EF = 1.3;
+export const SR_MAX_EF = 2.5;
+export const SR_DEFAULT_EF = 2.5;
+/** 間隔の上限（日）。1年を超えて先の予定を立てても意味がないので頭打ちにする */
+export const SR_MAX_IVL = 365;
+
+/**
+ * 手ごたえを 0〜5 で表す（SM-2 の quality）。
+ *
+ * 本来は本人に5段階で申告させるが、このアプリの操作は「正解／不正解」の2択なので、
+ * **答えるまでの速さ**で 3〜5 を分けている。すぐ答えられた＝手ごたえがある。
+ *
+ * 時間を測っているのはフラッシュカードだけなので、他のモードは常に 4（ふつう）。
+ *
+ * @param {boolean} ok 正解したか
+ * @param {number} [elapsedMs] 答えるまでの時間
+ * @returns {number} 2（不正解）/ 3（遅い）/ 4（ふつう）/ 5（速い）
+ */
+export const srQuality = (ok, elapsedMs) => {
+  if (!ok) return 2;
+  if (typeof elapsedMs !== 'number' || !isFinite(elapsedMs) || elapsedMs < 0) return 4;
+  if (elapsedMs <= 3000) return 5;
+  if (elapsedMs >= 8000) return 3;
+  return 4;
+};
+
+/**
+ * 次回復習日を計算する。
+ *
+ * 間隔の伸び方:
+ *   1回目の正解 → 1日後
+ *   2回目の正解 → 3日後
+ *   3回目以降   → 前回の間隔 × ef（覚えやすい単語ほど速く伸びる）
+ *   不正解      → 1日後にリセット（間隔は最初からやり直し）
+ *
+ * ⚠️ 連続正解数は `word.streak` を見ている（**更新前**の値を渡すこと）。
+ * SM-2 の「連続何回正解したか」と streak は同じ意味なので、別に持つと必ずずれる。
+ *
+ * @param {object} w 単語（更新前）
+ * @param {boolean} ok 正解したか
+ * @param {string} todayStr 'YYYY-MM-DD'
+ * @param {number} [elapsedMs] 答えるまでの時間
+ * @returns {{due: string, ivl: number, ef: number}}
+ */
+export const nextSchedule = (w, ok, todayStr, elapsedMs) => {
+  const q = srQuality(ok, elapsedMs);
+  const prevEf = typeof w.ef === 'number' ? w.ef : SR_DEFAULT_EF;
+  const prevIvl = typeof w.ivl === 'number' && w.ivl > 0 ? w.ivl : 0;
+  const reps = w.streak || 0;
+
+  // SM-2 の難易度係数の更新式。q=5 で +0.1、q=4 で 増減なし、q=2 で -0.32
+  const ef = clamp(prevEf + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)), SR_MIN_EF, SR_MAX_EF);
+
+  let ivl;
+  if (!ok) ivl = 1;
+  else if (reps === 0) ivl = 1;
+  else if (reps === 1) ivl = 3;
+  else ivl = clamp(Math.round((prevIvl || 3) * ef), 1, SR_MAX_IVL);
+
+  return { due: addDays(todayStr, ivl), ivl, ef: Math.round(ef * 100) / 100 };
+};
+
+/**
+ * 今日やるべき単語か（復習日が来ているか）。
+ *
+ * 一度も学習していない単語（due が無い）は **対象外**。新規の単語は
+ * 「新規モード」の担当で、復習モードは一度覚えた単語を忘れる前に出すためのもの。
+ *
+ * @param {object} w
+ * @param {string} todayStr
+ * @returns {boolean}
+ */
+export const isDue = (w, todayStr) => !!w.due && w.due <= todayStr;
+
+/**
+ * 学習済みなのにまだ予定が無い単語へ、予定を後付けする。
+ *
+ * 間隔反復は後から足した機能なので、それ以前に覚えた単語には due が無い。
+ * 何もしないと復習モードに1語も出てこないため、これまでの記録
+ * （習熟度と正答率）からおおよその予定を組み立てる。
+ *
+ * 予定がすでにある単語と、一度も学習していない単語には手を触れない（何度呼んでも安全）。
+ *
+ * @param {object} w
+ * @returns {object} 予定を足した単語（変更が無ければ同じ参照を返す）
+ */
+export const backfillSchedule = (w) => {
+  if (!w || w.due || !w.lastReviewed) return w;
+
+  const p = clamp(w.progress || 0, 0, 100);
+  // 習熟度が高い＝よく覚えている＝間隔を長めに見積もってよい
+  const ivl = p >= 90 ? 14 : p >= 80 ? 10 : p >= 60 ? 6 : p >= 40 ? 3 : p >= 20 ? 2 : 1;
+
+  // 難易度係数は正答率から。0% → 1.3（最も難しい）/ 100% → 2.5（最も易しい）
+  const attempts = (w.correct || 0) + (w.incorrect || 0);
+  const rate = attempts > 0 ? (w.correct || 0) / attempts : 0.5;
+  const ef = clamp(SR_MIN_EF + rate * (SR_MAX_EF - SR_MIN_EF), SR_MIN_EF, SR_MAX_EF);
+
+  const due = addDays(w.lastReviewed, ivl);
+  if (!due) return w;
+  return { ...w, due, ivl, ef: Math.round(ef * 100) / 100 };
+};
+
+/**
+ * 復習日までの残り日数を「明日」「3日後」のような文にする。
+ * @param {string} due 'YYYY-MM-DD'
+ * @param {string} todayStr
+ * @returns {string}
+ */
+export const formatDue = (due, todayStr) => {
+  if (!due) return '未定';
+  const d = daysBetween(todayStr, due);
+  if (d === null) return '未定';
+  if (d < 0) return `${-d}日超過`;
+  if (d === 0) return '今日';
+  if (d === 1) return '明日';
+  return `${d}日後`;
+};
+
 // ===== 学習時間の記録 =====
 //
 // 時間を測れるのはフラッシュカードだけ（カードが出てから答えるまでを計っている）。
@@ -186,9 +372,13 @@ export const streakFromDates = (dateSet, todayStr) => {
  * 1語に費やした時間として数える上限（ミリ秒）。
  *
  * カードを開いたまま放置されると、その1語だけで何十分も加算されてしまい
- * 「勉強時間」が実態とかけ離れる。長考しても1分と見なして頭打ちにする。
+ * 「勉強時間」が実態とかけ離れる。頭打ちを設けて放置ぶんを切り捨てる。
+ *
+ * 15秒にしている。1語に15秒以上かけているのは、考えているのではなく
+ * 手が止まっている（＝放置）とみなす。速さボーナスも8秒で最低倍率に達するので、
+ * 「まじめに考えている」と扱う範囲はそもそも8秒までという設計になっている。
  */
-export const MAX_WORD_MS = 60000;
+export const MAX_WORD_MS = 15000;
 
 /** 30日より古い記録は捨てる（単語の reviewedDates と同じ扱い） */
 const TIME_KEEP_DAYS = 30;
