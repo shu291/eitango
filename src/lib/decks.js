@@ -8,7 +8,7 @@
 // 取り込み（読込）で渡される JSON も同じ2種類がありうるので、
 // どちらでも受けられるようにしてある。
 
-import { backfillSchedule, SR_DEFAULT_EF } from './logic';
+import { backfillSchedule, repairWord, SR_DEFAULT_EF } from './logic';
 
 export const STORAGE_KEY_V1 = '@eitango_state_v1';
 export const STORAGE_KEY_V2 = '@eitango_state_v2';
@@ -19,9 +19,13 @@ export const STORAGE_KEY_V2 = '@eitango_state_v2';
  * 間隔反復の項目（due / ivl / ef）は後から足したので、古いデータには入っていない。
  * 学習済みなのに予定が無い単語には backfillSchedule が予定を後付けするので、
  * 間隔反復を入れる前に覚えた単語もそのまま復習モードに乗る。
+ *
+ * repairWord は、貼り付けの区切りを読み違えていた頃に壊れた単語を直す。
+ * 英単語の欄に意味が混ざったままだと出題時に答えが見えてしまうので、
+ * 読み込みのたびに直す（正常な単語には触らないので何度通しても安全）。
  */
 export const normalizeWord = (w, fallbackId) =>
-  backfillSchedule({
+  backfillSchedule(repairWord({
     ...w,
     id: typeof w.id === 'number' ? w.id : fallbackId,
     en: String(w.en ?? ''),
@@ -35,7 +39,27 @@ export const normalizeWord = (w, fallbackId) =>
     due: w.due ?? null,
     ivl: typeof w.ivl === 'number' ? w.ivl : 0,
     ef: typeof w.ef === 'number' ? w.ef : SR_DEFAULT_EF,
-  });
+  }));
+
+/**
+ * 保存されていた生データの中に、貼り付けで壊れた単語が何語あるか数える。
+ *
+ * normalizeWord が黙って直してしまうので、直した事実を知らせるために
+ * **直す前の生データ**を見て数える。実際に直せるものだけを数えるので、
+ * 和→英の単語帳のように触らないものは含まれない。
+ *
+ * @param {any} raw JSON.parse した保存データ（v1 / v2 どちらでも可）
+ * @returns {number}
+ */
+export const countBrokenWords = (raw) => {
+  if (!raw || typeof raw !== 'object') return 0;
+  const lists = Array.isArray(raw.decks)
+    ? raw.decks.map((d) => (d && Array.isArray(d.words) ? d.words : []))
+    : [Array.isArray(raw.w) ? raw.w : []];
+  let n = 0;
+  for (const list of lists) for (const w of list) if (repairWord(w) !== w) n++;
+  return n;
+};
 
 /** 単語帳を1冊作る。nid（次に採番する単語ID）は省略時に単語から求める */
 export const makeDeck = ({ id, name, words = [], cover = null, nid }) => {

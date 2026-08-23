@@ -462,22 +462,49 @@ const dropLeadingMarkers = (parts) => {
   return parts.slice(i);
 };
 
+/**
+ * 英単語の側として妥当か。
+ *
+ * 区切りを読み違えると、英単語の欄に通し番号や意味まで入り込む
+ * （例: `264	prompt	即座の`）。この状態で出題すると
+ * **問題文に答えが混ざって見えてしまう**ので、返す前に必ずここで確かめ、
+ * おかしければ次の区切りで割り直す。
+ *
+ * 弾くのは2つだけ。
+ *   1. タブを含む     … 割れていない列がそのまま残っている
+ *   2. 英字と日本語が混ざっている … 意味を巻き込んでいる（`apple,りんご` など）
+ *
+ * 日本語だけの場合は通す。`りんご	apple` のように和→英で貼り付けた単語帳を
+ * これまで通り受けるため（dropLeadingMarkers の説明も参照）。
+ * `in spite of` のような複数語や `P.S.` のような記号入りも通る。
+ */
+const looksLikeEn = (s) => !!s && !s.includes('\t') && !(hasLatin(s) && JA_REGEX.test(s));
+
 export const parseLine = (line) => {
   const tr = line.trim();
   if (!tr) return null;
-  for (const sep of [',', '\t', '　']) {
-    if (tr.includes(sep)) {
-      const p = dropLeadingMarkers(tr.split(sep).map((s) => s.trim()).filter(Boolean));
-      if (p.length >= 2) {
-        let i = /^\d+$/.test(p[0]) ? 1 : 0;
-        if (p.length - i >= 2) {
-          const en = p[i];
-          const ja = p.slice(i + 1).join(sep === ',' ? '、' : sep).trim();
-          if (en && ja) return { en, ja };
-        }
-      }
-    }
+
+  // 区切りは **タブ → 全角スペース → カンマ** の順に試す。
+  //
+  // ⚠️ カンマを最後に回しているのが要点。意味には
+  // `即座の, 素早い； ～を(…するよう)促す, 刺激する(to do)` のようにカンマが
+  // 入ることがよくあり、先に試すと意味の途中で切ってしまう。
+  // （以前はカンマが最優先で、この行の英単語が `264	prompt	即座の` になっていた）
+  // タブと全角スペースは意味の中にはまず現れないので、こちらの方が信用できる。
+  for (const sep of ['\t', '　', ',']) {
+    if (!tr.includes(sep)) continue;
+    const p = dropLeadingMarkers(tr.split(sep).map((s) => s.trim()).filter(Boolean));
+    if (p.length < 2) continue;
+    const i = /^\d+$/.test(p[0]) ? 1 : 0;
+    if (p.length - i < 2) continue;
+    const en = p[i];
+    // 3つ以上に割れたら、残りは意味の続きとみなしてつなぎ直す。
+    // タブのまま繋ぐと表示が改行のように崩れるので、読める区切りに置き換える
+    const ja = p.slice(i + 1).join(sep === ',' ? '、' : '　').trim();
+    // 読み違えていたら return せず、次の区切りで試す
+    if (looksLikeEn(en) && ja) return { en, ja };
   }
+
   // 半角スペース区切りの場合も、行頭の印（新／★／通し番号など）を落としてから境目を探す
   const ws = tr.split(/\s+/).filter(Boolean);
   const kept = dropLeadingMarkers(ws);
@@ -489,18 +516,52 @@ export const parseLine = (line) => {
   if (ji > 0) {
     const en = cl.substring(0, ji).trim();
     const ja = cl.substring(ji).trim();
-    if (en && ja) return { en, ja };
+    if (looksLikeEn(en) && ja) return { en, ja };
   }
   const p = dropLeadingMarkers(tr.split(/\s{2,}/).map((s) => s.trim()).filter(Boolean));
   if (p.length >= 2) {
-    let i = /^\d+$/.test(p[0]) ? 1 : 0;
+    const i = /^\d+$/.test(p[0]) ? 1 : 0;
     if (p.length - i >= 2) {
       const en = p[i];
       const ja = p.slice(i + 1).join(' ').trim();
-      if (en && ja) return { en, ja };
+      if (looksLikeEn(en) && ja) return { en, ja };
     }
   }
   return null;
+};
+
+/**
+ * 英単語の欄が壊れているか。looksLikeEn の裏返し。
+ *
+ * タブが残っている、または英字と日本語が混ざっているものを壊れているとみなす。
+ * 日本語だけの欄は和→英の単語帳としてありうるので壊れ扱いしない。
+ */
+export const isBrokenEn = (en) => !!en && (en.includes('\t') || (hasLatin(en) && JA_REGEX.test(en)));
+
+/**
+ * 貼り付けの読み違いで壊れた単語を直す。
+ *
+ * カンマを最優先で区切っていた頃、意味にカンマが入った行が途中で切られ、
+ * 英単語の欄に `264	prompt	即座の` のように通し番号・英単語・意味の先頭まで
+ * まとめて入ってしまっていた。この状態だと出題時に問題文へ答えが混ざる。
+ *
+ * 英単語の欄を直した parseLine で割り直し、巻き込まれていた意味は元の意味の
+ * **前に**戻す（`265	abandon	～を捨てる` ＋ `見捨てる` → `～を捨てる、見捨てる`）。
+ * 意味の前半が欠けたままにならないよう、後ろではなく前に付ける。
+ *
+ * 割り直せない場合は触らない。日本語を英単語の欄に入れている単語帳
+ * （和→英で使っている場合）は parseLine が null を返すのでそのまま残る。
+ * 直したあとは条件に当たらなくなるので、何度呼んでも安全。
+ *
+ * @param {object} w 単語
+ * @returns {object} 直した単語（変更が無ければ同じ参照を返す）
+ */
+export const repairWord = (w) => {
+  if (!w || !isBrokenEn(w.en)) return w;
+  const p = parseLine(w.en);
+  if (!p) return w;
+  const ja = w.ja ? `${p.ja}、${w.ja}` : p.ja;
+  return { ...w, en: p.en, ja };
 };
 
 // 初期サンプルデータ（importDataするまで使う）

@@ -31,6 +31,7 @@ import {
   nextDeckId,
   uniqueDeckName,
   normalizeState,
+  countBrokenWords,
   planImport,
   deckNameFromFile,
   buildState,
@@ -213,7 +214,8 @@ export default function App() {
         const rawV2 = await AsyncStorage.getItem(STORAGE_KEY_V2);
         const raw = rawV2 || (await AsyncStorage.getItem(STORAGE_KEY_V1));
         if (raw) {
-          const state = normalizeState(JSON.parse(raw));
+          const parsed = JSON.parse(raw);
+          const state = normalizeState(parsed);
           if (state) {
             setDecks(state.decks);
             setActiveId(state.active);
@@ -222,6 +224,10 @@ export default function App() {
             setDblTap(state.dt === true);
             if (typeof state.vol === 'number') setVolume(state.vol);
             if (state.time) setTimeLog(state.time);
+            // 貼り付けの区切りを読み違えていた頃に壊れた単語は normalizeState が
+            // 黙って直している。データを勝手に書き換えたことになるので必ず知らせる
+            const fixed = countBrokenWords(parsed);
+            if (fixed > 0) setToast(`貼り付けで壊れていた${fixed}語を直しました`);
           }
         }
       } catch (e) {
