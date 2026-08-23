@@ -28,6 +28,7 @@ import {
   STORAGE_KEY_V1,
   STORAGE_KEY_V2,
   makeDeck,
+  moveDeck,
   nextDeckId,
   uniqueDeckName,
   normalizeState,
@@ -179,6 +180,8 @@ export default function App() {
   const [editDeckName, setEditDeckName] = useState('');
   // 長押しで開く編集メニューの対象。null なら閉じている
   const [menuDeckId, setMenuDeckId] = useState(null);
+  // 並べ替えモード中か。この間はカードのタップで単語帳を切り替えない
+  const [sorting, setSorting] = useState(false);
 
   // 長押しの判定は自前でやる。
   // TouchableOpacity の onLongPress は react-native-web では発火しないことを実測で確認したため
@@ -260,6 +263,12 @@ export default function App() {
     }, 500);
     return () => clearTimeout(t);
   }, [decks, activeId, streak, lastDate, dblTap, volume, timeLog, loaded]);
+
+  // 本棚を離れたら並べ替えモードは解除する。
+  // 付けっぱなしで戻ってくると、タップしても単語帳が切り替わらず戸惑うため
+  useEffect(() => {
+    if (scr !== 'shelf') setSorting(false);
+  }, [scr]);
 
   // 保存データの大きさ。何が容量を食っているかを「データ管理」に出すために測る。
   //
@@ -975,6 +984,12 @@ export default function App() {
     setEditDeckId(null);
     setToast('削除しました');
   };
+
+  /**
+   * 本棚の並び順を1つずつ動かす。
+   * delta に -decks.length を渡せば先頭に持ってこられる（moveDeck が端で止める）。
+   */
+  const moveDeckBy = (id, delta) => setDecks((ds) => moveDeck(ds, id, delta));
 
   const toggleReveal = (key) => {
     setRevealed((prev) => {
@@ -2208,16 +2223,34 @@ export default function App() {
         </View>
 
         <View className="px-4 -mt-6 pb-4" style={{ gap: 12 }}>
-          <Text className="text-xs text-gray-400">タップで切り替え ／ 長押しで編集</Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xs text-gray-400 flex-1 pr-2">
+              {sorting ? '◀ ▶ で順番を入れ替えます' : 'タップで切り替え ／ 長押しで編集'}
+            </Text>
+            {/* 1冊しか無いときは並べ替えようがないので出さない */}
+            {decks.length > 1 && (
+              <TouchableOpacity
+                onPress={() => setSorting((v) => !v)}
+                className={`rounded-full px-3.5 py-1.5 ${sorting ? 'bg-indigo-600' : 'bg-white border border-gray-200'}`}
+              >
+                <Text className={`text-xs font-bold ${sorting ? 'text-white' : 'text-gray-600'}`}>
+                  {sorting ? '完了' : '並べ替え'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           <View className="flex-row" style={{ flexWrap: 'wrap', gap: 12 }}>
-            {decks.map((d) => {
+            {decks.map((d, i) => {
               const isActive = d.id === activeId;
               const pct = d.words.length ? Math.round((d.words.reduce((s, w) => s + w.progress, 0) / d.words.length)) : 0;
               const editing = editDeckId === d.id;
               return (
                 <View key={d.id} style={{ width: '47%' }}>
                   <TouchableOpacity
+                    // 並べ替え中は切り替えも編集メニューも出さない。
+                    // 矢印を押すつもりでカードに触れて単語帳が変わってしまうのを防ぐ
+                    disabled={sorting}
                     onPressIn={() => startLongPress(() => setMenuDeckId(d.id))}
                     onPressOut={cancelLongPress}
                     // 長押しが成立していたら、指を離したときの通常タップは無視する
@@ -2265,6 +2298,13 @@ export default function App() {
                         </View>
                       </View>
 
+                      {/* 並べ替え中は今が何番目かを出す。動いたことが一目で分かるように */}
+                      {sorting ? (
+                        <View style={{ position: 'absolute', top: 8, left: 8 }} className="bg-white rounded-full w-7 h-7 items-center justify-center">
+                          <Text className="text-indigo-700 text-xs font-black">{i + 1}</Text>
+                        </View>
+                      ) : null}
+
                       {isActive && (
                         <View style={{ position: 'absolute', top: 8, right: 8 }} className="bg-indigo-600 rounded-full px-2 py-1">
                           <Text className="text-white text-xs font-bold">学習中</Text>
@@ -2272,11 +2312,35 @@ export default function App() {
                       )}
                     </View>
                   </TouchableOpacity>
+
+                  {/*
+                    並べ替えの矢印。カードの上に重ねると表紙が隠れるので下に出す。
+                    ドラッグではなくボタンにしているのは、Web とネイティブの両方で
+                    確実に動かすため（RNW では長押し・ドラッグ系が素直に動かない）。
+                  */}
+                  {sorting && (
+                    <View className="flex-row mt-1.5" style={{ gap: 6 }}>
+                      {[
+                        { dir: -1, icon: 'chevron-back', off: i === 0 },
+                        { dir: 1, icon: 'chevron-forward', off: i === decks.length - 1 },
+                      ].map((b) => (
+                        <TouchableOpacity
+                          key={b.dir}
+                          onPress={() => moveDeckBy(d.id, b.dir)}
+                          disabled={b.off}
+                          className={`flex-1 rounded-lg py-2.5 items-center ${b.off ? 'bg-gray-100' : 'bg-indigo-50 border border-indigo-200'}`}
+                        >
+                          <Icon name={b.icon} size={18} color={b.off ? '#d1d5db' : '#4f46e5'} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
               );
             })}
 
-            {/* 追加カード */}
+            {/* 追加カード。並べ替え中は順番の話に集中できるよう隠す */}
+            {!sorting && (
             <TouchableOpacity onPress={createDeck} style={{ width: '47%' }}>
               <View
                 className="rounded-2xl border-2 border-dashed border-gray-300 items-center justify-center bg-white"
@@ -2286,6 +2350,7 @@ export default function App() {
                 <Text className="text-gray-400 text-xs mt-1 font-semibold">新しい単語帳</Text>
               </View>
             </TouchableOpacity>
+            )}
           </View>
 
           <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
@@ -2327,6 +2392,11 @@ export default function App() {
                   ? [{ i: 'close-circle', l: '表紙を外す', on: () => removeCover(menuDeckId) }]
                   : []),
                 { i: 'create', l: '名前を変える', on: () => { setEditDeckId(menuDeckId); setEditDeckName(menuDeck.name); } },
+                // よく使う単語帳を先頭に置きたいことが多いので、1タップで済む道を用意する。
+                // すでに先頭なら出さない
+                ...(menuDeck && decks[0] && decks[0].id !== menuDeck.id
+                  ? [{ i: 'arrow-up', l: '本棚の先頭に移動', on: (id) => { moveDeckBy(id, -decks.length); setToast('先頭に移動しました'); } }]
+                  : []),
                 { i: 'trash', l: 'この単語帳を削除', on: () => deleteDeck(menuDeckId), danger: true },
               ].map((it) => (
                 <TouchableOpacity

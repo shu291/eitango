@@ -73,6 +73,35 @@ export const makeDeck = ({ id, name, words = [], cover = null, nid }) => {
   };
 };
 
+/**
+ * 本棚の並び順を変える。
+ *
+ * `delta` の分だけ前後に動かす（-1 で1つ前、+1 で1つ後ろ）。
+ * 端を越える指定は端で止めるので、先頭へ持ってくるなら `-decks.length` を渡せばよい。
+ *
+ * 入れ替え（swap）ではなく抜き差し（splice）にしてある。1つ隣なら結果は同じだが、
+ * 2つ以上動かすときに間の単語帳の順番が崩れないのはこちら。
+ *
+ * ⚠️ 学習中の単語帳は **ID** で覚えている（`activeId`）ので、並べ替えても選択は変わらない。
+ * 位置で覚える作りにすると、並べ替えた瞬間に別の単語帳に切り替わってしまう。
+ *
+ * @param {Array} decks
+ * @param {number} id 動かす単語帳のID
+ * @param {number} delta 動かす量
+ * @returns {Array} 並べ替えた新しい配列（動かないときは元の配列をそのまま返す）
+ */
+export const moveDeck = (decks, id, delta) => {
+  if (!Array.isArray(decks)) return decks;
+  const from = decks.findIndex((d) => d.id === id);
+  if (from < 0) return decks;
+  const to = Math.max(0, Math.min(decks.length - 1, from + delta));
+  if (to === from) return decks;
+  const next = [...decks];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+};
+
 /** 既存と重ならない単語帳ID */
 export const nextDeckId = (decks) => decks.reduce((m, d) => Math.max(m, d.id), 0) + 1;
 
