@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6366f1"
+      "backgroundColor": "#F7F3E9"
     },
     "ios": {
       "supportsTablet": true,
@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6366f1"
+        "backgroundColor": "#F7F3E9"
       }
     },
     "web": {
@@ -30,7 +30,9 @@
       "baseUrl": "/eitango"
     },
     "plugins": [
-      "expo-audio"
-    ]
+      "expo-audio",
+      "expo-font"
+    ],
+    "backgroundColor": "#F7F3E9"
   }
 }

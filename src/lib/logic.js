@@ -107,18 +107,54 @@ export const calcProg = (word, ok, mode = 'quiz', elapsedMs) => {
   }
 };
 
+/**
+ * 覚え具合（習熟度）の6段階。**低いほうから**並べてある。
+ *
+ * ここが段階の唯一の定義。1語の見た目（getLevel）・単語帳の絞り込み・統計の分布グラフが
+ * すべてこの配列を読むので、境目や名前や色を変えるときはここだけ直せばよい。
+ * 以前は同じ 90/80/60/40/20 の並びが3か所に散らばっていて、片方だけ直す事故が起きやすかった。
+ *
+ * `min` 以上 `max` 未満で1段。いちばん上だけ `max` を Infinity にしてある（progress が 100 まで来るため）。
+ *
+ * 色は虹色をやめ、藍1色の濃淡ランプ（濃いほど覚えている）。「要復習」だけは
+ * 朱＝赤ペンでチェックした行、という別の意味なので色相を変えている。
+ * 値は src/theme.js の lv1〜lv6 と同じもの（logic.js は純粋関数だけにしたいので import しない）。
+ */
+export const LEVELS = [
+  { k: 'lv_review',   name: '要復習',   min: 0,  max: 20,       c: 'text-rose-600',   bg: 'bg-rose-50',   bar: 'bg-rose-500',   barColor: '#A8352A', i: '' },
+  { k: 'lv_beginner', name: '初級',     min: 20, max: 40,       c: 'text-gray-500',   bg: 'bg-gray-100',  bar: 'bg-indigo-200', barColor: '#8FA3B9', i: '' },
+  { k: 'lv_learning', name: '学習中',   min: 40, max: 60,       c: 'text-indigo-500', bg: 'bg-indigo-50', bar: 'bg-indigo-300', barColor: '#6E88A4', i: '' },
+  { k: 'lv_settled',  name: '定着',     min: 60, max: 80,       c: 'text-indigo-500', bg: 'bg-indigo-50', bar: 'bg-indigo-400', barColor: '#4A6B8C', i: '' },
+  { k: 'lv_master',   name: 'マスター', min: 80, max: 90,       c: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-500', barColor: '#2F5175', i: '' },
+  { k: 'lv_perfect',  name: '完璧',     min: 90, max: Infinity, c: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-600', barColor: '#1F3A5F', i: '' },
+];
+
+/**
+ * まだ一度も出していない単語。**段階には含めない**。
+ * progress 0 のまま「要復習」に混ぜると、手を付けていないだけの語が苦手に見えてしまう。
+ */
+export const LEVEL_NEW = { k: 'new', name: '未学習', min: 0, max: 0, c: 'text-gray-300', bg: 'bg-gray-50', bar: 'bg-gray-300', barColor: '#8C8271', i: '' };
+
+/**
+ * 習熟度から段階を1つ返す。
+ * @param {number} p 0〜100
+ * @param {boolean} [touched] 一度でも出したか。false なら段階ではなく「未学習」
+ */
 export const getLevel = (p, touched = true) => {
-  if (!touched) return { name: '未学習', c: 'text-gray-400', bg: 'bg-gray-50', bar: 'bg-gray-300', barColor: '#d1d5db', i: '❓' };
-  if (p >= 90) return { name: '完璧', c: 'text-purple-600', bg: 'bg-purple-50', bar: 'bg-purple-500', barColor: '#9333ea', i: '👑' };
-  if (p >= 80) return { name: 'マスター', c: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500', barColor: '#10b981', i: '⭐' };
-  if (p >= 60) return { name: '定着', c: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500', barColor: '#3b82f6', i: '📘' };
-  if (p >= 40) return { name: '学習中', c: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500', barColor: '#f59e0b', i: '📝' };
-  if (p >= 20) return { name: '初級', c: 'text-orange-600', bg: 'bg-orange-50', bar: 'bg-orange-400', barColor: '#fb923c', i: '🌱' };
-  return { name: '要復習', c: 'text-rose-600', bg: 'bg-rose-50', bar: 'bg-rose-400', barColor: '#fb7185', i: '🔥' };
+  if (!touched) return LEVEL_NEW;
+  const q = clamp(p || 0, 0, 100);
+  return LEVELS.find((l) => q >= l.min && q < l.max) || LEVELS[0];
 };
 
 // 一度も触れていない（正解も不正解も0回）
 export const isNew = (w) => ((w.correct || 0) + (w.incorrect || 0)) === 0;
+
+/**
+ * その単語が指定した段階に入るか。単語帳の絞り込みで使う。
+ * @param {object} w
+ * @param {string} k LEVELS の k（'lv_review' など）
+ */
+export const inLevel = (w, k) => !isNew(w) && getLevel(w.progress || 0).k === k;
 
 export const isWeak = (w) => {
   const t = (w.correct || 0) + (w.incorrect || 0);
@@ -317,32 +353,19 @@ export const nextSchedule = (w, ok, todayStr, elapsedMs) => {
 export const isDue = (w, todayStr) => !!w.due && w.due <= todayStr;
 
 /**
- * 学習済みなのにまだ予定が無い単語へ、予定を後付けする。
+ * 単語から復習の予定だけを外す（習熟度・正解数・学習した日付は触らない）。
  *
- * 間隔反復は後から足した機能なので、それ以前に覚えた単語には due が無い。
- * 何もしないと復習モードに1語も出てこないため、これまでの記録
- * （習熟度と正答率）からおおよその予定を組み立てる。
- *
- * 予定がすでにある単語と、一度も学習していない単語には手を触れない（何度呼んでも安全）。
+ * 間隔反復を入れたとき、それ以前に覚えた単語へ「習熟度と正答率から逆算した予定」を
+ * 後付けしていた（backfillSchedule）。**やめた。** 実際にいつ答えられたかを知らない
+ * 数字から作った予定なので、開いた初日にいきなり数百語が「今日の復習」に積まれ、
+ * 忘却曲線として正しくもなかった。今は予定を持つのは**その日から実際に答えた単語だけ**。
  *
  * @param {object} w
- * @returns {object} 予定を足した単語（変更が無ければ同じ参照を返す）
+ * @returns {object} 予定を外した単語（もともと無ければ同じ参照を返す）
  */
-export const backfillSchedule = (w) => {
-  if (!w || w.due || !w.lastReviewed) return w;
-
-  const p = clamp(w.progress || 0, 0, 100);
-  // 習熟度が高い＝よく覚えている＝間隔を長めに見積もってよい
-  const ivl = p >= 90 ? 14 : p >= 80 ? 10 : p >= 60 ? 6 : p >= 40 ? 3 : p >= 20 ? 2 : 1;
-
-  // 難易度係数は正答率から。0% → 1.3（最も難しい）/ 100% → 2.5（最も易しい）
-  const attempts = (w.correct || 0) + (w.incorrect || 0);
-  const rate = attempts > 0 ? (w.correct || 0) / attempts : 0.5;
-  const ef = clamp(SR_MIN_EF + rate * (SR_MAX_EF - SR_MIN_EF), SR_MIN_EF, SR_MAX_EF);
-
-  const due = addDays(w.lastReviewed, ivl);
-  if (!due) return w;
-  return { ...w, due, ivl, ef: Math.round(ef * 100) / 100 };
+export const clearSchedule = (w) => {
+  if (!w || (!w.due && !w.ivl)) return w;
+  return { ...w, due: null, ivl: 0, ef: SR_DEFAULT_EF };
 };
 
 /**

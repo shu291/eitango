@@ -104,7 +104,7 @@ eitango/
   日本語だけの `en` は和→英の単語帳としてありうるので通す。
 
   ⚠️ 過去に壊れて保存された単語は `repairWord()` が読み込み時に直す
-  （`normalizeWord` の中で呼んでいる。`backfillSchedule` と同じ位置づけで冪等）。
+  （`normalizeWord` の中で呼んでいる。冪等なので何度通しても安全）。
   直した語数は `countBrokenWords()` で数えて起動時にトーストで知らせる。
 
 ---
@@ -130,8 +130,14 @@ quality（手ごたえ 2〜5）は答えるまでの速さから `srQuality()` �
 ⚠️ `nextSchedule()` は `word.streak` を「これまでの連続正解数」として読む。
 **必ず更新前の単語を渡すこと。** 更新後の値を渡すと間隔が1段階ぶん先走る。
 
-⚠️ `due` を持たない古いデータには `backfillSchedule()` が読み込み時に予定を後付けする
-（`normalizeWord` の中で呼んでいる）。冪等なので何度呼んでも安全。
+⚠️ **予定（`due`）が付くのは、実際に答えた単語だけ。**
+以前は `backfillSchedule()` が「習熟度と正答率から逆算した予定」を古いデータに後付けしていたが、
+**2026-08-29 にやめた**（→ §3 の【2026-08-29 更新】）。今あるのは予定を外す `clearSchedule()` だけ。
+
+⚠️ 予定の作り方を変えたら `SR_VERSION`（`src/lib/decks.js`）を上げる。
+保存データの `srv` がこれと違うと、読み込みのときに **due / ivl / ef を1回だけ全部外す**
+（`normalizeState` → `makeDeck` → `normalizeWord(w, id, resetSchedule)`）。
+習熟度・正解数・`reviewedDates` には触らない。外した語数は `countScheduled()` で数えてトーストで知らせる。
 
 以下は習熟度（`progress`）側の計算。こちらは独自のポイント加減算方式で、変更していない。
 
@@ -166,12 +172,34 @@ quality（手ごたえ 2〜5）は答えるまでの速さから `srQuality()` �
 `isWeak(w)`（2 回以上やって正答率 < 50%、または不正解 3 回以上かつ progress < 50）/
 `isDue(w, today)`（`due` が今日以前＝復習日が来ている）。
 
-`getLevel(p)`（`logic.js:59`）が progress を 6 段階のラベルに変換する:
-要復習 / 初級(≥20) / 学習中(≥40) / 定着(≥60) / マスター(≥80) / 完璧(≥90)。
+### 覚え具合の 6 段階は `LEVELS` が唯一の定義
+
+> 【2026-08-29 更新】以前は 90/80/60/40/20 の境目が `getLevel` と統計画面の2か所に
+> 別々に書かれていた。単語帳の絞り込みでも同じ段階を使うことになったので、
+> `LEVELS`（`src/lib/logic.js`）1か所にまとめた。**境目・名前・色を変えるならここだけ直す。**
+
+```js
+LEVELS  // 低いほうから: 要復習(0) / 初級(20) / 学習中(40) / 定着(60) / マスター(80) / 完璧(90〜)
+LEVEL_NEW  // 未学習。どの段階にも入らない
+getLevel(p, touched)  // 1語 → 段階。touched が false なら LEVEL_NEW
+inLevel(w, 'lv_settled')  // その単語が「定着」か。未学習は必ず false
+```
+
+⚠️ **未学習（一度も出していない語）を段階に混ぜないこと。** progress 0 のままなので
+素直に書くと「要復習」に落ちるが、手を付けていないだけの語が苦手に見えてしまう。
+`inLevel` が `isNew` で弾いている。
+
+⚠️ 語数を数えるときは App.js の `lvCount`（1語につき1回だけ数える）を使う。
+段階ごとに `words.filter()` を回すと 1900 語で 6 周する。統計の分布グラフも同じ値を見ている。
 
 > 【2026-07-28 更新】ここには「SM-2 を導入するなら新規実装になる」と書かれていたが、
-> 実際に追加済み。`progress` は捨てず併存させ、古いデータへは `backfillSchedule()` で
-> 習熟度と正答率から予定を後付けする形にした（`reviewedDates` からの逆算はしていない）。
+> 実際に追加済み。`progress` は捨てず併存させた。
+>
+> 【2026-08-29 更新】古いデータへ `backfillSchedule()` で予定を後付けする形だったが、
+> **やめた**。実際にいつ答えられたかを知らない数字から作った予定なので、開いた初日に
+> いきなり数百語が「今日の復習」に積まれ、忘却曲線としても正しくなかった。
+> 今は**その日から実際に答えた単語だけ**が予定を持つ。既存データの予定は
+> `SR_VERSION` の仕組みで読み込み時に1回だけ外した。
 
 ### ストレージ
 
@@ -359,3 +387,30 @@ ios/app.xcodeproj/project.pbxproj:380  DEVELOPMENT_TEAM = 8PLVWBJM54;   (Release
   `react-native-reanimated` が実際に使われているか（`App.js` からの直接 import は無し。
   NativeWind や safe-area-context 経由の間接依存の可能性がある）
 - `.expo/` の中身
+
+---
+
+## 9. 見た目のルール（2026-08-28 追加）
+
+UI を全面的に作り替えた。**色・余白・書体を触るときは必ず `design/DESIGN.md` を読むこと。**
+
+| ファイル | 役割 |
+|---|---|
+| `src/theme.js` | **色・角丸・余白・書体の唯一の出どころ**（CommonJS。`tailwind.config.js` も App.js もここを読む） |
+| `tailwind.config.js` | Tailwind の既定色を紙の色に**読み替えて**いる（`bg-white`→生成りの紙、`bg-indigo-600`→藍、`text-rose-500`→朱、`text-gray-400`→読める濃さの鉛筆）。`rounded-2xl` も 10px に丸め込まれる |
+| `design/DESIGN.md` | 守るべきルール（影を使わない／13px以下にLoraを当てない／押せる＝色の面 など） |
+| `design/direction.json` | 採用案Aと不採用のB・C案の定義 |
+| `design/design-brief.html` | 3案の見くらべページ（ブラウザで開く） |
+
+### 触る前に知っておくこと
+
+- 採用案は **A「英単語ノート」**（生成り #F7F3E9 の紙 / 罫線 / 朱の一点）。
+- **影は全画面ゼロ。** `shadowColor` や `elevation` を足さない。段差は 1px 罫線と紙の色差で作る。
+  カードは `<Sheet>`、区切りは `<Rule>`、見出しは `<SectionTitle>` / `<PageTitle>`、ボタンは `<Btn>`、
+  空っぽの画面は `<EmptyState>`。**新しくカードやボタンを書かない。**
+- **藍 `C.primary` = 押す／進捗。朱 `C.accent` = 赤ペンの印（間違い・苦手・期限超過）。** 混ぜない。
+- 書体は `@expo-google-fonts/lora`（英単語）と `@expo-google-fonts/ibm-plex-mono`（数字）を同梱。
+  **日本語には当てない。** Web では `ff()`（App.js:76）がシステム書体のフォールバックを付け足す。
+  `useFonts` の完了を待って `return null` しないこと（Web で一瞬まっ白になる）。
+- `getLevel()`（`src/lib/logic.js`）の色は虹色をやめ、**藍1色の濃淡ランプ**にした（要復習だけ朱）。
+- 下タブは `TabBar`（App.js 末尾）。`useSafeAreaInsets().bottom` を足しているので `SafeAreaProvider` の中でのみ使える。

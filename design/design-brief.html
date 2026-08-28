@@ -1,0 +1,1498 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>英単語マスター（eitango） ― デザイン3案くらべ | design-kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&amp;family=JetBrains+Mono:wght@100..800&amp;family=Lexend:wght@100..900&amp;family=Lora:wght@700&amp;family=Nunito:wght@200..900&amp;family=システム（ヒラギノ／游ゴシック）:wght@400;500;600;700&amp;display=swap">
+<style>
+/* ---------- design-brief 自身の見た目 ---------- */
+:root{
+  color-scheme:light;
+  --pg:#f7f7f5; --pg2:#ffffff; --pln:#e4e3dd; --pln2:#cfcec6;
+  --pin:#16161a; --pmu:#6c6b66; --pac:#3d5afe; --pac-soft:#eaeeff;
+  --pok:#0a7d3f; --pbad:#c62828; --pwarn:#a35a00;
+  --sh:0 1px 2px rgba(16,16,20,.05), 0 10px 30px rgba(16,16,20,.07);
+  --pmono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme:dark;
+    --pg:#0e0f12; --pg2:#16181d; --pln:#272a31; --pln2:#3a3e47;
+    --pin:#eceef2; --pmu:#9a9fab; --pac:#8fa4ff; --pac-soft:#1c2135;
+    --pok:#4ade80; --pbad:#ff8a8a; --pwarn:#f2b45c;
+    --sh:0 1px 2px rgba(0,0,0,.4), 0 12px 34px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --pg:#0e0f12; --pg2:#16181d; --pln:#272a31; --pln2:#3a3e47;
+  --pin:#eceef2; --pmu:#9a9fab; --pac:#8fa4ff; --pac-soft:#1c2135;
+  --pok:#4ade80; --pbad:#ff8a8a; --pwarn:#f2b45c;
+  --sh:0 1px 2px rgba(0,0,0,.4), 0 12px 34px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{ color-scheme:light; }
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--pg);color:var(--pin);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+.wrap{max-width:940px;margin:0 auto;padding:0 20px}
+
+/* 上部固定バー */
+.bar{position:sticky;top:0;z-index:50;
+  background:color-mix(in srgb, var(--pg) 86%, transparent);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--pln)}
+.bar-in{max-width:940px;margin:0 auto;padding:10px 20px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bar .brand{font-weight:800;letter-spacing:.02em;font-size:13px;color:var(--pmu);
+  text-transform:uppercase;margin-right:2px;white-space:nowrap}
+.jump{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.jump a{display:inline-flex;align-items:center;gap:7px;
+  padding:6px 12px;border-radius:999px;text-decoration:none;
+  font-size:13px;font-weight:700;color:var(--pin);
+  border:1px solid var(--pln);background:var(--pg2);white-space:nowrap}
+.jump a:hover{border-color:var(--pln2)}
+.jump a .dot{width:10px;height:10px;border-radius:50%;flex:none;
+  box-shadow:0 0 0 1px rgba(128,128,128,.35) inset}
+.seg{display:inline-flex;border:1px solid var(--pln);border-radius:999px;
+  background:var(--pg2);padding:3px;gap:2px}
+.seg button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:700;
+  color:var(--pmu);padding:5px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--pin);color:var(--pg)}
+
+/* ヘッダ */
+header.hero{padding:44px 0 8px}
+header.hero .kicker{font-size:12.5px;font-weight:800;letter-spacing:.14em;
+  color:var(--pac);text-transform:uppercase}
+header.hero h1{margin:.24em 0 .18em;font-size:clamp(30px,6.2vw,46px);line-height:1.18;
+  letter-spacing:-.02em;font-weight:800}
+header.hero .lead{font-size:17px;color:var(--pmu);max-width:36em;margin:0}
+/* flex にしているのは、5項目のとき最後の1つが伸びて空きマスができないようにするため */
+.facts{display:flex;flex-wrap:wrap;
+  gap:1px;background:var(--pln);border:1px solid var(--pln);
+  border-radius:14px;overflow:hidden;margin-top:26px}
+.facts div{background:var(--pg2);padding:13px 15px;flex:1 1 200px;min-width:0}
+.facts dt{font-size:11.5px;font-weight:800;color:var(--pmu);letter-spacing:.06em;margin:0 0 2px}
+.facts dd{margin:0;font-size:14.5px;font-weight:600;line-height:1.5}
+
+.callout{margin:26px 0 0;padding:16px 18px;border-radius:14px;
+  background:var(--pac-soft);border:1px solid color-mix(in srgb,var(--pac) 26%,transparent);
+  display:flex;gap:12px;align-items:flex-start}
+.callout svg{width:20px;height:20px;flex:none;color:var(--pac);margin-top:3px}
+.callout b.ttl{display:block;margin-bottom:2px}   /* 本文中の <b> は行内のまま */
+.callout p{margin:0;font-size:14px}
+
+details.warns{margin-top:18px;border:1px solid color-mix(in srgb,var(--pwarn) 40%,var(--pln));
+  border-radius:12px;background:color-mix(in srgb,var(--pwarn) 8%,var(--pg2));padding:0 16px}
+details.warns summary{cursor:pointer;padding:12px 0;font-weight:700;font-size:14px;color:var(--pwarn)}
+details.warns ul{margin:0 0 14px;padding-left:1.2em;font-size:13.5px;color:var(--pin)}
+details.warns li{margin:.25em 0}
+
+/* 案カード */
+.dir{margin:56px 0 0;border:1px solid var(--pln);border-radius:20px;
+  background:var(--pg2);box-shadow:var(--sh);overflow:hidden;scroll-margin-top:74px}
+.dir > .strip{height:7px;display:flex}
+.dir > .strip i{flex:1}
+.dir-head{padding:26px 24px 4px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.dir-head .idbox{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;
+  font-size:23px;font-weight:800;flex:none;letter-spacing:-.02em}
+.dir-head h2{margin:0;font-size:26px;letter-spacing:-.015em;font-weight:800;line-height:1.25}
+.dir-head .mood{margin:3px 0 0;color:var(--pmu);font-size:14.5px}
+.dir-head .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.tag{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;
+  background:var(--pg);border:1px solid var(--pln);color:var(--pmu)}
+.why{margin:14px 24px 0;padding:13px 15px;border-left:3px solid var(--pac);
+  background:var(--pg);border-radius:0 10px 10px 0;font-size:14.5px}
+.why b{color:var(--pac);font-size:12.5px;display:block;margin-bottom:2px;letter-spacing:.04em}
+
+.block{padding:0 24px}
+.block + .block{margin-top:30px}
+.block > h3{margin:0 0 4px;font-size:15px;font-weight:800;letter-spacing:.01em;
+  display:flex;align-items:center;gap:8px}
+.block > h3 .n{font-family:var(--pmono);font-size:11px;font-weight:700;color:var(--pg);
+  background:var(--pmu);width:19px;height:19px;border-radius:6px;display:grid;place-items:center;flex:none}
+.block > .hint{margin:0 0 13px;font-size:13px;color:var(--pmu)}
+
+/* パレット */
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:9px}
+.sw{border:1px solid var(--pln);border-radius:12px;overflow:hidden;background:var(--pg);
+  cursor:pointer;text-align:left;font:inherit;padding:0;display:block;width:100%;
+  transition:transform .12s ease}
+.sw:hover{transform:translateY(-2px)}
+.sw:active{transform:scale(.98)}
+.sw .c{height:52px;display:block;border-bottom:1px solid var(--pln)}
+.sw .t{padding:7px 9px 9px}
+.sw .k,.sw .r,.sw .h{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw .k{font-size:12px;font-weight:800;line-height:1.3}
+.sw .r{font-family:var(--pmono);font-size:10.5px;color:var(--pmu);margin-top:1px}
+.sw .h{font-family:var(--pmono);font-size:11.5px;font-weight:700;margin-top:3px}
+
+/* 表 */
+.tblwrap{overflow-x:auto;border:1px solid var(--pln);border-radius:13px;background:var(--pg)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--pln);vertical-align:middle}
+th{font-size:11.5px;font-weight:800;color:var(--pmu);letter-spacing:.05em;white-space:nowrap;
+  background:color-mix(in srgb,var(--pmu) 7%,transparent)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--pmono);font-weight:700;white-space:nowrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:800;white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--pok) 16%,transparent);color:var(--pok)}
+.pill.ng{background:color-mix(in srgb,var(--pbad) 16%,transparent);color:var(--pbad)}
+.pill.mid{background:color-mix(in srgb,var(--pwarn) 18%,transparent);color:var(--pwarn)}
+.pairbox{display:inline-flex;align-items:center;gap:7px}
+.pairbox .chip2{width:34px;height:22px;border-radius:6px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;border:1px solid rgba(128,128,128,.35);flex:none}
+.fixbtn{font:inherit;font-size:11.5px;font-weight:700;font-family:var(--pmono);
+  border:1px dashed var(--pok);color:var(--pok);background:transparent;
+  padding:3px 9px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.fixbtn:hover{background:color-mix(in srgb,var(--pok) 12%,transparent)}
+.alarm{margin-top:11px;padding:13px 15px;border-radius:12px;font-size:13.5px;
+  background:color-mix(in srgb,var(--pbad) 10%,transparent);
+  border:1px solid color-mix(in srgb,var(--pbad) 35%,transparent)}
+.alarm b{color:var(--pbad)}
+.alarm ul{margin:7px 0 0;padding-left:1.15em}
+.alarm li{margin:.2em 0}
+.goodnote{margin-top:11px;padding:11px 15px;border-radius:12px;font-size:13.5px;
+  background:color-mix(in srgb,var(--pok) 10%,transparent);
+  border:1px solid color-mix(in srgb,var(--pok) 30%,transparent)}
+.goodnote b{color:var(--pok)}
+
+/* フォント見本 */
+.fontcard{border:1px solid var(--pln);border-radius:14px;overflow:hidden}
+.fontcard .fh{padding:9px 14px;background:var(--pg);border-bottom:1px solid var(--pln);
+  font-size:12px;color:var(--pmu);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.fontcard .fh b{color:var(--pin);font-weight:800}
+.fontcard .fb{padding:20px}
+.specimen + .specimen{margin-top:16px;padding-top:16px;border-top:1px dashed var(--pln)}
+.specimen .lab{font-size:11px;font-weight:800;color:var(--pmu);letter-spacing:.07em;margin-bottom:5px}
+.fnote{margin-top:10px;font-size:12.5px;color:var(--pwarn)}
+
+/* 部品プレビュー */
+.pvbox{border:1px solid var(--pln);border-radius:16px;overflow:hidden}
+.pvbox .ph{padding:8px 14px;background:var(--pg);border-bottom:1px solid var(--pln);
+  font-size:12px;color:var(--pmu)}
+.split{display:grid;gap:20px;grid-template-columns:334px minmax(0,1fr);align-items:start;padding:20px}
+@media (max-width:820px){ .split{grid-template-columns:1fr} }
+.parts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));align-items:start}
+.part{display:grid;gap:8px}
+.part > .cap{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--pmu)}
+
+/* 画像 */
+.imgs{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.imgs figure{margin:0;border:1px solid var(--pln);border-radius:13px;overflow:hidden;background:var(--pg)}
+.imgs img{display:block;width:100%;height:132px;object-fit:cover;background:var(--pln)}
+.imgs figcaption{padding:7px 10px;font-size:11px;color:var(--pmu);line-height:1.45}
+.heroes{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));margin-top:14px}
+.heroframe{border:1px solid var(--pln);border-radius:14px;overflow:hidden}
+.heroframe .hcap{padding:7px 12px;font-size:11.5px;color:var(--pmu);background:var(--pg);
+  border-bottom:1px solid var(--pln)}
+.noimg{padding:16px;border:1px dashed var(--pln2);border-radius:13px;font-size:13.5px;color:var(--pmu)}
+
+/* アイコン */
+.icons{display:grid;gap:9px;grid-template-columns:repeat(auto-fill,minmax(86px,1fr))}
+.iconcell{border:1px solid var(--pln);border-radius:12px;padding:12px 6px 9px;
+  display:grid;justify-items:center;gap:6px;background:var(--pg)}
+.iconcell .nm{font-family:var(--pmono);font-size:10px;color:var(--pmu);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iconcell.miss{border-style:dashed;opacity:.65}
+.iconcell .box{width:30px;height:30px;display:grid;place-items:center}
+.iconcell svg{width:26px;height:26px}
+/* SVGは width/height 属性を外してあるので、置く場所ごとにCSSでサイズを決める */
+.icontint .i{display:grid;place-items:center;width:26px;height:26px;flex:none}
+.icontint svg{width:26px;height:26px}
+.icontint .cap{flex:1 1 200px;min-width:0}
+
+/* 採用ボタン */
+.adopt{margin:30px 24px 26px;padding:20px;border-radius:16px;
+  border:1px solid var(--pln);background:var(--pg);display:grid;gap:12px}
+.adopt .arow{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+.adopt button.take{border:0;border-radius:12px;padding:13px 20px;font:inherit;
+  font-size:15px;font-weight:800;cursor:pointer;transition:transform .12s ease}
+.adopt button.take:active{transform:scale(.98)}
+.adopt code{font-family:var(--pmono);font-size:12.5px;background:var(--pg2);
+  border:1px solid var(--pln);border-radius:8px;padding:3px 8px;word-break:break-all}
+.adopt .cmd{font-size:13px;color:var(--pmu)}
+.adopt details{margin-top:2px}
+.adopt summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--pmu)}
+.adopt pre{margin:10px 0 0;max-height:330px;overflow:auto;background:var(--pg2);
+  border:1px solid var(--pln);border-radius:11px;padding:13px;
+  font-family:var(--pmono);font-size:11.5px;line-height:1.6;white-space:pre;color:var(--pin)}
+
+/* 比較表 */
+.compare{margin:64px 0 0}
+.compare h2{font-size:24px;font-weight:800;letter-spacing:-.015em;margin:0 0 6px}
+.compare .hint{margin:0 0 16px;color:var(--pmu);font-size:14px}
+.compare th:first-child,.compare td:first-child{position:sticky;left:0;background:var(--pg);
+  border-right:1px solid var(--pln);font-weight:800;white-space:nowrap;z-index:1}
+.compare th{background:color-mix(in srgb,var(--pmu) 9%,var(--pg))}
+.compare td{font-size:13px}
+
+footer{margin:62px 0 70px;padding-top:22px;border-top:1px solid var(--pln);
+  color:var(--pmu);font-size:12.5px}
+footer code{font-family:var(--pmono);font-size:12px;background:var(--pg2);
+  border:1px solid var(--pln);border-radius:6px;padding:2px 6px}
+
+/* 長いパスやアプリ名で横スクロールが出ないようにする（スマホで効く） */
+code,.adopt .cmd,footer{overflow-wrap:anywhere}
+header.hero h1,header.hero .lead,.facts dd,.why,.dir-head h2,.dir-head .mood,
+.block > .hint,.compare td,.iconcell .nm{overflow-wrap:anywhere}
+
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);
+  z-index:99;padding:11px 20px;border-radius:999px;
+  background:var(--pin);color:var(--pg);font-size:13.5px;font-weight:700;
+  box-shadow:0 10px 30px rgba(0,0,0,.28);opacity:0;pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- 案ごとのプレビュー（変数は .pv[data-dir] 側で切り替わる） ---------- */
+.pv{background:var(--bg);color:var(--text);
+  font-family:var(--font-body);font-weight:var(--fw-body);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums}
+/* インラインSVGは width/height 属性を外してあるので、サイズ指定を必ずどこかで当てる。
+   :where() は詳細度0なので、下のどの個別ルールにも負ける安全網。 */
+.pv :where(svg){width:20px;height:20px;flex:none}
+.pv .hd{font-family:var(--font-heading);font-weight:var(--fw-head);line-height:1.35}
+.pv .mu{color:var(--muted)}
+.pv .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+.pv .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid transparent;border-radius:var(--r);
+  padding:11px 15px;min-height:42px;font:inherit;font-family:var(--font-body);
+  font-weight:600;font-size:14px;cursor:pointer;
+  background:var(--surface-2);color:var(--text);transition:transform .12s ease}
+.pv .btn:active{transform:scale(.98)}
+.pv .btn svg{width:17px;height:17px;flex:none}
+.pv .btn-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-accent)}
+.pv .btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+.pv .btn-danger{background:var(--danger);color:var(--on-danger)}
+.pv .btn-off{opacity:.42;cursor:not-allowed;box-shadow:none}
+.pv .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+
+.pv .card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:calc(15px * var(--dens));box-shadow:var(--shadow)}
+.pv .card .t{font-family:var(--font-heading);font-weight:700;font-size:16px;line-height:1.35}
+.pv .card .m{font-size:12px;color:var(--muted);margin-top:3px}
+.pv .card .b{font-size:14px;margin-top:9px}
+
+.pv .field{display:grid;gap:6px}
+.pv .field label{font-size:13px;color:var(--muted);font-weight:600}
+.pv .inp{width:100%;background:var(--bg-2);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 12px;font:inherit;font-family:var(--font-body);font-size:14px}
+.pv .inp.focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.pv .inp.bad{border-color:var(--danger);background:var(--danger-soft)}
+.pv .ferr{color:var(--danger);font-size:12px;display:flex;align-items:center;gap:5px}
+.pv .ferr svg{width:14px;height:14px}
+
+.pv .tabbar{display:flex;background:var(--overlay);border-top:1px solid var(--border);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.pv .tabbar span{flex:1;display:grid;justify-items:center;gap:3px;padding:9px 0 11px;
+  color:var(--muted);font-size:12px;font-weight:600}
+.pv .tabbar span.on{color:var(--primary)}
+.pv .tabbar svg{width:21px;height:21px}
+
+.pv .lrow{display:flex;align-items:center;gap:11px;
+  padding:calc(11px * var(--dens)) 13px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r)}
+.pv .lrow + .lrow{margin-top:6px}
+.pv .lrow .ic{display:grid;place-items:center;width:33px;height:33px;flex:none;
+  border-radius:var(--r-sm);background:var(--primary-soft);color:var(--primary)}
+.pv .lrow .ic svg{width:18px;height:18px}
+.pv .lrow .bd{flex:1;min-width:0}
+.pv .lrow .tt{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv .lrow .ss{font-size:12px;color:var(--muted)}
+.pv .lrow .vv{font-family:var(--font-mono);font-weight:700;font-size:14px}
+.pv .lrow .chev{display:grid;place-items:center;color:var(--muted);flex:none}
+.pv .lrow .chev svg{width:16px;height:16px}
+
+.pv .prog{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.pv .prog i{display:block;height:100%;border-radius:inherit;background:var(--primary)}
+.pv .ringwrap{display:flex;align-items:center;gap:14px}
+.pv .ring{transform:rotate(-90deg);flex:none}
+.pv .ring .tr{stroke:var(--surface-2)}
+.pv .ring .br{stroke:var(--primary);stroke-linecap:round}
+
+.pv .stat{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:calc(14px * var(--dens));display:grid;gap:3px}
+.pv .stat .n{font-family:var(--font-mono);font-size:32px;font-weight:700;line-height:1}
+.pv .stat .k{font-size:12px;color:var(--muted)}
+.pv .stat .d{font-size:12px;font-weight:600}
+.pv .stat .d.up{color:var(--success)} .pv .stat .d.dn{color:var(--danger)}
+.pv .stats2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.pv .toast{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:999px;
+  background:var(--surface-2);color:var(--text);border:1px solid var(--border);
+  box-shadow:var(--shadow);font-size:13px;font-weight:600}
+.pv .toast svg{width:16px;height:16px;color:var(--success)}
+
+.pv .scrim{background:var(--scrim);border-radius:var(--r-lg);padding:20px 14px;
+  display:grid;place-items:center;border:1px solid var(--border)}
+.pv .modal{width:100%;max-width:280px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:17px;box-shadow:var(--shadow-lg);display:grid;gap:10px}
+.pv .modal .t{font-family:var(--font-heading);font-weight:700;font-size:16px}
+.pv .modal .b{font-size:13px;color:var(--muted);line-height:1.6}
+
+.pv .empty{display:grid;justify-items:center;gap:10px;padding:24px 14px;text-align:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+.pv .empty .art{width:84px;height:84px;border-radius:999px;display:grid;place-items:center;
+  background:radial-gradient(circle at 30% 25%, var(--primary-soft), transparent 72%), var(--surface-2);
+  color:var(--primary)}
+.pv .empty .art svg{width:36px;height:36px}
+.pv .empty .t{font-family:var(--font-heading);font-weight:700;font-size:15px}
+.pv .empty .b{font-size:13px;color:var(--muted);max-width:24em;line-height:1.6}
+
+.pv .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;
+  font-size:12px;font-weight:600;background:var(--surface-2);color:var(--muted);
+  border:1px solid var(--border)}
+.pv .chip.on{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+
+/* 端末モック */
+.phone{border:1px solid var(--border);border-radius:26px;overflow:hidden;
+  background:var(--bg);display:flex;flex-direction:column;min-height:540px;
+  box-shadow:var(--shadow-lg)}
+.phone .ph-top{display:flex;align-items:center;justify-content:space-between;
+  padding:calc(14px * var(--dens)) 16px 10px;background:var(--overlay);
+  border-bottom:1px solid var(--border)}
+.phone .ph-top .ti{font-family:var(--font-heading);font-weight:var(--fw-head);font-size:18px}
+.phone .ph-top .gr{color:var(--muted)}
+.phone .ph-top svg{width:21px;height:21px}
+.phone .ph-body{flex:1;padding:calc(15px * var(--dens)) 15px calc(20px * var(--dens));
+  display:grid;gap:calc(16px * var(--dens));align-content:start}
+.phone .lab{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+
+.pv .heroimg{position:relative;overflow:hidden}
+.pv .heroimg img{display:block;width:100%;height:172px;object-fit:cover}
+.pv .heroimg .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:16px;gap:5px}
+.pv .heroimg .ov .t{font-family:var(--font-heading);font-weight:var(--fw-head);font-size:21px;
+  color:var(--text);line-height:1.3}
+.pv .heroimg .ov .s{font-size:12.5px;color:var(--muted)}
+.pv .herocss{height:172px;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;gap:5px;
+  background:
+    radial-gradient(760px 340px at 82% -14%, color-mix(in srgb, var(--primary) 32%, transparent), transparent 62%),
+    radial-gradient(600px 320px at -8% 114%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--bg), var(--bg-2))}
+.pv .herocss .t{font-family:var(--font-heading);font-weight:var(--fw-head);font-size:21px;line-height:1.3}
+.pv .herocss .s{font-size:12.5px;color:var(--muted)}
+
+[data-dir="A"]{--bg:#F7F3E9;--surface:#FFFDF7;--border:#E3DAC6;--text:#22201B;--muted:#6E6656;--primary:#1F3A5F;--on-primary:#FFFDF7;--accent:#A8352A;--danger:#A93226;--success:#33691E;--on-danger:#FFFFFF;--on-success:#FFFFFF;--bg-2:#F3EDDE;--surface-2:#FFF9E5;--line-2:#D7CAAE;--muted-2:#8D836F;--primary-soft:color-mix(in srgb, #1F3A5F 16%, transparent);--danger-soft:color-mix(in srgb, #A93226 14%, transparent);--overlay:color-mix(in srgb, #F7F3E9 88%, transparent);--scrim:color-mix(in srgb, #F7F3E9 62%, transparent);--r-sm:2px;--r:6px;--r-lg:10px;--shadow:none（影は全画面ゼロ。段差は1px罫線と紙の明度差だけで作る）;--shadow-lg:0 12px 40px rgba(0,0,0,.24);--shadow-accent:0 8px 24px color-mix(in srgb, #1F3A5F 30%, transparent);--font-heading:"Lora",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;--font-body:"システム（ヒラギノ／游ゴシック）",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;--font-mono:"IBM Plex Mono","システム（ヒラギノ／游ゴシック）",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--fw-head:700;--fw-body:400;--dens:1.00;}
+[data-dir="B"]{--bg:#FBF8FF;--surface:#FFFFFF;--border:#E9E1F4;--text:#2E2740;--muted:#6E6486;--primary:#7C5CD6;--on-primary:#FFFFFF;--accent:#C1437E;--danger:#C7455C;--success:#2A8164;--on-danger:#FFFFFF;--on-success:#FFFFFF;--bg-2:#F2E9FF;--surface-2:#F6F6F6;--line-2:#D6C7EA;--muted-2:#8A81A1;--primary-soft:color-mix(in srgb, #7C5CD6 16%, transparent);--danger-soft:color-mix(in srgb, #C7455C 14%, transparent);--overlay:color-mix(in srgb, #FBF8FF 88%, transparent);--scrim:color-mix(in srgb, #FBF8FF 62%, transparent);--r-sm:12px;--r:18px;--r-lg:20px;--shadow:0 6px 14px rgba(124,92,214,.10)（押せるカードだけ。真下4pxに同色パステルの座布団を1枚敷く）;--shadow-lg:0 12px 40px rgba(0,0,0,.24);--shadow-accent:0 8px 24px color-mix(in srgb, #7C5CD6 30%, transparent);--font-heading:"Nunito","システム（ヒラギノ／游ゴシック）",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;--font-body:"システム（ヒラギノ／游ゴシック）",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;--font-mono:"Nunito","システム（ヒラギノ／游ゴシック）",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--fw-head:800;--fw-body:400;--dens:1.18;}
+[data-dir="C"]{--bg:#0B1020;--surface:#151C33;--border:#26304D;--text:#E8ECF7;--muted:#93A0C0;--primary:#6C8CFF;--on-primary:#0B1020;--accent:#FFB86B;--danger:#FF6B6B;--success:#4ADE80;--on-danger:#0B0B0B;--on-success:#0B0B0B;--bg-2:#0F162B;--surface-2:#1C2645;--line-2:#323F65;--muted-2:#7081AB;--primary-soft:color-mix(in srgb, #6C8CFF 16%, transparent);--danger-soft:color-mix(in srgb, #FF6B6B 14%, transparent);--overlay:color-mix(in srgb, #0B1020 88%, transparent);--scrim:color-mix(in srgb, #0B1020 62%, transparent);--r-sm:6px;--r:10px;--r-lg:14px;--shadow:none（影ゼロ。各ブロックの左端に2pxの縦罫を1本引き、その色で状態を言う）;--shadow-lg:0 12px 40px rgba(0,0,0,.24);--shadow-accent:0 8px 24px color-mix(in srgb, #6C8CFF 30%, transparent);--font-heading:"Lexend","システム（ヒラギノ／游ゴシック）",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;--font-body:"システム（ヒラギノ／游ゴシック）",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;--font-mono:"JetBrains Mono","システム（ヒラギノ／游ゴシック）",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--fw-head:600;--fw-body:400;--dens:1.00;}</style>
+</head><body>
+<div class="bar"><div class="bar-in">
+<span class="brand">design&nbsp;kit</span>
+<nav class="jump">
+<a href="#top">▲ 上へ</a>
+<a href="#dir-A"><i class="dot" style="background:#1F3A5F"></i>案 A</a>
+<a href="#dir-B"><i class="dot" style="background:#7C5CD6"></i>案 B</a>
+<a href="#dir-C"><i class="dot" style="background:#6C8CFF"></i>案 C</a>
+<a href="#compare">くらべる表</a>
+</nav>
+<div class="seg" role="group" aria-label="この画面の背景"><button type="button" data-theme="auto">おまかせ</button><button type="button" data-theme="light">ライト背景</button><button type="button" data-theme="dark">ダーク背景</button></div>
+</div></div>
+<div class="wrap" id="top">
+<header class="hero">
+<div class="kicker">デザイン方針をえらぶ</div>
+<h1>英単語マスター（eitango）</h1>
+<p class="lead">英単語を毎日おぼえて、忘れる前に復習する</p>
+<dl class="facts">
+<div><dt>つくるもの</dt><dd>英単語マスター（eitango）</dd></div>
+<div><dt>なんのため</dt><dd>英単語を毎日おぼえて、忘れる前に復習する</dd></div>
+<div><dt>だれが使う</dt><dd>早慶上智MARCH志望の高校生（本人）</dd></div>
+<div><dt>どこで動く</dt><dd>Expo (React Native) / iOS実機 + Web(GitHub Pages)</dd></div>
+<div><dt>いつ使う</dt><dd>朝の通学電車で片手・数分、夜9時以降に自宅の机で数十分</dd></div>
+</dl>
+<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1"/></svg><div><b class="ttl">3つの案から1つ選んでください。</b><p>下にスクロールすると、案ごとに「色」「文字」「実際のボタンや画面」が並んでいます。見て、いちばんしっくり来たものの<b>「この案にする」</b>を押すだけでOKです。決めきれなければ<b>案A</b>で進めます。</p></div></div>
+<details class="warns"><summary>⚠ 気になる点が 27 件あります（クリックで開く）</summary><ul>
+<li>写真フォルダが見つかりません: /Users/so/eitango/design/images（写真なしで進めます）</li>
+<li>アイコンフォルダが見つかりません: /Users/so/eitango/design/icons（内蔵の線アイコンで代用します）</li>
+<li>[案 A] フォント「Lora」は検証済み一覧に無いため、ウェイトは 400/700 のみ要求します。</li>
+<li>[案 A] フォント「システム（ヒラギノ／游ゴシック）」は検証済み一覧に無いため、ウェイトは 400/700 のみ要求します。</li>
+<li>[案 A] アイコン「book-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 A] アイコン「today-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 A] アイコン「create-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 A] アイコン「albums-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 A] アイコン「library-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 A] アイコン「stats-chart-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 A] アイコン「checkmark」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 A] アイコン「close」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 B] フォント「システム（ヒラギノ／游ゴシック）」は検証済み一覧に無いため、ウェイトは 400/700 のみ要求します。</li>
+<li>[案 B] アイコン「sparkles」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 B] アイコン「albums-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 B] アイコン「list-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 B] アイコン「library-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 B] アイコン「stats-chart」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 B] アイコン「checkmark-circle」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 B] アイコン「close-circle」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 C] フォント「システム（ヒラギノ／游ゴシック）」は検証済み一覧に無いため、ウェイトは 400/700 のみ要求します。</li>
+<li>[案 C] アイコン「moon-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 C] アイコン「albums-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 C] アイコン「list-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 C] アイコン「library-outline」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 C] アイコン「stats-chart」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+<li>[案 C] アイコン「checkmark-circle」が icons/ にも内蔵にも無いのでプレースホルダにしました。</li>
+</ul></details>
+</header>
+<section class="dir" id="dir-A" data-dir="A">
+<div class="strip"><i style="background:#F7F3E9"></i><i style="background:#FFFDF7"></i><i style="background:#E3DAC6"></i><i style="background:#6E6656"></i><i style="background:#22201B"></i><i style="background:#1F3A5F"></i><i style="background:#A8352A"></i><i style="background:#33691E"></i><i style="background:#A93226"></i></div>
+<div class="dir-head">
+<div class="idbox" style="background:#1F3A5F;color:#FFFDF7">A</div>
+<div style="flex:1;min-width:200px">
+<h2>英単語ノート</h2>
+<p class="mood">生成り / 罫線 / 朱の一点</p>
+<div class="tags">
+<span class="tag">明るい画面</span>
+<span class="tag">ぎっしり（基準余白12px。4の倍数で 4/8/12/16/24 の5段だけ使う）</span>
+<span class="tag">角丸 6px</span>
+<span class="tag">Lora / システム（ヒラギノ／游ゴシック）</span>
+<span class="tag" style="">最低コントラスト 5.12:1</span>
+</div></div></div>
+<div class="why"><b>なぜこの案か</b>昼の車内でも夜の机でも眩しくない生成りの紙面に、英単語だけがセリフ体で罫線の上に立つので、一番見たいもの（次に覚える綴り）が毎回まっ先に目に入る</div>
+<div class="block" style="margin-top:26px"><h3><span class="n">1</span>色（10色セット）</h3><p class="hint">クリックするとHEXがコピーされます。役割が決まっているので、この10色だけで画面ぜんぶ作れます。</p>
+<div class="pal"><button class="sw" type="button" data-copy="#F7F3E9" title="クリックでHEXをコピー"><span class="c" style="background:#F7F3E9"></span><span class="t"><span class="k">背景</span><span class="r">bg</span><span class="h">#F7F3E9</span></span></button><button class="sw" type="button" data-copy="#FFFDF7" title="クリックでHEXをコピー"><span class="c" style="background:#FFFDF7"></span><span class="t"><span class="k">面・カード</span><span class="r">surface</span><span class="h">#FFFDF7</span></span></button><button class="sw" type="button" data-copy="#E3DAC6" title="クリックでHEXをコピー"><span class="c" style="background:#E3DAC6"></span><span class="t"><span class="k">罫線</span><span class="r">border</span><span class="h">#E3DAC6</span></span></button><button class="sw" type="button" data-copy="#22201B" title="クリックでHEXをコピー"><span class="c" style="background:#22201B"></span><span class="t"><span class="k">本文の文字</span><span class="r">text</span><span class="h">#22201B</span></span></button><button class="sw" type="button" data-copy="#6E6656" title="クリックでHEXをコピー"><span class="c" style="background:#6E6656"></span><span class="t"><span class="k">うすい文字</span><span class="r">muted</span><span class="h">#6E6656</span></span></button><button class="sw" type="button" data-copy="#1F3A5F" title="クリックでHEXをコピー"><span class="c" style="background:#1F3A5F"></span><span class="t"><span class="k">主役の色</span><span class="r">primary</span><span class="h">#1F3A5F</span></span></button><button class="sw" type="button" data-copy="#FFFDF7" title="クリックでHEXをコピー"><span class="c" style="background:#FFFDF7"></span><span class="t"><span class="k">主役の上の文字</span><span class="r">onPrimary</span><span class="h">#FFFDF7</span></span></button><button class="sw" type="button" data-copy="#A8352A" title="クリックでHEXをコピー"><span class="c" style="background:#A8352A"></span><span class="t"><span class="k">差し色</span><span class="r">accent</span><span class="h">#A8352A</span></span></button><button class="sw" type="button" data-copy="#A93226" title="クリックでHEXをコピー"><span class="c" style="background:#A93226"></span><span class="t"><span class="k">危険</span><span class="r">danger</span><span class="h">#A93226</span></span></button><button class="sw" type="button" data-copy="#33691E" title="クリックでHEXをコピー"><span class="c" style="background:#33691E"></span><span class="t"><span class="k">成功</span><span class="r">success</span><span class="h">#33691E</span></span></button></div>
+</div>
+<div class="block"><h3><span class="n">2</span>読みやすさの検査</h3><p class="hint">背景と文字の明るさの差を数字で見ます。4.5:1 以上あれば、たいていの人がふつうに読めます（WCAG AA）。3.0 未満は「文字として使ってはいけない」ライン。</p>
+<div class="tblwrap"><table><thead><tr><th>組み合わせ</th><th>コントラスト比</th><th>判定</th><th>目安</th><th>修正案</th></tr></thead><tbody><tr><td><span class="pairbox"><span class="chip2" style="background:#F7F3E9;color:#22201B">Aa</span><span>本文の文字 / 背景</span></span></td><td class="n">14.69:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#F7F3E9;color:#6E6656">Aa</span><span>うすい文字 / 背景</span></span></td><td class="n">5.12:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FFFDF7;color:#22201B">Aa</span><span>本文の文字 / カード面</span></span></td><td class="n">16.00:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#1F3A5F;color:#FFFDF7">Aa</span><span>主役ボタンの文字 / 主役の色</span></span></td><td class="n">11.29:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#F7F3E9;color:#1F3A5F">Aa</span><span>主役の色 / 背景</span></span></td><td class="n">10.36:1</td><td><span class="pill ok">十分</span></td><td style="color:var(--pmu);font-size:12px">3.0 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#F7F3E9;color:#A8352A">Aa</span><span>差し色 / 背景</span></span></td><td class="n">5.91:1</td><td><span class="pill ok">十分</span></td><td style="color:var(--pmu);font-size:12px">3.0 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FFFDF7;color:#A93226">Aa</span><span>危険の色 / カード面</span></span></td><td class="n">6.51:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FFFDF7;color:#33691E">Aa</span><span>成功の色 / カード面</span></span></td><td class="n">6.49:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr></tbody></table></div><div class="goodnote"><b>ぜんぶ合格。</b> この配色なら、明るい屋外でも文字が読めます。</div>
+</div>
+<div class="block"><h3><span class="n">3</span>文字（実際に読み込んで表示）</h3><p class="hint">日本語と英数字の両方を出しています。12pxの注記が読めるか、大きい数字が詰まって見えないかを確認してください。</p>
+<div class="fontcard"><div class="fh"><span>見出し <b>Lora</b>（不明 / 太さ 700）　本文 <b>システム（ヒラギノ／游ゴシック）</b>（不明 / 太さ 400）　等幅 <b>IBM Plex Mono</b></span><span>実際に読み込んで表示しています</span></div><div class="fb"><div class="specimen"><div class="lab">みだし 28px</div><div style="font-family:&quot;Lora&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:700;font-size:28px;line-height:1.35;color:var(--pin)">きょうの積み上げ 3時間20分</div><div style="font-family:&quot;Lora&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:700;font-size:28px;line-height:1.35;color:var(--pin)">Today&rsquo;s Focus Streak</div></div><div class="specimen"><div class="lab">本文 15px</div><div style="font-family:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:400;font-size:15px;line-height:1.75;color:var(--pin)">寝る前に見る画面なので、まぶしくない色にしています。タイマーを止めると、その日の記録が自動でグラフに反映されます。設定はあとから何度でも変えられます。<br>The quick brown fox jumps over the lazy dog. 0123456789</div></div><div class="specimen"><div class="lab">注記 12px（ここが読めるかが勝負）</div><div style="font-family:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:400;font-size:12px;line-height:1.6;color:var(--pmu)">最終更新 2026/08/28 07:12 ・ 前回から +14分 ・ 目標まであと 40分</div></div><div class="specimen"><div class="lab">大きい数字（タイマー・記録）</div><div style="font-family:&quot;IBM Plex Mono&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:52px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--pin)">25:00</div><div style="font-family:&quot;IBM Plex Mono&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--pmu);margin-top:6px">1,284 / 3,000 pt</div></div></div></div><div class="fnote">※ Lora は手元の一覧に無いフォントです。太さ 400/700 だけ読み込みます。<br>※ システム（ヒラギノ／游ゴシック） は手元の一覧に無いフォントです。太さ 400/700 だけ読み込みます。</div>
+</div>
+<div class="block"><h3><span class="n">4</span>UI部品（実物）</h3><p class="hint">左が実際のスマホ画面のイメージ、右が部品ひとつずつです。</p>
+<div class="pvbox"><div class="ph">この案の色・フォント・角丸・影をそのまま当てた「実物」です</div><div class="split"><div class="pv phone"><div class="ph-top"><span class="ti">きょう</span><span class="gr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg></span></div><div class="ph-body"><div class="stats2"><div class="stat"><span class="n">3<span style="font-size:16px">h</span>20</span><span class="k">きょうの勉強時間</span><span class="d up">+42分 きのうより</span></div><div class="stat"><span class="n">7</span><span class="k">連続日数</span><span class="d dn">-1 記録更新まで</span></div></div><div class="card"><div class="ringwrap"><svg class="ring" width="68" height="68" viewBox="0 0 68 68" aria-hidden="true" style="width:68px;height:68px;flex:none"><circle class="tr" cx="34" cy="34" r="30" fill="none" stroke-width="8"/><circle class="br" cx="34" cy="34" r="30" fill="none" stroke-width="8" stroke-dasharray="135.72 52.78"/></svg><div style="flex:1"><div class="t">週の目標</div><div class="m">14時間中 10時間6分</div><div class="prog" style="margin-top:10px"><i style="width:72%"></i></div></div></div></div><div><div class="lab" style="margin-bottom:7px">きょうやること</div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg></span><span class="bd"><span class="tt">英単語 60個</span><span class="ss" style="display:block">きのうの続きから</span></span><span class="vv">12分</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1"/></svg></span><span class="bd"><span class="tt">数学 青チャート</span><span class="ss" style="display:block">例題 42〜48</span></span><span class="vv">35分</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg></span><span class="bd"><span class="tt">復習カード</span><span class="ss" style="display:block">8枚たまってます</span></span><span class="vv">8枚</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div></div><button class="btn btn-primary" style="width:100%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8V5.2Z"/></svg> 勉強をはじめる</button></div><div class="tabbar"><span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h14V9.6"/><path d="M10 21v-6h4v6"/></svg>きょう</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6.5 20v-7"/><path d="M12 20V5"/><path d="M17.5 20v-10"/></svg>記録</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg>カード</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg>設定</span></div></div><div class="parts"><div class="part"><span class="cap">ボタン 4種</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="btnrow"><button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg> 保存する</button><button class="btn btn-ghost">あとで</button><button class="btn btn-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V4h5v3M6.5 7 7.6 20h8.8L17.5 7"/></svg> 削除</button><button class="btn btn-off">送信ちゅう…</button></div></div></div><div class="part"><span class="cap">カード</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="card"><div class="t">数学 II・B 三角関数</div><div class="m">きのう 21:40 ・ 32分 ・ 正答率 78%</div><div class="b">加法定理のところでつまずいています。あしたの朝もう一度やると定着しやすいです。</div><div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">復習おすすめ</span><span class="chip">数学</span></div></div></div></div><div class="part"><span class="cap">入力欄（エラーあり）</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:12px"><div class="field"><label>目標の勉強時間</label><div class="inp focus">3時間30分</div></div><div class="field"><label>1日の上限</label><div class="inp bad">0分</div><span class="ferr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.2 21 19.5H3L12 4.2Z"/><path d="M12 10v4M12 16.6v.2"/></svg> 1分以上にしてください</span></div></div></div><div class="part"><span class="cap">下タブバー</span><div class="pv" style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden"><div style="height:56px;background:var(--bg)"></div><div class="tabbar"><span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h14V9.6"/><path d="M10 21v-6h4v6"/></svg>きょう</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6.5 20v-7"/><path d="M12 20V5"/><path d="M17.5 20v-10"/></svg>記録</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg>カード</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg>設定</span></div></div></div><div class="part"><span class="cap">リスト行</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="bd"><span class="tt">朝の英単語</span><span class="ss" style="display:block">毎日 7:00</span></span><span class="vv">21日</span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8Z"/></svg></span><span class="bd"><span class="tt">寝る前の復習</span><span class="ss" style="display:block">毎日 22:30</span></span><span class="vv">4日</span></div></div></div><div class="part"><span class="cap">進捗バー と リング</span><div class="pv" style="padding:16px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:14px"><div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span class="mu">今週の目標</span><span class="num">72%</span></div><div class="prog"><i style="width:72%"></i></div></div><div class="ringwrap"><svg class="ring" width="60" height="60" viewBox="0 0 60 60" aria-hidden="true" style="width:60px;height:60px;flex:none"><circle class="tr" cx="30" cy="30" r="26.5" fill="none" stroke-width="7"/><circle class="br" cx="30" cy="30" r="26.5" fill="none" stroke-width="7" stroke-dasharray="74.93 91.58"/></svg><div><div style="font-weight:600;font-size:14px">集中モード</div><div class="mu" style="font-size:12px">のこり 13分45秒</div></div></div></div></div><div class="part"><span class="cap">トースト と モーダル</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:12px;justify-items:center"><span class="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg> 記録を保存しました</span><div class="scrim" style="width:100%"><div class="modal"><div class="t">この記録を消しますか？</div><div class="b">消すと元にもどせません。</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost">やめる</button><button class="btn btn-danger">消す</button></div></div></div></div></div><div class="part"><span class="cap">空状態（データが無いとき）</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="empty"><span class="art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-3.3-2.4-6-6-6 0 3.3 2.4 6 6 6Z"/><path d="M12 13c0-3.3 2.4-6 6-6 0 3.3-2.4 6-6 6Z"/></svg></span><span class="t">まだ記録がありません</span><span class="b">「勉強をはじめる」を押すと、ここに今日の積み上げが出ます。</span><button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> さいしょの記録をつける</button></div></div></div><div class="part"><span class="cap">統計タイル</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="stats2"><div class="stat"><span class="n">128</span><span class="k">おぼえた単語</span><span class="d up">+12 きのう</span></div><div class="stat"><span class="n">86<span style="font-size:16px">%</span></span><span class="k">正答率</span><span class="d dn">-3 きのう</span></div></div></div></div></div></div></div>
+</div>
+<div class="block"><h3><span class="n">5</span>写真</h3><p class="hint">「空っぽの画面」に置く絵として使えるかを見てください。ヒーロー画像より、空状態に置くほうが効きます。</p>
+<div class="noimg">この案に使える写真がまだありません。<code>fetch_images.py</code> で集めるか、下の「写真を使わない案」で進めてもじゅうぶん成立します。</div><div class="heroes"><div class="heroframe"><div class="hcap">写真を使わない案 — パレットだけでCSSグラデーションを作る（オフラインPWA向き・軽い）</div><div class="pv"><div class="herocss"><span class="t">今夜も、すこしだけ。</span><span class="s">つづけた日数 21日 ・ 平均 42分</span></div></div></div></div>
+</div>
+<div class="block"><h3><span class="n">6</span>アイコン</h3><p class="hint">絵文字とまぜないこと。1画面ではどちらかに統一します。</p>
+<div class="pv icons" style="background:transparent;color:var(--text)"><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="book-outline">book-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="today-outline">today-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="create-outline">create-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="albums-outline">albums-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="library-outline">library-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="stats-chart-outline">stats-chart-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="checkmark">checkmark</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="close">close</span></div></div><div class="pv icontint" style="margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);display:flex;gap:14px;flex-wrap:wrap;align-items:center"><span class="cap mu" style="font-size:12px">↑ 同じアイコンにパレットの色を当てたところ</span></div><p class="hint" style="margin-top:10px">色は <code>currentColor</code> なので、CSSの <code>color:</code> だけで変わります。SVGを1個 400バイト前後なので、20個入れても10KBほど。単一HTMLにそのまま貼れます。（<b style="color:var(--pwarn)">8個が見つかりません</b>（名前が lucide と phosphor で違うことがあります））</p>
+</div>
+<div class="adopt"><div class="arow">
+<button class="take" type="button" data-copy-tokens="tok-A" data-dir-id="A" style="background:#1F3A5F;color:#FFFDF7">この案にする（tokens.css をコピー）</button>
+</div>
+<div class="cmd">押すと CSS がクリップボードに入ります。ファイルとして書き出すなら、ターミナルでこれ:<br><code>python3 make_moodboard.py --spec /Users/so/eitango/design/direction.json --out /Users/so/eitango/design/design-brief.html --emit-tokens A</code></div>
+<details><summary>tokens.css の中身を見る（手でコピーしたいとき）</summary><pre id="tok-A">/* ============================================================
+   英単語マスター（eitango） ― デザイントークン  (案 A: 英単語ノート)
+   design-kit / make_moodboard.py が自動生成しました。
+
+   ■ 単一HTMLアプリへの貼り方
+     1) このファイルの中身を丸ごとコピーする
+     2) index.html の &lt;head&gt; の中に style 要素を作って、その中に貼り付ける
+        （外部ファイルにしなくてOK）
+     3) フォントを使うなら、その style 要素の *前* にこの1行を置く:
+        &lt;link rel=&quot;stylesheet&quot; href=&quot;https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&amp;family=Lora:wght@700&amp;family=システム（ヒラギノ／游ゴシック）:wght@400;500;600;700&amp;display=swap&quot;&gt;
+        オフラインPWAで外部URLを入れたくないときは、この link を入れなくてOK。
+        --font-body 等はシステムフォントに自動で落ちるので崩れません。
+     4) &lt;meta name=&quot;theme-color&quot; content=&quot;#F7F3E9&quot;&gt; と
+        manifest.json の theme_color も同じ #F7F3E9 に揃える
+
+   ■ 名前のきまり
+     ・契約の10色 = --bg --surface --border --text --muted
+                    --primary --on-primary --accent --danger --success
+     ・今までのアプリで使っていた名前(--card --line --ink --acc --ok …)は
+       同じ値の別名として残してあるので、既存コードにそのまま貼っても壊れません。
+
+   ■ この配色のコントラスト（自動計算）
+      本文の文字 / 背景                 14.69:1  AAA
+      うすい文字 / 背景                 5.12:1  AA
+      本文の文字 / カード面               16.00:1  AAA
+      主役ボタンの文字 / 主役の色            11.29:1  AAA
+      主役の色 / 背景                  10.36:1  十分
+   ============================================================ */
+
+:root{
+  color-scheme: light;                 /* 入力欄やスクロールバーを浮かせないため必須 */
+
+  /* ===== 契約の10色（direction.json の palette と1:1） ===== */
+  --bg:#F7F3E9;
+  --surface:#FFFDF7;
+  --border:#E3DAC6;
+  --text:#22201B;
+  --muted:#6E6656;
+  --primary:#1F3A5F;
+  --on-primary:#FFFDF7;
+  --accent:#A8352A;
+  --danger:#A93226;
+  --success:#33691E;
+
+  /* ===== 今までのアプリで使っていた名前（同じ値の別名。消さない） ===== */
+  --card:var(--surface); --panel:var(--surface); --surface-1:var(--surface);
+  --line:var(--border);
+  --ink:var(--text); --fg:var(--text); --tx:var(--text); --txt:var(--text);
+  --dim:var(--muted); --sub:var(--muted); --text-dim:var(--muted); --tx2:var(--muted); --ink-2:var(--muted);
+  --acc:var(--primary); --on-accent:var(--on-primary);
+  --ok:var(--success); --good:var(--success); --bad:var(--danger); --warn:var(--accent);
+  --on-danger:#FFFFFF; --on-success:#FFFFFF; --on-accent-solid:#FFFFFF;
+
+  /* ===== 「もう一段」（全プロジェクトが必ず作るやつ） ===== */
+  --bg-2:#F3EDDE;       --bg2:var(--bg-2);
+  --surface-2:#FFF9E5;  --card2:var(--surface-2); --panel2:var(--surface-2);
+  --line-2:#D7CAAE;     --line2:var(--line-2);
+  --muted-2:#8D836F;    --dim2:var(--muted-2);   --tx3:var(--muted-2);
+
+  /* ===== 半透明（color-mix で作る。rgba のベタ書きより保守が楽） ===== */
+  --primary-soft: color-mix(in srgb, var(--primary) 16%, transparent);
+  --accent-soft:  color-mix(in srgb, var(--accent)  16%, transparent);
+  --danger-soft:  color-mix(in srgb, var(--danger)  14%, transparent);
+  --success-soft: color-mix(in srgb, var(--success) 14%, transparent);
+  --overlay:      color-mix(in srgb, var(--bg) 88%, transparent);  /* ヘッダ/タブバーの下地 */
+  --scrim:        color-mix(in srgb, var(--bg) 55%, transparent);  /* モーダルの暗幕 */
+  --ring:         color-mix(in srgb, var(--text) 10%, transparent);
+
+  /* ===== 形 ===== */
+  --r-sm:2px; --r:6px; --r-lg:10px; --r-pill:999px;
+  --radius:var(--r); --radius-sm:var(--r-sm); --radius-lg:var(--r-lg);
+
+  /* ===== 影 ===== */
+  --shadow:none（影は全画面ゼロ。段差は1px罫線と紙の明度差だけで作る）;
+  --shadow-lg:0 12px 40px rgba(0,0,0,.22);
+  --shadow-accent:0 8px 24px color-mix(in srgb, var(--primary) 30%, transparent);
+
+  /* ===== 文字（システムフォントのフォールバックを必ず残す） ===== */
+  --font-heading:&quot;Lora&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;
+  --font-body:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;
+  --font-mono:&quot;IBM Plex Mono&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --fw-body:400; --fw-mid:600; --fw-bold:700; --fw-head:700;
+  --fs-xs:12px; --fs-sm:13px; --fs:15px; --fs-lg:17px; --fs-xl:22px; --fs-2xl:28px; --fs-3xl:36px;
+  --lh:1.65; --lh-tight:1.35;
+
+  /* ===== 余白（24/32 を必ず使う。今までここが無くて全部詰まっていた） ===== */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+
+  /* ===== レイアウト ===== */
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --maxw:560px; --tabbar-h:62px; --header-h:54px;
+}
+
+/* ---- 反対の明るさのテーマ（自動生成。auto / light / dark の3段） ---- */
+/*    OSの設定に自動で合わせる。ユーザーが手で選んだら data-theme が勝つ。 */
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme=&quot;light&quot;])){
+    color-scheme:dark;
+    --bg:#15120C;
+    --surface:#252116;
+    --border:#4F4630;
+    --text:#F0EFED;
+    --muted:#B3AC9E;
+    --primary:#3A6CB1;
+    --on-primary:#FFFFFF;
+    --accent:#C03D30;
+    --danger:#DA6559;
+    --success:#4B9A2C;
+    --bg-2:#1F1A12; --surface-2:#352F20; --line-2:#655A3D; --muted-2:#9A917F;
+    --shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme=&quot;dark&quot;]{
+  color-scheme:dark;
+  --bg:#15120C;
+  --surface:#252116;
+  --border:#4F4630;
+  --text:#F0EFED;
+  --muted:#B3AC9E;
+  --primary:#3A6CB1;
+  --on-primary:#FFFFFF;
+  --accent:#C03D30;
+  --danger:#DA6559;
+  --success:#4B9A2C;
+  --bg-2:#1F1A12; --surface-2:#352F20; --line-2:#655A3D; --muted-2:#9A917F;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+}
+:root[data-theme=&quot;light&quot;]{ color-scheme:light; }
+/* JS側:  t===&#x27;auto&#x27; なら removeAttribute(&#x27;data-theme&#x27;)、それ以外は setAttribute(&#x27;data-theme&#x27;, t) */
+
+/* ============================================================
+   ここから下は「そのまま使える部品」。要らないものは消してOK。
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-body); font-size:var(--fs); font-weight:var(--fw-body);
+  line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;      /* 数字の桁を揃える */
+  -webkit-text-size-adjust:100%;
+  overscroll-behavior-y:none;
+}
+h1,h2,h3,h4{font-family:var(--font-heading);font-weight:var(--fw-head);line-height:var(--lh-tight);margin:0}
+h1{font-size:var(--fs-2xl)} h2{font-size:var(--fs-xl)} h3{font-size:var(--fs-lg)}
+p{margin:0}
+a{color:var(--primary)}
+small,.small{font-size:var(--fs-sm)}
+.muted{color:var(--muted)}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+/* 画面のいれもの（スマホ1カラム＋下タブバー） */
+.app{max-width:var(--maxw);margin:0 auto;
+  padding:calc(var(--safe-t) + var(--sp-4)) var(--sp-4)
+          calc(var(--tabbar-h) + var(--sp-5) + var(--safe-b))}
+.section{margin-top:var(--sp-5)}            /* 区切りは24px以上。詰めない */
+.section + .section{margin-top:var(--sp-6)}
+.stack{display:grid;gap:var(--sp-3)}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid transparent;border-radius:var(--r);
+  padding:11px 16px;min-height:44px;              /* 指で押せる最小サイズ */
+  font:inherit;font-weight:var(--fw-mid);cursor:pointer;
+  background:var(--surface-2);color:var(--text);
+  transition:transform .12s ease, background .12s ease;}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn[disabled],.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-accent)}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+.btn-danger{background:var(--danger);color:var(--on-danger)}
+.btn-block{width:100%}
+.btn svg{width:18px;height:18px;flex:none}
+
+/* カード */
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:var(--sp-4);box-shadow:var(--shadow)}
+.card-title{display:block;font-family:var(--font-heading);font-weight:var(--fw-bold);font-size:var(--fs-lg)}
+.card-meta{display:block;font-size:var(--fs-xs);color:var(--muted)}
+
+/* 入力欄 */
+.field{display:grid;gap:6px}
+.field label{font-size:var(--fs-sm);color:var(--muted);font-weight:var(--fw-mid)}
+.input,input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
+  width:100%;background:var(--bg-2);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 12px;min-height:44px;font:inherit;font-size:var(--fs)}
+.input:focus,input:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.input.is-error{border-color:var(--danger);background:var(--danger-soft)}
+.field-error{color:var(--danger);font-size:var(--fs-xs)}
+
+/* 下タブバー */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+  background:var(--overlay);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--border);padding-bottom:var(--safe-b)}
+.tabbar button{flex:1;display:grid;justify-items:center;gap:3px;
+  padding:8px 0 10px;background:none;border:0;cursor:pointer;
+  color:var(--muted);font:inherit;font-size:var(--fs-xs);font-weight:var(--fw-mid)}
+.tabbar button[aria-current=&quot;page&quot;],.tabbar button.is-on{color:var(--primary)}
+.tabbar svg{width:22px;height:22px}
+
+/* リスト */
+.list{display:grid;gap:2px}
+.list-row{display:flex;align-items:center;gap:var(--sp-3);
+  padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.list-row + .list-row{margin-top:6px}
+.list-row .ico{display:grid;place-items:center;width:34px;height:34px;flex:none;
+  border-radius:var(--r-sm);background:var(--primary-soft);color:var(--primary)}
+.list-row .ico svg{width:19px;height:19px}
+.list-row .body{flex:1;min-width:0}
+/* span で書いても縦に積まれるように display:block を明示しておく */
+.list-row .ttl,.list-row .sub{display:block}
+.list-row .ttl{font-weight:var(--fw-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-row .sub{font-size:var(--fs-xs);color:var(--muted)}
+.list-row .val{font-family:var(--font-mono);font-weight:var(--fw-bold);color:var(--text);flex:none}
+
+/* 進捗 */
+.progress{height:10px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
+.progress &gt; i{display:block;height:100%;border-radius:inherit;background:var(--primary)}
+.ring{transform:rotate(-90deg)}
+.ring .track{stroke:var(--surface-2)}
+.ring .bar{stroke:var(--primary);stroke-linecap:round}
+
+/* 統計タイル */
+.stat{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:var(--sp-4);display:grid;gap:4px}
+.stat .n{font-family:var(--font-mono);font-size:var(--fs-3xl);font-weight:var(--fw-bold);line-height:1}
+.stat .k{font-size:var(--fs-xs);color:var(--muted)}
+.stat .d{font-size:var(--fs-xs);font-weight:var(--fw-mid)}
+.stat .d.up{color:var(--success)} .stat .d.down{color:var(--danger)}
+
+/* チップ／バッジ */
+.chip{display:inline-flex;align-items:center;gap:6px;
+  padding:5px 11px;border-radius:var(--r-pill);font-size:var(--fs-xs);font-weight:var(--fw-mid);
+  background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+.badge{display:inline-block;padding:2px 8px;border-radius:var(--r-pill);
+  font-size:var(--fs-xs);font-weight:var(--fw-bold);background:var(--accent);color:var(--on-accent-solid)}
+
+/* トースト */
+.toast{position:fixed;left:50%;bottom:calc(var(--tabbar-h) + 18px + var(--safe-b));
+  transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:8px;
+  padding:11px 16px;border-radius:var(--r-pill);
+  background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border);box-shadow:var(--shadow-lg);font-size:var(--fs-sm)}
+
+/* モーダル */
+.scrim{position:fixed;inset:0;z-index:70;background:var(--scrim);
+  backdrop-filter:blur(3px);display:grid;place-items:center;padding:var(--sp-4)}
+.modal{width:100%;max-width:360px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--sp-5);box-shadow:var(--shadow-lg);display:grid;gap:var(--sp-3)}
+
+/* 空状態 ― これを全画面に必ず1つ用意する */
+.empty{display:grid;justify-items:center;gap:var(--sp-3);
+  padding:var(--sp-6) var(--sp-4);text-align:center;color:var(--muted)}
+.empty .art{width:96px;height:96px;border-radius:var(--r-pill);
+  display:grid;place-items:center;
+  background:radial-gradient(circle at 30% 25%, var(--primary-soft), transparent 70%), var(--surface-2);
+  color:var(--primary)}
+.empty .art svg{width:40px;height:40px}
+.empty h3{color:var(--text)}
+.empty p{font-size:var(--fs-sm);max-width:26em}
+
+/* 画像を使わない背景（写真が無くても画面が寂しくならない） */
+.hero-gradient{
+  background:
+    radial-gradient(900px 420px at 82% -12%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 62%),
+    radial-gradient(700px 380px at -6% 112%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+}
+
+/* うごき（軽く。押した感だけは全部に付ける） */
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.94)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+.anim-fade{animation:fade .22s ease both}
+.anim-pop{animation:pop .18s ease both}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+</pre></details>
+</div>
+</section>
+<section class="dir" id="dir-B" data-dir="B">
+<div class="strip"><i style="background:#FBF8FF"></i><i style="background:#FFFFFF"></i><i style="background:#E9E1F4"></i><i style="background:#6E6486"></i><i style="background:#2E2740"></i><i style="background:#7C5CD6"></i><i style="background:#C1437E"></i><i style="background:#2A8164"></i><i style="background:#C7455C"></i></div>
+<div class="dir-head">
+<div class="idbox" style="background:#7C5CD6;color:#FFFFFF">B</div>
+<div style="flex:1;min-width:200px">
+<h2>まるシール</h2>
+<p class="mood">やさしい / 淡い藤色 / 丸くて厚い</p>
+<div class="tags">
+<span class="tag">明るい画面</span>
+<span class="tag">ゆったり（基準余白20px。カード内padding・カード間gapを全部20に統一）</span>
+<span class="tag">角丸 18px</span>
+<span class="tag">Nunito / システム（ヒラギノ／游ゴシック）</span>
+<span class="tag" style="">最低コントラスト 4.58:1</span>
+</div></div></div>
+<div class="why"><b>なぜこの案か</b>毎日ひらくたびに「できなかった」を突きつけられる受験生が、気負わず1枚めくれるように、角も色も判定の見せ方も全部やわらかくする</div>
+<div class="block" style="margin-top:26px"><h3><span class="n">1</span>色（10色セット）</h3><p class="hint">クリックするとHEXがコピーされます。役割が決まっているので、この10色だけで画面ぜんぶ作れます。</p>
+<div class="pal"><button class="sw" type="button" data-copy="#FBF8FF" title="クリックでHEXをコピー"><span class="c" style="background:#FBF8FF"></span><span class="t"><span class="k">背景</span><span class="r">bg</span><span class="h">#FBF8FF</span></span></button><button class="sw" type="button" data-copy="#FFFFFF" title="クリックでHEXをコピー"><span class="c" style="background:#FFFFFF"></span><span class="t"><span class="k">面・カード</span><span class="r">surface</span><span class="h">#FFFFFF</span></span></button><button class="sw" type="button" data-copy="#E9E1F4" title="クリックでHEXをコピー"><span class="c" style="background:#E9E1F4"></span><span class="t"><span class="k">罫線</span><span class="r">border</span><span class="h">#E9E1F4</span></span></button><button class="sw" type="button" data-copy="#2E2740" title="クリックでHEXをコピー"><span class="c" style="background:#2E2740"></span><span class="t"><span class="k">本文の文字</span><span class="r">text</span><span class="h">#2E2740</span></span></button><button class="sw" type="button" data-copy="#6E6486" title="クリックでHEXをコピー"><span class="c" style="background:#6E6486"></span><span class="t"><span class="k">うすい文字</span><span class="r">muted</span><span class="h">#6E6486</span></span></button><button class="sw" type="button" data-copy="#7C5CD6" title="クリックでHEXをコピー"><span class="c" style="background:#7C5CD6"></span><span class="t"><span class="k">主役の色</span><span class="r">primary</span><span class="h">#7C5CD6</span></span></button><button class="sw" type="button" data-copy="#FFFFFF" title="クリックでHEXをコピー"><span class="c" style="background:#FFFFFF"></span><span class="t"><span class="k">主役の上の文字</span><span class="r">onPrimary</span><span class="h">#FFFFFF</span></span></button><button class="sw" type="button" data-copy="#C1437E" title="クリックでHEXをコピー"><span class="c" style="background:#C1437E"></span><span class="t"><span class="k">差し色</span><span class="r">accent</span><span class="h">#C1437E</span></span></button><button class="sw" type="button" data-copy="#C7455C" title="クリックでHEXをコピー"><span class="c" style="background:#C7455C"></span><span class="t"><span class="k">危険</span><span class="r">danger</span><span class="h">#C7455C</span></span></button><button class="sw" type="button" data-copy="#2A8164" title="クリックでHEXをコピー"><span class="c" style="background:#2A8164"></span><span class="t"><span class="k">成功</span><span class="r">success</span><span class="h">#2A8164</span></span></button></div>
+</div>
+<div class="block"><h3><span class="n">2</span>読みやすさの検査</h3><p class="hint">背景と文字の明るさの差を数字で見ます。4.5:1 以上あれば、たいていの人がふつうに読めます（WCAG AA）。3.0 未満は「文字として使ってはいけない」ライン。</p>
+<div class="tblwrap"><table><thead><tr><th>組み合わせ</th><th>コントラスト比</th><th>判定</th><th>目安</th><th>修正案</th></tr></thead><tbody><tr><td><span class="pairbox"><span class="chip2" style="background:#FBF8FF;color:#2E2740">Aa</span><span>本文の文字 / 背景</span></span></td><td class="n">13.49:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FBF8FF;color:#6E6486">Aa</span><span>うすい文字 / 背景</span></span></td><td class="n">5.21:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FFFFFF;color:#2E2740">Aa</span><span>本文の文字 / カード面</span></span></td><td class="n">14.19:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#7C5CD6;color:#FFFFFF">Aa</span><span>主役ボタンの文字 / 主役の色</span></span></td><td class="n">4.82:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FBF8FF;color:#7C5CD6">Aa</span><span>主役の色 / 背景</span></span></td><td class="n">4.58:1</td><td><span class="pill ok">十分</span></td><td style="color:var(--pmu);font-size:12px">3.0 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FBF8FF;color:#C1437E">Aa</span><span>差し色 / 背景</span></span></td><td class="n">4.57:1</td><td><span class="pill ok">十分</span></td><td style="color:var(--pmu);font-size:12px">3.0 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FFFFFF;color:#C7455C">Aa</span><span>危険の色 / カード面</span></span></td><td class="n">4.74:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#FFFFFF;color:#2A8164">Aa</span><span>成功の色 / カード面</span></span></td><td class="n">4.75:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr></tbody></table></div><div class="goodnote"><b>ぜんぶ合格。</b> この配色なら、明るい屋外でも文字が読めます。</div>
+</div>
+<div class="block"><h3><span class="n">3</span>文字（実際に読み込んで表示）</h3><p class="hint">日本語と英数字の両方を出しています。12pxの注記が読めるか、大きい数字が詰まって見えないかを確認してください。</p>
+<div class="fontcard"><div class="fh"><span>見出し <b>Nunito</b>（欧文 / 太さ 800）　本文 <b>システム（ヒラギノ／游ゴシック）</b>（不明 / 太さ 400）　等幅 <b>Nunito</b></span><span>実際に読み込んで表示しています</span></div><div class="fb"><div class="specimen"><div class="lab">みだし 28px</div><div style="font-family:&quot;Nunito&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:800;font-size:28px;line-height:1.35;color:var(--pin)">きょうの積み上げ 3時間20分</div><div style="font-family:&quot;Nunito&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:800;font-size:28px;line-height:1.35;color:var(--pin)">Today&rsquo;s Focus Streak</div></div><div class="specimen"><div class="lab">本文 15px</div><div style="font-family:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:400;font-size:15px;line-height:1.75;color:var(--pin)">寝る前に見る画面なので、まぶしくない色にしています。タイマーを止めると、その日の記録が自動でグラフに反映されます。設定はあとから何度でも変えられます。<br>The quick brown fox jumps over the lazy dog. 0123456789</div></div><div class="specimen"><div class="lab">注記 12px（ここが読めるかが勝負）</div><div style="font-family:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:400;font-size:12px;line-height:1.6;color:var(--pmu)">最終更新 2026/08/28 07:12 ・ 前回から +14分 ・ 目標まであと 40分</div></div><div class="specimen"><div class="lab">大きい数字（タイマー・記録）</div><div style="font-family:&quot;Nunito&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:52px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--pin)">25:00</div><div style="font-family:&quot;Nunito&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--pmu);margin-top:6px">1,284 / 3,000 pt</div></div></div></div><div class="fnote">※ システム（ヒラギノ／游ゴシック） は手元の一覧に無いフォントです。太さ 400/700 だけ読み込みます。</div>
+</div>
+<div class="block"><h3><span class="n">4</span>UI部品（実物）</h3><p class="hint">左が実際のスマホ画面のイメージ、右が部品ひとつずつです。</p>
+<div class="pvbox"><div class="ph">この案の色・フォント・角丸・影をそのまま当てた「実物」です</div><div class="split"><div class="pv phone"><div class="ph-top"><span class="ti">きょう</span><span class="gr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg></span></div><div class="ph-body"><div class="stats2"><div class="stat"><span class="n">3<span style="font-size:16px">h</span>20</span><span class="k">きょうの勉強時間</span><span class="d up">+42分 きのうより</span></div><div class="stat"><span class="n">7</span><span class="k">連続日数</span><span class="d dn">-1 記録更新まで</span></div></div><div class="card"><div class="ringwrap"><svg class="ring" width="68" height="68" viewBox="0 0 68 68" aria-hidden="true" style="width:68px;height:68px;flex:none"><circle class="tr" cx="34" cy="34" r="30" fill="none" stroke-width="8"/><circle class="br" cx="34" cy="34" r="30" fill="none" stroke-width="8" stroke-dasharray="135.72 52.78"/></svg><div style="flex:1"><div class="t">週の目標</div><div class="m">14時間中 10時間6分</div><div class="prog" style="margin-top:10px"><i style="width:72%"></i></div></div></div></div><div><div class="lab" style="margin-bottom:7px">きょうやること</div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg></span><span class="bd"><span class="tt">英単語 60個</span><span class="ss" style="display:block">きのうの続きから</span></span><span class="vv">12分</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1"/></svg></span><span class="bd"><span class="tt">数学 青チャート</span><span class="ss" style="display:block">例題 42〜48</span></span><span class="vv">35分</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg></span><span class="bd"><span class="tt">復習カード</span><span class="ss" style="display:block">8枚たまってます</span></span><span class="vv">8枚</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div></div><button class="btn btn-primary" style="width:100%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8V5.2Z"/></svg> 勉強をはじめる</button></div><div class="tabbar"><span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h14V9.6"/><path d="M10 21v-6h4v6"/></svg>きょう</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6.5 20v-7"/><path d="M12 20V5"/><path d="M17.5 20v-10"/></svg>記録</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg>カード</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg>設定</span></div></div><div class="parts"><div class="part"><span class="cap">ボタン 4種</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="btnrow"><button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg> 保存する</button><button class="btn btn-ghost">あとで</button><button class="btn btn-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V4h5v3M6.5 7 7.6 20h8.8L17.5 7"/></svg> 削除</button><button class="btn btn-off">送信ちゅう…</button></div></div></div><div class="part"><span class="cap">カード</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="card"><div class="t">数学 II・B 三角関数</div><div class="m">きのう 21:40 ・ 32分 ・ 正答率 78%</div><div class="b">加法定理のところでつまずいています。あしたの朝もう一度やると定着しやすいです。</div><div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">復習おすすめ</span><span class="chip">数学</span></div></div></div></div><div class="part"><span class="cap">入力欄（エラーあり）</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:12px"><div class="field"><label>目標の勉強時間</label><div class="inp focus">3時間30分</div></div><div class="field"><label>1日の上限</label><div class="inp bad">0分</div><span class="ferr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.2 21 19.5H3L12 4.2Z"/><path d="M12 10v4M12 16.6v.2"/></svg> 1分以上にしてください</span></div></div></div><div class="part"><span class="cap">下タブバー</span><div class="pv" style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden"><div style="height:56px;background:var(--bg)"></div><div class="tabbar"><span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h14V9.6"/><path d="M10 21v-6h4v6"/></svg>きょう</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6.5 20v-7"/><path d="M12 20V5"/><path d="M17.5 20v-10"/></svg>記録</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg>カード</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg>設定</span></div></div></div><div class="part"><span class="cap">リスト行</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="bd"><span class="tt">朝の英単語</span><span class="ss" style="display:block">毎日 7:00</span></span><span class="vv">21日</span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8Z"/></svg></span><span class="bd"><span class="tt">寝る前の復習</span><span class="ss" style="display:block">毎日 22:30</span></span><span class="vv">4日</span></div></div></div><div class="part"><span class="cap">進捗バー と リング</span><div class="pv" style="padding:16px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:14px"><div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span class="mu">今週の目標</span><span class="num">72%</span></div><div class="prog"><i style="width:72%"></i></div></div><div class="ringwrap"><svg class="ring" width="60" height="60" viewBox="0 0 60 60" aria-hidden="true" style="width:60px;height:60px;flex:none"><circle class="tr" cx="30" cy="30" r="26.5" fill="none" stroke-width="7"/><circle class="br" cx="30" cy="30" r="26.5" fill="none" stroke-width="7" stroke-dasharray="74.93 91.58"/></svg><div><div style="font-weight:600;font-size:14px">集中モード</div><div class="mu" style="font-size:12px">のこり 13分45秒</div></div></div></div></div><div class="part"><span class="cap">トースト と モーダル</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:12px;justify-items:center"><span class="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg> 記録を保存しました</span><div class="scrim" style="width:100%"><div class="modal"><div class="t">この記録を消しますか？</div><div class="b">消すと元にもどせません。</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost">やめる</button><button class="btn btn-danger">消す</button></div></div></div></div></div><div class="part"><span class="cap">空状態（データが無いとき）</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="empty"><span class="art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-3.3-2.4-6-6-6 0 3.3 2.4 6 6 6Z"/><path d="M12 13c0-3.3 2.4-6 6-6 0 3.3-2.4 6-6 6Z"/></svg></span><span class="t">まだ記録がありません</span><span class="b">「勉強をはじめる」を押すと、ここに今日の積み上げが出ます。</span><button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> さいしょの記録をつける</button></div></div></div><div class="part"><span class="cap">統計タイル</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="stats2"><div class="stat"><span class="n">128</span><span class="k">おぼえた単語</span><span class="d up">+12 きのう</span></div><div class="stat"><span class="n">86<span style="font-size:16px">%</span></span><span class="k">正答率</span><span class="d dn">-3 きのう</span></div></div></div></div></div></div></div>
+</div>
+<div class="block"><h3><span class="n">5</span>写真</h3><p class="hint">「空っぽの画面」に置く絵として使えるかを見てください。ヒーロー画像より、空状態に置くほうが効きます。</p>
+<div class="noimg">この案に使える写真がまだありません。<code>fetch_images.py</code> で集めるか、下の「写真を使わない案」で進めてもじゅうぶん成立します。</div><div class="heroes"><div class="heroframe"><div class="hcap">写真を使わない案 — パレットだけでCSSグラデーションを作る（オフラインPWA向き・軽い）</div><div class="pv"><div class="herocss"><span class="t">今夜も、すこしだけ。</span><span class="s">つづけた日数 21日 ・ 平均 42分</span></div></div></div></div>
+</div>
+<div class="block"><h3><span class="n">6</span>アイコン</h3><p class="hint">絵文字とまぜないこと。1画面ではどちらかに統一します。</p>
+<div class="pv icons" style="background:transparent;color:var(--text)"><div class="iconcell"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="nm" title="flame">flame</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="sparkles">sparkles</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="albums-outline">albums-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="list-outline">list-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="library-outline">library-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="stats-chart">stats-chart</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="checkmark-circle">checkmark-circle</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="close-circle">close-circle</span></div></div><div class="pv icontint" style="margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);display:flex;gap:14px;flex-wrap:wrap;align-items:center"><span class="i" style="color:#2E2740"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="i" style="color:#6E6486"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="i" style="color:#7C5CD6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="i" style="color:#C1437E"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="i" style="color:#2A8164"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="i" style="color:#C7455C"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="cap mu" style="font-size:12px">↑ 同じアイコンにパレットの色を当てたところ</span></div><p class="hint" style="margin-top:10px">色は <code>currentColor</code> なので、CSSの <code>color:</code> だけで変わります。SVGを1個 400バイト前後なので、20個入れても10KBほど。単一HTMLにそのまま貼れます。（1個は内蔵の線アイコンで代用しています ／ <b style="color:var(--pwarn)">7個が見つかりません</b>（名前が lucide と phosphor で違うことがあります））</p>
+</div>
+<div class="adopt"><div class="arow">
+<button class="take" type="button" data-copy-tokens="tok-B" data-dir-id="B" style="background:#7C5CD6;color:#FFFFFF">この案にする（tokens.css をコピー）</button>
+</div>
+<div class="cmd">押すと CSS がクリップボードに入ります。ファイルとして書き出すなら、ターミナルでこれ:<br><code>python3 make_moodboard.py --spec /Users/so/eitango/design/direction.json --out /Users/so/eitango/design/design-brief.html --emit-tokens B</code></div>
+<details><summary>tokens.css の中身を見る（手でコピーしたいとき）</summary><pre id="tok-B">/* ============================================================
+   英単語マスター（eitango） ― デザイントークン  (案 B: まるシール)
+   design-kit / make_moodboard.py が自動生成しました。
+
+   ■ 単一HTMLアプリへの貼り方
+     1) このファイルの中身を丸ごとコピーする
+     2) index.html の &lt;head&gt; の中に style 要素を作って、その中に貼り付ける
+        （外部ファイルにしなくてOK）
+     3) フォントを使うなら、その style 要素の *前* にこの1行を置く:
+        &lt;link rel=&quot;stylesheet&quot; href=&quot;https://fonts.googleapis.com/css2?family=Nunito:wght@200..900&amp;family=システム（ヒラギノ／游ゴシック）:wght@400;500;600;700&amp;display=swap&quot;&gt;
+        オフラインPWAで外部URLを入れたくないときは、この link を入れなくてOK。
+        --font-body 等はシステムフォントに自動で落ちるので崩れません。
+     4) &lt;meta name=&quot;theme-color&quot; content=&quot;#FBF8FF&quot;&gt; と
+        manifest.json の theme_color も同じ #FBF8FF に揃える
+
+   ■ 名前のきまり
+     ・契約の10色 = --bg --surface --border --text --muted
+                    --primary --on-primary --accent --danger --success
+     ・今までのアプリで使っていた名前(--card --line --ink --acc --ok …)は
+       同じ値の別名として残してあるので、既存コードにそのまま貼っても壊れません。
+
+   ■ この配色のコントラスト（自動計算）
+      本文の文字 / 背景                 13.49:1  AAA
+      うすい文字 / 背景                 5.21:1  AA
+      本文の文字 / カード面               14.19:1  AAA
+      主役ボタンの文字 / 主役の色            4.82:1  AA
+      主役の色 / 背景                  4.58:1  十分
+   ============================================================ */
+
+:root{
+  color-scheme: light;                 /* 入力欄やスクロールバーを浮かせないため必須 */
+
+  /* ===== 契約の10色（direction.json の palette と1:1） ===== */
+  --bg:#FBF8FF;
+  --surface:#FFFFFF;
+  --border:#E9E1F4;
+  --text:#2E2740;
+  --muted:#6E6486;
+  --primary:#7C5CD6;
+  --on-primary:#FFFFFF;
+  --accent:#C1437E;
+  --danger:#C7455C;
+  --success:#2A8164;
+
+  /* ===== 今までのアプリで使っていた名前（同じ値の別名。消さない） ===== */
+  --card:var(--surface); --panel:var(--surface); --surface-1:var(--surface);
+  --line:var(--border);
+  --ink:var(--text); --fg:var(--text); --tx:var(--text); --txt:var(--text);
+  --dim:var(--muted); --sub:var(--muted); --text-dim:var(--muted); --tx2:var(--muted); --ink-2:var(--muted);
+  --acc:var(--primary); --on-accent:var(--on-primary);
+  --ok:var(--success); --good:var(--success); --bad:var(--danger); --warn:var(--accent);
+  --on-danger:#FFFFFF; --on-success:#FFFFFF; --on-accent-solid:#FFFFFF;
+
+  /* ===== 「もう一段」（全プロジェクトが必ず作るやつ） ===== */
+  --bg-2:#F2E9FF;       --bg2:var(--bg-2);
+  --surface-2:#F6F6F6;  --card2:var(--surface-2); --panel2:var(--surface-2);
+  --line-2:#D6C7EA;     --line2:var(--line-2);
+  --muted-2:#8A81A1;    --dim2:var(--muted-2);   --tx3:var(--muted-2);
+
+  /* ===== 半透明（color-mix で作る。rgba のベタ書きより保守が楽） ===== */
+  --primary-soft: color-mix(in srgb, var(--primary) 16%, transparent);
+  --accent-soft:  color-mix(in srgb, var(--accent)  16%, transparent);
+  --danger-soft:  color-mix(in srgb, var(--danger)  14%, transparent);
+  --success-soft: color-mix(in srgb, var(--success) 14%, transparent);
+  --overlay:      color-mix(in srgb, var(--bg) 88%, transparent);  /* ヘッダ/タブバーの下地 */
+  --scrim:        color-mix(in srgb, var(--bg) 55%, transparent);  /* モーダルの暗幕 */
+  --ring:         color-mix(in srgb, var(--text) 10%, transparent);
+
+  /* ===== 形 ===== */
+  --r-sm:12px; --r:18px; --r-lg:20px; --r-pill:999px;
+  --radius:var(--r); --radius-sm:var(--r-sm); --radius-lg:var(--r-lg);
+
+  /* ===== 影 ===== */
+  --shadow:0 6px 14px rgba(124,92,214,.10)（押せるカードだけ。真下4pxに同色パステルの座布団を1枚敷く）;
+  --shadow-lg:0 12px 40px rgba(0,0,0,.22);
+  --shadow-accent:0 8px 24px color-mix(in srgb, var(--primary) 30%, transparent);
+
+  /* ===== 文字（システムフォントのフォールバックを必ず残す） ===== */
+  --font-heading:&quot;Nunito&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;
+  --font-body:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;
+  --font-mono:&quot;Nunito&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --fw-body:400; --fw-mid:600; --fw-bold:700; --fw-head:800;
+  --fs-xs:12px; --fs-sm:13px; --fs:15px; --fs-lg:17px; --fs-xl:22px; --fs-2xl:28px; --fs-3xl:36px;
+  --lh:1.65; --lh-tight:1.35;
+
+  /* ===== 余白（24/32 を必ず使う。今までここが無くて全部詰まっていた） ===== */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+
+  /* ===== レイアウト ===== */
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --maxw:560px; --tabbar-h:62px; --header-h:54px;
+}
+
+/* ---- 反対の明るさのテーマ（自動生成。auto / light / dark の3段） ---- */
+/*    OSの設定に自動で合わせる。ユーザーが手で選んだら data-theme が勝つ。 */
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme=&quot;light&quot;])){
+    color-scheme:dark;
+    --bg:#100C15;
+    --surface:#1C1625;
+    --border:#3D304F;
+    --text:#EDEBF1;
+    --muted:#A39CB5;
+    --primary:#7C5CD6;
+    --on-primary:#FFFFFF;
+    --accent:#C1437E;
+    --danger:#CE5D71;
+    --success:#309271;
+    --bg-2:#17121F; --surface-2:#282035; --line-2:#4E3D65; --muted-2:#857C9D;
+    --shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme=&quot;dark&quot;]{
+  color-scheme:dark;
+  --bg:#100C15;
+  --surface:#1C1625;
+  --border:#3D304F;
+  --text:#EDEBF1;
+  --muted:#A39CB5;
+  --primary:#7C5CD6;
+  --on-primary:#FFFFFF;
+  --accent:#C1437E;
+  --danger:#CE5D71;
+  --success:#309271;
+  --bg-2:#17121F; --surface-2:#282035; --line-2:#4E3D65; --muted-2:#857C9D;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+}
+:root[data-theme=&quot;light&quot;]{ color-scheme:light; }
+/* JS側:  t===&#x27;auto&#x27; なら removeAttribute(&#x27;data-theme&#x27;)、それ以外は setAttribute(&#x27;data-theme&#x27;, t) */
+
+/* ============================================================
+   ここから下は「そのまま使える部品」。要らないものは消してOK。
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-body); font-size:var(--fs); font-weight:var(--fw-body);
+  line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;      /* 数字の桁を揃える */
+  -webkit-text-size-adjust:100%;
+  overscroll-behavior-y:none;
+}
+h1,h2,h3,h4{font-family:var(--font-heading);font-weight:var(--fw-head);line-height:var(--lh-tight);margin:0}
+h1{font-size:var(--fs-2xl)} h2{font-size:var(--fs-xl)} h3{font-size:var(--fs-lg)}
+p{margin:0}
+a{color:var(--primary)}
+small,.small{font-size:var(--fs-sm)}
+.muted{color:var(--muted)}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+/* 画面のいれもの（スマホ1カラム＋下タブバー） */
+.app{max-width:var(--maxw);margin:0 auto;
+  padding:calc(var(--safe-t) + var(--sp-4)) var(--sp-4)
+          calc(var(--tabbar-h) + var(--sp-5) + var(--safe-b))}
+.section{margin-top:var(--sp-5)}            /* 区切りは24px以上。詰めない */
+.section + .section{margin-top:var(--sp-6)}
+.stack{display:grid;gap:var(--sp-3)}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid transparent;border-radius:var(--r);
+  padding:11px 16px;min-height:44px;              /* 指で押せる最小サイズ */
+  font:inherit;font-weight:var(--fw-mid);cursor:pointer;
+  background:var(--surface-2);color:var(--text);
+  transition:transform .12s ease, background .12s ease;}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn[disabled],.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-accent)}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+.btn-danger{background:var(--danger);color:var(--on-danger)}
+.btn-block{width:100%}
+.btn svg{width:18px;height:18px;flex:none}
+
+/* カード */
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:var(--sp-4);box-shadow:var(--shadow)}
+.card-title{display:block;font-family:var(--font-heading);font-weight:var(--fw-bold);font-size:var(--fs-lg)}
+.card-meta{display:block;font-size:var(--fs-xs);color:var(--muted)}
+
+/* 入力欄 */
+.field{display:grid;gap:6px}
+.field label{font-size:var(--fs-sm);color:var(--muted);font-weight:var(--fw-mid)}
+.input,input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
+  width:100%;background:var(--bg-2);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 12px;min-height:44px;font:inherit;font-size:var(--fs)}
+.input:focus,input:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.input.is-error{border-color:var(--danger);background:var(--danger-soft)}
+.field-error{color:var(--danger);font-size:var(--fs-xs)}
+
+/* 下タブバー */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+  background:var(--overlay);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--border);padding-bottom:var(--safe-b)}
+.tabbar button{flex:1;display:grid;justify-items:center;gap:3px;
+  padding:8px 0 10px;background:none;border:0;cursor:pointer;
+  color:var(--muted);font:inherit;font-size:var(--fs-xs);font-weight:var(--fw-mid)}
+.tabbar button[aria-current=&quot;page&quot;],.tabbar button.is-on{color:var(--primary)}
+.tabbar svg{width:22px;height:22px}
+
+/* リスト */
+.list{display:grid;gap:2px}
+.list-row{display:flex;align-items:center;gap:var(--sp-3);
+  padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.list-row + .list-row{margin-top:6px}
+.list-row .ico{display:grid;place-items:center;width:34px;height:34px;flex:none;
+  border-radius:var(--r-sm);background:var(--primary-soft);color:var(--primary)}
+.list-row .ico svg{width:19px;height:19px}
+.list-row .body{flex:1;min-width:0}
+/* span で書いても縦に積まれるように display:block を明示しておく */
+.list-row .ttl,.list-row .sub{display:block}
+.list-row .ttl{font-weight:var(--fw-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-row .sub{font-size:var(--fs-xs);color:var(--muted)}
+.list-row .val{font-family:var(--font-mono);font-weight:var(--fw-bold);color:var(--text);flex:none}
+
+/* 進捗 */
+.progress{height:10px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
+.progress &gt; i{display:block;height:100%;border-radius:inherit;background:var(--primary)}
+.ring{transform:rotate(-90deg)}
+.ring .track{stroke:var(--surface-2)}
+.ring .bar{stroke:var(--primary);stroke-linecap:round}
+
+/* 統計タイル */
+.stat{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:var(--sp-4);display:grid;gap:4px}
+.stat .n{font-family:var(--font-mono);font-size:var(--fs-3xl);font-weight:var(--fw-bold);line-height:1}
+.stat .k{font-size:var(--fs-xs);color:var(--muted)}
+.stat .d{font-size:var(--fs-xs);font-weight:var(--fw-mid)}
+.stat .d.up{color:var(--success)} .stat .d.down{color:var(--danger)}
+
+/* チップ／バッジ */
+.chip{display:inline-flex;align-items:center;gap:6px;
+  padding:5px 11px;border-radius:var(--r-pill);font-size:var(--fs-xs);font-weight:var(--fw-mid);
+  background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+.badge{display:inline-block;padding:2px 8px;border-radius:var(--r-pill);
+  font-size:var(--fs-xs);font-weight:var(--fw-bold);background:var(--accent);color:var(--on-accent-solid)}
+
+/* トースト */
+.toast{position:fixed;left:50%;bottom:calc(var(--tabbar-h) + 18px + var(--safe-b));
+  transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:8px;
+  padding:11px 16px;border-radius:var(--r-pill);
+  background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border);box-shadow:var(--shadow-lg);font-size:var(--fs-sm)}
+
+/* モーダル */
+.scrim{position:fixed;inset:0;z-index:70;background:var(--scrim);
+  backdrop-filter:blur(3px);display:grid;place-items:center;padding:var(--sp-4)}
+.modal{width:100%;max-width:360px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--sp-5);box-shadow:var(--shadow-lg);display:grid;gap:var(--sp-3)}
+
+/* 空状態 ― これを全画面に必ず1つ用意する */
+.empty{display:grid;justify-items:center;gap:var(--sp-3);
+  padding:var(--sp-6) var(--sp-4);text-align:center;color:var(--muted)}
+.empty .art{width:96px;height:96px;border-radius:var(--r-pill);
+  display:grid;place-items:center;
+  background:radial-gradient(circle at 30% 25%, var(--primary-soft), transparent 70%), var(--surface-2);
+  color:var(--primary)}
+.empty .art svg{width:40px;height:40px}
+.empty h3{color:var(--text)}
+.empty p{font-size:var(--fs-sm);max-width:26em}
+
+/* 画像を使わない背景（写真が無くても画面が寂しくならない） */
+.hero-gradient{
+  background:
+    radial-gradient(900px 420px at 82% -12%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 62%),
+    radial-gradient(700px 380px at -6% 112%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+}
+
+/* うごき（軽く。押した感だけは全部に付ける） */
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.94)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+.anim-fade{animation:fade .22s ease both}
+.anim-pop{animation:pop .18s ease both}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+</pre></details>
+</div>
+</section>
+<section class="dir" id="dir-C" data-dir="C">
+<div class="strip"><i style="background:#0B1020"></i><i style="background:#151C33"></i><i style="background:#26304D"></i><i style="background:#93A0C0"></i><i style="background:#E8ECF7"></i><i style="background:#6C8CFF"></i><i style="background:#FFB86B"></i><i style="background:#4ADE80"></i><i style="background:#FF6B6B"></i></div>
+<div class="dir-head">
+<div class="idbox" style="background:#6C8CFF;color:#0B1020">C</div>
+<div style="flex:1;min-width:200px">
+<h2>夜の自習室</h2>
+<p class="mood">深い紺 / 罫線一本 / 灯りは一つ</p>
+<div class="tags">
+<span class="tag">暗い画面</span>
+<span class="tag">標準（基準余白16px。単語一覧と統計の行だけ行高56pxでぎっしり）</span>
+<span class="tag">角丸 10px</span>
+<span class="tag">Lexend / システム（ヒラギノ／游ゴシック）</span>
+<span class="tag" style="">最低コントラスト 6.16:1</span>
+</div></div></div>
+<div class="why"><b>なぜこの案か</b>一番長く使うのは夜9時以降の机で、暗い部屋の白い画面は紙より眩しく目が冴えてしまうため、光量を落として英単語だけが浮く画面にする</div>
+<div class="block" style="margin-top:26px"><h3><span class="n">1</span>色（10色セット）</h3><p class="hint">クリックするとHEXがコピーされます。役割が決まっているので、この10色だけで画面ぜんぶ作れます。</p>
+<div class="pal"><button class="sw" type="button" data-copy="#0B1020" title="クリックでHEXをコピー"><span class="c" style="background:#0B1020"></span><span class="t"><span class="k">背景</span><span class="r">bg</span><span class="h">#0B1020</span></span></button><button class="sw" type="button" data-copy="#151C33" title="クリックでHEXをコピー"><span class="c" style="background:#151C33"></span><span class="t"><span class="k">面・カード</span><span class="r">surface</span><span class="h">#151C33</span></span></button><button class="sw" type="button" data-copy="#26304D" title="クリックでHEXをコピー"><span class="c" style="background:#26304D"></span><span class="t"><span class="k">罫線</span><span class="r">border</span><span class="h">#26304D</span></span></button><button class="sw" type="button" data-copy="#E8ECF7" title="クリックでHEXをコピー"><span class="c" style="background:#E8ECF7"></span><span class="t"><span class="k">本文の文字</span><span class="r">text</span><span class="h">#E8ECF7</span></span></button><button class="sw" type="button" data-copy="#93A0C0" title="クリックでHEXをコピー"><span class="c" style="background:#93A0C0"></span><span class="t"><span class="k">うすい文字</span><span class="r">muted</span><span class="h">#93A0C0</span></span></button><button class="sw" type="button" data-copy="#6C8CFF" title="クリックでHEXをコピー"><span class="c" style="background:#6C8CFF"></span><span class="t"><span class="k">主役の色</span><span class="r">primary</span><span class="h">#6C8CFF</span></span></button><button class="sw" type="button" data-copy="#0B1020" title="クリックでHEXをコピー"><span class="c" style="background:#0B1020"></span><span class="t"><span class="k">主役の上の文字</span><span class="r">onPrimary</span><span class="h">#0B1020</span></span></button><button class="sw" type="button" data-copy="#FFB86B" title="クリックでHEXをコピー"><span class="c" style="background:#FFB86B"></span><span class="t"><span class="k">差し色</span><span class="r">accent</span><span class="h">#FFB86B</span></span></button><button class="sw" type="button" data-copy="#FF6B6B" title="クリックでHEXをコピー"><span class="c" style="background:#FF6B6B"></span><span class="t"><span class="k">危険</span><span class="r">danger</span><span class="h">#FF6B6B</span></span></button><button class="sw" type="button" data-copy="#4ADE80" title="クリックでHEXをコピー"><span class="c" style="background:#4ADE80"></span><span class="t"><span class="k">成功</span><span class="r">success</span><span class="h">#4ADE80</span></span></button></div>
+</div>
+<div class="block"><h3><span class="n">2</span>読みやすさの検査</h3><p class="hint">背景と文字の明るさの差を数字で見ます。4.5:1 以上あれば、たいていの人がふつうに読めます（WCAG AA）。3.0 未満は「文字として使ってはいけない」ライン。</p>
+<div class="tblwrap"><table><thead><tr><th>組み合わせ</th><th>コントラスト比</th><th>判定</th><th>目安</th><th>修正案</th></tr></thead><tbody><tr><td><span class="pairbox"><span class="chip2" style="background:#0B1020;color:#E8ECF7">Aa</span><span>本文の文字 / 背景</span></span></td><td class="n">16.02:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#0B1020;color:#93A0C0">Aa</span><span>うすい文字 / 背景</span></span></td><td class="n">7.24:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#151C33;color:#E8ECF7">Aa</span><span>本文の文字 / カード面</span></span></td><td class="n">14.27:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#6C8CFF;color:#0B1020">Aa</span><span>主役ボタンの文字 / 主役の色</span></span></td><td class="n">6.16:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#0B1020;color:#6C8CFF">Aa</span><span>主役の色 / 背景</span></span></td><td class="n">6.16:1</td><td><span class="pill ok">十分</span></td><td style="color:var(--pmu);font-size:12px">3.0 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#0B1020;color:#FFB86B">Aa</span><span>差し色 / 背景</span></span></td><td class="n">11.11:1</td><td><span class="pill ok">十分</span></td><td style="color:var(--pmu);font-size:12px">3.0 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#151C33;color:#FF6B6B">Aa</span><span>危険の色 / カード面</span></span></td><td class="n">6.07:1</td><td><span class="pill ok">AA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr><tr><td><span class="pairbox"><span class="chip2" style="background:#151C33;color:#4ADE80">Aa</span><span>成功の色 / カード面</span></span></td><td class="n">9.67:1</td><td><span class="pill ok">AAA</span></td><td style="color:var(--pmu);font-size:12px">4.5 以上ほしい</td><td><span style="color:var(--pmu)">—</span></td></tr></tbody></table></div><div class="goodnote"><b>ぜんぶ合格。</b> この配色なら、明るい屋外でも文字が読めます。</div>
+</div>
+<div class="block"><h3><span class="n">3</span>文字（実際に読み込んで表示）</h3><p class="hint">日本語と英数字の両方を出しています。12pxの注記が読めるか、大きい数字が詰まって見えないかを確認してください。</p>
+<div class="fontcard"><div class="fh"><span>見出し <b>Lexend</b>（欧文 / 太さ 600）　本文 <b>システム（ヒラギノ／游ゴシック）</b>（不明 / 太さ 400）　等幅 <b>JetBrains Mono</b></span><span>実際に読み込んで表示しています</span></div><div class="fb"><div class="specimen"><div class="lab">みだし 28px</div><div style="font-family:&quot;Lexend&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:600;font-size:28px;line-height:1.35;color:var(--pin)">きょうの積み上げ 3時間20分</div><div style="font-family:&quot;Lexend&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:600;font-size:28px;line-height:1.35;color:var(--pin)">Today&rsquo;s Focus Streak</div></div><div class="specimen"><div class="lab">本文 15px</div><div style="font-family:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:400;font-size:15px;line-height:1.75;color:var(--pin)">寝る前に見る画面なので、まぶしくない色にしています。タイマーを止めると、その日の記録が自動でグラフに反映されます。設定はあとから何度でも変えられます。<br>The quick brown fox jumps over the lazy dog. 0123456789</div></div><div class="specimen"><div class="lab">注記 12px（ここが読めるかが勝負）</div><div style="font-family:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;font-weight:400;font-size:12px;line-height:1.6;color:var(--pmu)">最終更新 2026/08/28 07:12 ・ 前回から +14分 ・ 目標まであと 40分</div></div><div class="specimen"><div class="lab">大きい数字（タイマー・記録）</div><div style="font-family:&quot;JetBrains Mono&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:52px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--pin)">25:00</div><div style="font-family:&quot;JetBrains Mono&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--pmu);margin-top:6px">1,284 / 3,000 pt</div></div></div></div><div class="fnote">※ システム（ヒラギノ／游ゴシック） は手元の一覧に無いフォントです。太さ 400/700 だけ読み込みます。</div>
+</div>
+<div class="block"><h3><span class="n">4</span>UI部品（実物）</h3><p class="hint">左が実際のスマホ画面のイメージ、右が部品ひとつずつです。</p>
+<div class="pvbox"><div class="ph">この案の色・フォント・角丸・影をそのまま当てた「実物」です</div><div class="split"><div class="pv phone"><div class="ph-top"><span class="ti">きょう</span><span class="gr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg></span></div><div class="ph-body"><div class="stats2"><div class="stat"><span class="n">3<span style="font-size:16px">h</span>20</span><span class="k">きょうの勉強時間</span><span class="d up">+42分 きのうより</span></div><div class="stat"><span class="n">7</span><span class="k">連続日数</span><span class="d dn">-1 記録更新まで</span></div></div><div class="card"><div class="ringwrap"><svg class="ring" width="68" height="68" viewBox="0 0 68 68" aria-hidden="true" style="width:68px;height:68px;flex:none"><circle class="tr" cx="34" cy="34" r="30" fill="none" stroke-width="8"/><circle class="br" cx="34" cy="34" r="30" fill="none" stroke-width="8" stroke-dasharray="135.72 52.78"/></svg><div style="flex:1"><div class="t">週の目標</div><div class="m">14時間中 10時間6分</div><div class="prog" style="margin-top:10px"><i style="width:72%"></i></div></div></div></div><div><div class="lab" style="margin-bottom:7px">きょうやること</div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg></span><span class="bd"><span class="tt">英単語 60個</span><span class="ss" style="display:block">きのうの続きから</span></span><span class="vv">12分</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1"/></svg></span><span class="bd"><span class="tt">数学 青チャート</span><span class="ss" style="display:block">例題 42〜48</span></span><span class="vv">35分</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg></span><span class="bd"><span class="tt">復習カード</span><span class="ss" style="display:block">8枚たまってます</span></span><span class="vv">8枚</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></div></div><button class="btn btn-primary" style="width:100%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8V5.2Z"/></svg> 勉強をはじめる</button></div><div class="tabbar"><span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h14V9.6"/><path d="M10 21v-6h4v6"/></svg>きょう</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6.5 20v-7"/><path d="M12 20V5"/><path d="M17.5 20v-10"/></svg>記録</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg>カード</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg>設定</span></div></div><div class="parts"><div class="part"><span class="cap">ボタン 4種</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="btnrow"><button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg> 保存する</button><button class="btn btn-ghost">あとで</button><button class="btn btn-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V4h5v3M6.5 7 7.6 20h8.8L17.5 7"/></svg> 削除</button><button class="btn btn-off">送信ちゅう…</button></div></div></div><div class="part"><span class="cap">カード</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="card"><div class="t">数学 II・B 三角関数</div><div class="m">きのう 21:40 ・ 32分 ・ 正答率 78%</div><div class="b">加法定理のところでつまずいています。あしたの朝もう一度やると定着しやすいです。</div><div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">復習おすすめ</span><span class="chip">数学</span></div></div></div></div><div class="part"><span class="cap">入力欄（エラーあり）</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:12px"><div class="field"><label>目標の勉強時間</label><div class="inp focus">3時間30分</div></div><div class="field"><label>1日の上限</label><div class="inp bad">0分</div><span class="ferr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.2 21 19.5H3L12 4.2Z"/><path d="M12 10v4M12 16.6v.2"/></svg> 1分以上にしてください</span></div></div></div><div class="part"><span class="cap">下タブバー</span><div class="pv" style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden"><div style="height:56px;background:var(--bg)"></div><div class="tabbar"><span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h14V9.6"/><path d="M10 21v-6h4v6"/></svg>きょう</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6.5 20v-7"/><path d="M12 20V5"/><path d="M17.5 20v-10"/></svg>記録</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8.4 4.3 4 4.5v13c4.4-.2 6.5.5 8 2 1.5-1.5 3.6-2.2 8-2v-13c-4.4-.2-6.5.5-8 2Z"/><path d="M12 6.5V21"/></svg>カード</span><span class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg>設定</span></div></div></div><div class="part"><span class="cap">リスト行</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="bd"><span class="tt">朝の英単語</span><span class="ss" style="display:block">毎日 7:00</span></span><span class="vv">21日</span></div><div class="lrow"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8Z"/></svg></span><span class="bd"><span class="tt">寝る前の復習</span><span class="ss" style="display:block">毎日 22:30</span></span><span class="vv">4日</span></div></div></div><div class="part"><span class="cap">進捗バー と リング</span><div class="pv" style="padding:16px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:14px"><div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span class="mu">今週の目標</span><span class="num">72%</span></div><div class="prog"><i style="width:72%"></i></div></div><div class="ringwrap"><svg class="ring" width="60" height="60" viewBox="0 0 60 60" aria-hidden="true" style="width:60px;height:60px;flex:none"><circle class="tr" cx="30" cy="30" r="26.5" fill="none" stroke-width="7"/><circle class="br" cx="30" cy="30" r="26.5" fill="none" stroke-width="7" stroke-dasharray="74.93 91.58"/></svg><div><div style="font-weight:600;font-size:14px">集中モード</div><div class="mu" style="font-size:12px">のこり 13分45秒</div></div></div></div></div><div class="part"><span class="cap">トースト と モーダル</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg);display:grid;gap:12px;justify-items:center"><span class="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg> 記録を保存しました</span><div class="scrim" style="width:100%"><div class="modal"><div class="t">この記録を消しますか？</div><div class="b">消すと元にもどせません。</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost">やめる</button><button class="btn btn-danger">消す</button></div></div></div></div></div><div class="part"><span class="cap">空状態（データが無いとき）</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="empty"><span class="art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-3.3-2.4-6-6-6 0 3.3 2.4 6 6 6Z"/><path d="M12 13c0-3.3 2.4-6 6-6 0 3.3-2.4 6-6 6Z"/></svg></span><span class="t">まだ記録がありません</span><span class="b">「勉強をはじめる」を押すと、ここに今日の積み上げが出ます。</span><button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> さいしょの記録をつける</button></div></div></div><div class="part"><span class="cap">統計タイル</span><div class="pv" style="padding:14px;border:1px solid var(--border);border-radius:var(--r-lg)"><div class="stats2"><div class="stat"><span class="n">128</span><span class="k">おぼえた単語</span><span class="d up">+12 きのう</span></div><div class="stat"><span class="n">86<span style="font-size:16px">%</span></span><span class="k">正答率</span><span class="d dn">-3 きのう</span></div></div></div></div></div></div></div>
+</div>
+<div class="block"><h3><span class="n">5</span>写真</h3><p class="hint">「空っぽの画面」に置く絵として使えるかを見てください。ヒーロー画像より、空状態に置くほうが効きます。</p>
+<div class="noimg">この案に使える写真がまだありません。<code>fetch_images.py</code> で集めるか、下の「写真を使わない案」で進めてもじゅうぶん成立します。</div><div class="heroes"><div class="heroframe"><div class="hcap">写真を使わない案 — パレットだけでCSSグラデーションを作る（オフラインPWA向き・軽い）</div><div class="pv"><div class="herocss"><span class="t">今夜も、すこしだけ。</span><span class="s">つづけた日数 21日 ・ 平均 42分</span></div></div></div></div>
+</div>
+<div class="block"><h3><span class="n">6</span>アイコン</h3><p class="hint">絵文字とまぜないこと。1画面ではどちらかに統一します。</p>
+<div class="pv icons" style="background:transparent;color:var(--text)"><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="moon-outline">moon-outline</span></div><div class="iconcell"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 4.5A3 3 0 0 0 6.6 8 3 3 0 0 0 5 13.4 3.2 3.2 0 0 0 8 19h1.5V4.5Z"/><path d="M14.5 4.5A3 3 0 0 1 17.4 8 3 3 0 0 1 19 13.4 3.2 3.2 0 0 1 16 19h-1.5V4.5Z"/></svg></span><span class="nm" title="brain">brain</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="albums-outline">albums-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="list-outline">list-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="library-outline">library-outline</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="stats-chart">stats-chart</span></div><div class="iconcell miss"><span class="box" style="border:1px dashed var(--pln2);border-radius:7px"></span><span class="nm" title="checkmark-circle">checkmark-circle</span></div><div class="iconcell"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a6 6 0 0 0 6-6c0-4.2-6-10-6-10S6 11.8 6 16a6 6 0 0 0 6 6Z"/><path d="M12 22a2.4 2.4 0 0 0 2.4-2.4c0-1.7-2.4-4.4-2.4-4.4s-2.4 2.7-2.4 4.4A2.4 2.4 0 0 0 12 22Z"/></svg></span><span class="nm" title="flame">flame</span></div></div><div class="pv icontint" style="margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);display:flex;gap:14px;flex-wrap:wrap;align-items:center"><span class="cap mu" style="font-size:12px">↑ 同じアイコンにパレットの色を当てたところ</span></div><p class="hint" style="margin-top:10px">色は <code>currentColor</code> なので、CSSの <code>color:</code> だけで変わります。SVGを1個 400バイト前後なので、20個入れても10KBほど。単一HTMLにそのまま貼れます。（2個は内蔵の線アイコンで代用しています ／ <b style="color:var(--pwarn)">6個が見つかりません</b>（名前が lucide と phosphor で違うことがあります））</p>
+</div>
+<div class="adopt"><div class="arow">
+<button class="take" type="button" data-copy-tokens="tok-C" data-dir-id="C" style="background:#6C8CFF;color:#0B1020">この案にする（tokens.css をコピー）</button>
+</div>
+<div class="cmd">押すと CSS がクリップボードに入ります。ファイルとして書き出すなら、ターミナルでこれ:<br><code>python3 make_moodboard.py --spec /Users/so/eitango/design/direction.json --out /Users/so/eitango/design/design-brief.html --emit-tokens C</code></div>
+<details><summary>tokens.css の中身を見る（手でコピーしたいとき）</summary><pre id="tok-C">/* ============================================================
+   英単語マスター（eitango） ― デザイントークン  (案 C: 夜の自習室)
+   design-kit / make_moodboard.py が自動生成しました。
+
+   ■ 単一HTMLアプリへの貼り方
+     1) このファイルの中身を丸ごとコピーする
+     2) index.html の &lt;head&gt; の中に style 要素を作って、その中に貼り付ける
+        （外部ファイルにしなくてOK）
+     3) フォントを使うなら、その style 要素の *前* にこの1行を置く:
+        &lt;link rel=&quot;stylesheet&quot; href=&quot;https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&amp;family=Lexend:wght@100..900&amp;family=システム（ヒラギノ／游ゴシック）:wght@400;500;600;700&amp;display=swap&quot;&gt;
+        オフラインPWAで外部URLを入れたくないときは、この link を入れなくてOK。
+        --font-body 等はシステムフォントに自動で落ちるので崩れません。
+     4) &lt;meta name=&quot;theme-color&quot; content=&quot;#0B1020&quot;&gt; と
+        manifest.json の theme_color も同じ #0B1020 に揃える
+
+   ■ 名前のきまり
+     ・契約の10色 = --bg --surface --border --text --muted
+                    --primary --on-primary --accent --danger --success
+     ・今までのアプリで使っていた名前(--card --line --ink --acc --ok …)は
+       同じ値の別名として残してあるので、既存コードにそのまま貼っても壊れません。
+
+   ■ この配色のコントラスト（自動計算）
+      本文の文字 / 背景                 16.02:1  AAA
+      うすい文字 / 背景                 7.24:1  AAA
+      本文の文字 / カード面               14.27:1  AAA
+      主役ボタンの文字 / 主役の色            6.16:1  AA
+      主役の色 / 背景                  6.16:1  十分
+   ============================================================ */
+
+:root{
+  color-scheme: dark;                 /* 入力欄やスクロールバーを浮かせないため必須 */
+
+  /* ===== 契約の10色（direction.json の palette と1:1） ===== */
+  --bg:#0B1020;
+  --surface:#151C33;
+  --border:#26304D;
+  --text:#E8ECF7;
+  --muted:#93A0C0;
+  --primary:#6C8CFF;
+  --on-primary:#0B1020;
+  --accent:#FFB86B;
+  --danger:#FF6B6B;
+  --success:#4ADE80;
+
+  /* ===== 今までのアプリで使っていた名前（同じ値の別名。消さない） ===== */
+  --card:var(--surface); --panel:var(--surface); --surface-1:var(--surface);
+  --line:var(--border);
+  --ink:var(--text); --fg:var(--text); --tx:var(--text); --txt:var(--text);
+  --dim:var(--muted); --sub:var(--muted); --text-dim:var(--muted); --tx2:var(--muted); --ink-2:var(--muted);
+  --acc:var(--primary); --on-accent:var(--on-primary);
+  --ok:var(--success); --good:var(--success); --bad:var(--danger); --warn:var(--accent);
+  --on-danger:#0B0B0B; --on-success:#0B0B0B; --on-accent-solid:#0B0B0B;
+
+  /* ===== 「もう一段」（全プロジェクトが必ず作るやつ） ===== */
+  --bg-2:#0F162B;       --bg2:var(--bg-2);
+  --surface-2:#1C2645;  --card2:var(--surface-2); --panel2:var(--surface-2);
+  --line-2:#323F65;     --line2:var(--line-2);
+  --muted-2:#7081AB;    --dim2:var(--muted-2);   --tx3:var(--muted-2);
+
+  /* ===== 半透明（color-mix で作る。rgba のベタ書きより保守が楽） ===== */
+  --primary-soft: color-mix(in srgb, var(--primary) 16%, transparent);
+  --accent-soft:  color-mix(in srgb, var(--accent)  16%, transparent);
+  --danger-soft:  color-mix(in srgb, var(--danger)  14%, transparent);
+  --success-soft: color-mix(in srgb, var(--success) 14%, transparent);
+  --overlay:      color-mix(in srgb, var(--bg) 88%, transparent);  /* ヘッダ/タブバーの下地 */
+  --scrim:        color-mix(in srgb, var(--bg) 55%, transparent);  /* モーダルの暗幕 */
+  --ring:         color-mix(in srgb, var(--text) 10%, transparent);
+
+  /* ===== 形 ===== */
+  --r-sm:6px; --r:10px; --r-lg:14px; --r-pill:999px;
+  --radius:var(--r); --radius-sm:var(--r-sm); --radius-lg:var(--r-lg);
+
+  /* ===== 影 ===== */
+  --shadow:none（影ゼロ。各ブロックの左端に2pxの縦罫を1本引き、その色で状態を言う）;
+  --shadow-lg:0 12px 40px rgba(0,0,0,.22);
+  --shadow-accent:0 8px 24px color-mix(in srgb, var(--primary) 30%, transparent);
+
+  /* ===== 文字（システムフォントのフォールバックを必ず残す） ===== */
+  --font-heading:&quot;Lexend&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;
+  --font-body:&quot;システム（ヒラギノ／游ゴシック）&quot;,-apple-system,BlinkMacSystemFont,&quot;Hiragino Sans&quot;,&quot;Noto Sans JP&quot;,system-ui,sans-serif;
+  --font-mono:&quot;JetBrains Mono&quot;,&quot;システム（ヒラギノ／游ゴシック）&quot;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --fw-body:400; --fw-mid:600; --fw-bold:700; --fw-head:600;
+  --fs-xs:12px; --fs-sm:13px; --fs:15px; --fs-lg:17px; --fs-xl:22px; --fs-2xl:28px; --fs-3xl:36px;
+  --lh:1.65; --lh-tight:1.35;
+
+  /* ===== 余白（24/32 を必ず使う。今までここが無くて全部詰まっていた） ===== */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+
+  /* ===== レイアウト ===== */
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --maxw:560px; --tabbar-h:62px; --header-h:54px;
+}
+
+/* ---- 反対の明るさのテーマ（自動生成。auto / light / dark の3段） ---- */
+/*    OSの設定に自動で合わせる。ユーザーが手で選んだら data-theme が勝つ。 */
+@media (prefers-color-scheme: light){
+  :root:where(:not([data-theme=&quot;dark&quot;])){
+    color-scheme:light;
+    --bg:#F8F9FA;
+    --surface:#FDFDFE;
+    --border:#C1C5D0;
+    --text:#151A26;
+    --muted:#51618B;
+    --primary:#6889FF;
+    --on-primary:#0B0B0B;
+    --accent:#DF7400;
+    --danger:#E70000;
+    --success:#18833F;
+    --bg-2:#EFF1F4; --surface-2:#F1F1F8; --line-2:#ADB2C1; --muted-2:#6B7CA9;
+    --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.07);
+  }
+}
+:root[data-theme=&quot;light&quot;]{
+  color-scheme:light;
+  --bg:#F8F9FA;
+  --surface:#FDFDFE;
+  --border:#C1C5D0;
+  --text:#151A26;
+  --muted:#51618B;
+  --primary:#6889FF;
+  --on-primary:#0B0B0B;
+  --accent:#DF7400;
+  --danger:#E70000;
+  --success:#18833F;
+  --bg-2:#EFF1F4; --surface-2:#F1F1F8; --line-2:#ADB2C1; --muted-2:#6B7CA9;
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.07);
+}
+:root[data-theme=&quot;dark&quot;]{ color-scheme:dark; }
+/* JS側:  t===&#x27;auto&#x27; なら removeAttribute(&#x27;data-theme&#x27;)、それ以外は setAttribute(&#x27;data-theme&#x27;, t) */
+
+/* ============================================================
+   ここから下は「そのまま使える部品」。要らないものは消してOK。
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-body); font-size:var(--fs); font-weight:var(--fw-body);
+  line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;      /* 数字の桁を揃える */
+  -webkit-text-size-adjust:100%;
+  overscroll-behavior-y:none;
+}
+h1,h2,h3,h4{font-family:var(--font-heading);font-weight:var(--fw-head);line-height:var(--lh-tight);margin:0}
+h1{font-size:var(--fs-2xl)} h2{font-size:var(--fs-xl)} h3{font-size:var(--fs-lg)}
+p{margin:0}
+a{color:var(--primary)}
+small,.small{font-size:var(--fs-sm)}
+.muted{color:var(--muted)}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+/* 画面のいれもの（スマホ1カラム＋下タブバー） */
+.app{max-width:var(--maxw);margin:0 auto;
+  padding:calc(var(--safe-t) + var(--sp-4)) var(--sp-4)
+          calc(var(--tabbar-h) + var(--sp-5) + var(--safe-b))}
+.section{margin-top:var(--sp-5)}            /* 区切りは24px以上。詰めない */
+.section + .section{margin-top:var(--sp-6)}
+.stack{display:grid;gap:var(--sp-3)}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid transparent;border-radius:var(--r);
+  padding:11px 16px;min-height:44px;              /* 指で押せる最小サイズ */
+  font:inherit;font-weight:var(--fw-mid);cursor:pointer;
+  background:var(--surface-2);color:var(--text);
+  transition:transform .12s ease, background .12s ease;}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn[disabled],.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-accent)}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+.btn-danger{background:var(--danger);color:var(--on-danger)}
+.btn-block{width:100%}
+.btn svg{width:18px;height:18px;flex:none}
+
+/* カード */
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:var(--sp-4);box-shadow:var(--shadow)}
+.card-title{display:block;font-family:var(--font-heading);font-weight:var(--fw-bold);font-size:var(--fs-lg)}
+.card-meta{display:block;font-size:var(--fs-xs);color:var(--muted)}
+
+/* 入力欄 */
+.field{display:grid;gap:6px}
+.field label{font-size:var(--fs-sm);color:var(--muted);font-weight:var(--fw-mid)}
+.input,input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
+  width:100%;background:var(--bg-2);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 12px;min-height:44px;font:inherit;font-size:var(--fs)}
+.input:focus,input:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.input.is-error{border-color:var(--danger);background:var(--danger-soft)}
+.field-error{color:var(--danger);font-size:var(--fs-xs)}
+
+/* 下タブバー */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+  background:var(--overlay);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--border);padding-bottom:var(--safe-b)}
+.tabbar button{flex:1;display:grid;justify-items:center;gap:3px;
+  padding:8px 0 10px;background:none;border:0;cursor:pointer;
+  color:var(--muted);font:inherit;font-size:var(--fs-xs);font-weight:var(--fw-mid)}
+.tabbar button[aria-current=&quot;page&quot;],.tabbar button.is-on{color:var(--primary)}
+.tabbar svg{width:22px;height:22px}
+
+/* リスト */
+.list{display:grid;gap:2px}
+.list-row{display:flex;align-items:center;gap:var(--sp-3);
+  padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.list-row + .list-row{margin-top:6px}
+.list-row .ico{display:grid;place-items:center;width:34px;height:34px;flex:none;
+  border-radius:var(--r-sm);background:var(--primary-soft);color:var(--primary)}
+.list-row .ico svg{width:19px;height:19px}
+.list-row .body{flex:1;min-width:0}
+/* span で書いても縦に積まれるように display:block を明示しておく */
+.list-row .ttl,.list-row .sub{display:block}
+.list-row .ttl{font-weight:var(--fw-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-row .sub{font-size:var(--fs-xs);color:var(--muted)}
+.list-row .val{font-family:var(--font-mono);font-weight:var(--fw-bold);color:var(--text);flex:none}
+
+/* 進捗 */
+.progress{height:10px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
+.progress &gt; i{display:block;height:100%;border-radius:inherit;background:var(--primary)}
+.ring{transform:rotate(-90deg)}
+.ring .track{stroke:var(--surface-2)}
+.ring .bar{stroke:var(--primary);stroke-linecap:round}
+
+/* 統計タイル */
+.stat{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:var(--sp-4);display:grid;gap:4px}
+.stat .n{font-family:var(--font-mono);font-size:var(--fs-3xl);font-weight:var(--fw-bold);line-height:1}
+.stat .k{font-size:var(--fs-xs);color:var(--muted)}
+.stat .d{font-size:var(--fs-xs);font-weight:var(--fw-mid)}
+.stat .d.up{color:var(--success)} .stat .d.down{color:var(--danger)}
+
+/* チップ／バッジ */
+.chip{display:inline-flex;align-items:center;gap:6px;
+  padding:5px 11px;border-radius:var(--r-pill);font-size:var(--fs-xs);font-weight:var(--fw-mid);
+  background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+.badge{display:inline-block;padding:2px 8px;border-radius:var(--r-pill);
+  font-size:var(--fs-xs);font-weight:var(--fw-bold);background:var(--accent);color:var(--on-accent-solid)}
+
+/* トースト */
+.toast{position:fixed;left:50%;bottom:calc(var(--tabbar-h) + 18px + var(--safe-b));
+  transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:8px;
+  padding:11px 16px;border-radius:var(--r-pill);
+  background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border);box-shadow:var(--shadow-lg);font-size:var(--fs-sm)}
+
+/* モーダル */
+.scrim{position:fixed;inset:0;z-index:70;background:var(--scrim);
+  backdrop-filter:blur(3px);display:grid;place-items:center;padding:var(--sp-4)}
+.modal{width:100%;max-width:360px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--sp-5);box-shadow:var(--shadow-lg);display:grid;gap:var(--sp-3)}
+
+/* 空状態 ― これを全画面に必ず1つ用意する */
+.empty{display:grid;justify-items:center;gap:var(--sp-3);
+  padding:var(--sp-6) var(--sp-4);text-align:center;color:var(--muted)}
+.empty .art{width:96px;height:96px;border-radius:var(--r-pill);
+  display:grid;place-items:center;
+  background:radial-gradient(circle at 30% 25%, var(--primary-soft), transparent 70%), var(--surface-2);
+  color:var(--primary)}
+.empty .art svg{width:40px;height:40px}
+.empty h3{color:var(--text)}
+.empty p{font-size:var(--fs-sm);max-width:26em}
+
+/* 画像を使わない背景（写真が無くても画面が寂しくならない） */
+.hero-gradient{
+  background:
+    radial-gradient(900px 420px at 82% -12%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 62%),
+    radial-gradient(700px 380px at -6% 112%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+}
+
+/* うごき（軽く。押した感だけは全部に付ける） */
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.94)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+.anim-fade{animation:fade .22s ease both}
+.anim-pop{animation:pop .18s ease both}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+</pre></details>
+</div>
+</section>
+<section class="compare" id="compare">
+<h2>3案をならべてくらべる</h2>
+<p class="hint">迷ったら「向いてる場面」の行だけ見てください。色の好みより、<b>いつ・どこで使うか</b>で選ぶほうが失敗しません。</p>
+<div class="tblwrap"><table><thead><tr><th>くらべる所</th><th>案 A</th><th>案 B</th><th>案 C</th></tr></thead><tbody><tr><td>案の名前</td><td><b>英単語ノート</b></td><td><b>まるシール</b></td><td><b>夜の自習室</b></td></tr><tr><td>ひとことで言うと</td><td>生成り / 罫線 / 朱の一点</td><td>やさしい / 淡い藤色 / 丸くて厚い</td><td>深い紺 / 罫線一本 / 灯りは一つ</td></tr><tr><td>なぜこの案か</td><td>昼の車内でも夜の机でも眩しくない生成りの紙面に、英単語だけがセリフ体で罫線の上に立つので、一番見たいもの（次に覚える綴り）が毎回まっ先に目に</td><td>毎日ひらくたびに「できなかった」を突きつけられる受験生が、気負わず1枚めくれるように、角も色も判定の見せ方も全部やわらかくする</td><td>一番長く使うのは夜9時以降の机で、暗い部屋の白い画面は紙より眩しく目が冴えてしまうため、光量を落として英単語だけが浮く画面にする</td></tr><tr><td>明るさ</td><td>明るい画面（ライト）</td><td>明るい画面（ライト）</td><td>暗い画面（ダーク）</td></tr><tr><td>情報のつめ具合</td><td>ぎっしり（基準余白12px。4の倍数で 4/8/12/16/24 の5段だけ使う）</td><td>ゆったり（基準余白20px。カード内padding・カード間gapを全部20に統一）</td><td>標準（基準余白16px。単語一覧と統計の行だけ行高56pxでぎっしり）</td></tr><tr><td>色の数（主役＋差し色系）</td><td>4色</td><td>4色</td><td>4色</td></tr><tr><td>段差のつけ方</td><td>影あり</td><td>影あり</td><td>うすい影＋罫線</td></tr><tr><td>角丸</td><td>2 / 6 / 10px</td><td>12 / 18 / 20px</td><td>6 / 10 / 14px</td></tr><tr><td>見出しフォント</td><td>Lora 700</td><td>Nunito 800</td><td>Lexend 600</td></tr><tr><td>本文フォント</td><td>システム（ヒラギノ／游ゴシック） 400</td><td>システム（ヒラギノ／游ゴシック） 400</td><td>システム（ヒラギノ／游ゴシック） 400</td></tr><tr><td>いちばん弱いコントラスト</td><td><span class="pill ok">5.12:1</span></td><td><span class="pill ok">4.58:1</span></td><td><span class="pill ok">6.16:1</span></td></tr><tr><td>読みやすさの判定</td><td><span class="pill ok">問題なし</span></td><td><span class="pill ok">問題なし</span></td><td><span class="pill ok">問題なし</span></td></tr><tr><td>向いてる場面</td><td>昼間・明るい所で使う画面 ／ ふつうの一覧＋詳細</td><td>昼間・明るい所で使う画面 ／ 1画面に1つのことだけ集中させたいとき</td><td>夜・寝る前に見る画面 ／ ふつうの一覧＋詳細</td></tr></tbody></table></div>
+</section>
+<footer>
+このページは design-kit の <code>make_moodboard.py</code> が <code>/Users/so/eitango/design/direction.json</code> から自動生成しました。
+色をいじりたくなったら direction.json を書きかえて、もう一度同じコマンドを打つだけで作り直せます。<br>
+外に取りにいくのは Google Fonts だけです。ネットが無いときはフォントだけシステムのものに変わりますが、色や部品はそのまま見えます。
+</footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  var root=document.documentElement, KEY='design-kit-brief-theme';
+  function setTheme(t){
+    if(t==='auto'){ root.removeAttribute('data-theme'); }
+    else { root.setAttribute('data-theme', t); }
+    try{ localStorage.setItem(KEY,t); }catch(e){}
+    var bs=document.querySelectorAll('.seg button[data-theme]');
+    for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].dataset.theme===t); }
+  }
+  var saved='auto';
+  try{ saved=localStorage.getItem(KEY)||'auto'; }catch(e){}
+  setTheme(saved);
+  document.addEventListener('click', function(ev){
+    var b=ev.target.closest('.seg button[data-theme]');
+    if(b){ setTheme(b.dataset.theme); }
+  });
+
+  var tEl=document.getElementById('toast'), tTimer=null;
+  function toast(msg){
+    tEl.textContent=msg; tEl.classList.add('on');
+    clearTimeout(tTimer); tTimer=setTimeout(function(){ tEl.classList.remove('on'); }, 1900);
+  }
+  function copy(text, msg){
+    function ok(){ toast(msg); }
+    function fallback(){
+      var ta=document.createElement('textarea');
+      ta.value=text; ta.setAttribute('readonly','');
+      ta.style.cssText='position:fixed;top:-1000px;left:0;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      var done=false;
+      try{ done=document.execCommand('copy'); }catch(e){ done=false; }
+      document.body.removeChild(ta);
+      if(done){ ok(); } else { toast('コピーできませんでした。下の「中身を見る」から手で選んでコピーしてください'); }
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else { fallback(); }
+  }
+
+  document.addEventListener('click', function(ev){
+    var sw=ev.target.closest('[data-copy]');
+    if(sw){ copy(sw.dataset.copy, '「'+sw.dataset.copy+'」をコピーしました'); return; }
+    var tk=ev.target.closest('[data-copy-tokens]');
+    if(tk){
+      var pre=document.getElementById(tk.dataset.copyTokens);
+      if(pre){ copy(pre.textContent, '案'+tk.dataset.dirId+' の tokens.css をコピーしました。index.html の <style> に貼ってください'); }
+      return;
+    }
+  });
+})();
+</script>
+</body></html>

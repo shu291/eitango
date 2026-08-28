@@ -1,0 +1,104 @@
+{
+  "app": {
+    "name": "英単語マスター（eitango）",
+    "purpose": "英単語を毎日おぼえて、忘れる前に復習する",
+    "users": "早慶上智MARCH志望の高校生（本人）",
+    "platform": "Expo (React Native) / iOS実機 + Web(GitHub Pages)",
+    "scene": "朝の通学電車で片手・数分、夜9時以降に自宅の机で数十分"
+  },
+  "directions": [
+    {
+      "id": "A",
+      "name": "英単語ノート",
+      "mood": "生成り / 罫線 / 朱の一点",
+      "why": "昼の車内でも夜の机でも眩しくない生成りの紙面に、英単語だけがセリフ体で罫線の上に立つので、一番見たいもの（次に覚える綴り）が毎回まっ先に目に入る",
+      "palette": {
+        "bg": "#F7F3E9",
+        "surface": "#FFFDF7",
+        "border": "#E3DAC6",
+        "text": "#22201B",
+        "muted": "#6E6656",
+        "primary": "#1F3A5F",
+        "onPrimary": "#FFFDF7",
+        "accent": "#A8352A",
+        "danger": "#A93226",
+        "success": "#33691E"
+      },
+      "fonts": {
+        "heading": "Lora",
+        "body": "システム（ヒラギノ／游ゴシック）",
+        "mono": "IBM Plex Mono",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "radius": { "sm": 2, "md": 6, "lg": 10 },
+      "shadow": "none（影は全画面ゼロ。段差は1px罫線と紙の明度差だけで作る）",
+      "density": "ぎっしり（基準余白12px。4の倍数で 4/8/12/16/24 の5段だけ使う）",
+      "scheme": "light",
+      "keyImages": [],
+      "icons": ["book-outline", "today-outline", "create-outline", "albums-outline", "library-outline", "stats-chart-outline", "checkmark", "close"]
+    },
+    {
+      "id": "B",
+      "name": "まるシール",
+      "mood": "やさしい / 淡い藤色 / 丸くて厚い",
+      "why": "毎日ひらくたびに「できなかった」を突きつけられる受験生が、気負わず1枚めくれるように、角も色も判定の見せ方も全部やわらかくする",
+      "palette": {
+        "bg": "#FBF8FF",
+        "surface": "#FFFFFF",
+        "border": "#E9E1F4",
+        "text": "#2E2740",
+        "muted": "#6E6486",
+        "primary": "#7C5CD6",
+        "onPrimary": "#FFFFFF",
+        "accent": "#C1437E",
+        "danger": "#C7455C",
+        "success": "#2A8164"
+      },
+      "fonts": {
+        "heading": "Nunito",
+        "body": "システム（ヒラギノ／游ゴシック）",
+        "mono": "Nunito",
+        "headingWeight": 800,
+        "bodyWeight": 400
+      },
+      "radius": { "sm": 12, "md": 18, "lg": 20 },
+      "shadow": "0 6px 14px rgba(124,92,214,.10)（押せるカードだけ。真下4pxに同色パステルの座布団を1枚敷く）",
+      "density": "ゆったり（基準余白20px。カード内padding・カード間gapを全部20に統一）",
+      "scheme": "light",
+      "keyImages": [],
+      "icons": ["flame", "sparkles", "albums-outline", "list-outline", "library-outline", "stats-chart", "checkmark-circle", "close-circle"]
+    },
+    {
+      "id": "C",
+      "name": "夜の自習室",
+      "mood": "深い紺 / 罫線一本 / 灯りは一つ",
+      "why": "一番長く使うのは夜9時以降の机で、暗い部屋の白い画面は紙より眩しく目が冴えてしまうため、光量を落として英単語だけが浮く画面にする",
+      "palette": {
+        "bg": "#0B1020",
+        "surface": "#151C33",
+        "border": "#26304D",
+        "text": "#E8ECF7",
+        "muted": "#93A0C0",
+        "primary": "#6C8CFF",
+        "onPrimary": "#0B1020",
+        "accent": "#FFB86B",
+        "danger": "#FF6B6B",
+        "success": "#4ADE80"
+      },
+      "fonts": {
+        "heading": "Lexend",
+        "body": "システム（ヒラギノ／游ゴシック）",
+        "mono": "JetBrains Mono",
+        "headingWeight": 600,
+        "bodyWeight": 400
+      },
+      "radius": { "sm": 6, "md": 10, "lg": 14 },
+      "shadow": "none（影ゼロ。各ブロックの左端に2pxの縦罫を1本引き、その色で状態を言う）",
+      "density": "標準（基準余白16px。単語一覧と統計の行だけ行高56pxでぎっしり）",
+      "scheme": "dark",
+      "keyImages": [],
+      "icons": ["moon-outline", "brain", "albums-outline", "list-outline", "library-outline", "stats-chart", "checkmark-circle", "flame"]
+    }
+  ]
+}

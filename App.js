@@ -14,10 +14,14 @@ import {
   Animated,
   Platform,
   StatusBar,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+  KeyboardAvoidingView } from 'react-native';
+import { SafeAreaView, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+// 書体。英単語と数字だけに当てる（日本語はヒラギノ等のシステム書体に任せる＝容量0）
+import { useFonts, Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
+import { IBMPlexMono_400Regular, IBMPlexMono_600SemiBold } from '@expo-google-fonts/ibm-plex-mono';
+// 色・角丸・余白の値。tailwind.config.js もこれを読んでいる
+import { C, R, SP, F as RAW_F } from './src/theme';
 import * as Storage from './src/lib/storage';
 // ファイル入出力・確認ダイアログ・発音はネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
 import { saveBackup, pickBackup } from './src/lib/backup';
@@ -33,10 +37,11 @@ import {
   uniqueDeckName,
   normalizeState,
   countBrokenWords,
+  countScheduled,
+  SR_VERSION,
   planImport,
   deckNameFromFile,
-  buildState,
-} from './src/lib/decks';
+  buildState } from './src/lib/decks';
 import {
   localDateStr,
   getToday,
@@ -58,21 +63,171 @@ import {
   formatDuration,
   formatBytes,
   getLevel,
+  LEVELS,
+  inLevel,
   isWeak,
   isNew,
   parseLine,
-  INIT_WORDS,
-} from './src/lib/logic';
+  INIT_WORDS } from './src/lib/logic';
 
 const STORAGE_KEY = '@eitango_state_v1';
 
-// Brain アイコンは Ionicons に無いので MaterialCommunityIcons から借りる
-const Icon = ({ name, size = 20, color = '#000', style }) => {
-  if (name === 'brain') {
-    return <MaterialCommunityIcons name="brain" size={size} color={color} style={style} />;
-  }
-  return <Ionicons name={name} size={size} color={color} style={style} />;
+/* Lora と IBM Plex Mono は欧文しか持っていない。
+   Web でこの2つだけを指定すると、日本語がブラウザ既定の書体（Times など）に落ちてしまう。
+   そこで Web のときだけ後ろにシステム書体を並べ、英数字＝Lora／日本語＝ヒラギノ、と描き分けさせる。
+   iOS ではフォールバックの並記が効かないので、そのまま1書体だけを渡す。 */
+const JP_FALLBACK = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif';
+const ff = (name) => (Platform.OS === 'web' ? `${name}, ${JP_FALLBACK}` : name);
+const F = {
+  en: ff(RAW_F.en),
+  enSemi: ff(RAW_F.enSemi),
+  enBold: ff(RAW_F.enBold),
+  num: ff(RAW_F.num),
+  numBold: ff(RAW_F.numBold),
 };
+// 数字はこれを style に渡す。桁が動いても幅がガタつかない
+const NUM = { fontFamily: F.num, fontVariant: ['tabular-nums'] };
+const NUM_BOLD = { fontFamily: F.numBold, fontVariant: ['tabular-nums'] };
+
+/* ===========================================================================
+   見た目の共通パーツ（デザイン案A「英単語ノート」）
+
+   ルールは design/DESIGN.md にまとめてある。要点だけ:
+   - 影は使わない。段差は 1px の罫線と、紙（bg）と紙片（surface）のわずかな色差で作る
+   - 押せるもの＝色の面がある／読むだけ＝罫線だけ
+   - 英単語と数字だけ Lora / IBM Plex Mono を当てる。日本語はシステム書体のまま
+   - 「いま見てほしい」ブロックは左端に3pxの縦罫（藍＝やること、朱＝赤ペンの印）
+   =========================================================================== */
+
+// Ionicons に無いものだけ MaterialCommunityIcons から借りる
+const MCI_NAMES = new Set(['brain', 'fountain-pen-tip', 'notebook-outline', 'bookshelf', 'cards-outline']);
+const Icon = ({ name, size = 20, color = C.text, style }) =>
+  MCI_NAMES.has(name) ? (
+    <MaterialCommunityIcons name={name} size={size} color={color} style={style} />
+  ) : (
+    <Ionicons name={name} size={size} color={color} style={style} />
+  );
+
+// 罫線1本。ノートの横罫。区切りはこれで作る
+const Rule = ({ className = '', color }) => (
+  <View className={`h-px ${className}`} style={{ backgroundColor: color || C.border }} />
+);
+
+// 紙片＝カード。全画面でこの1種類に揃える（影なし・1px罫線・角丸10px）
+// mark に色を渡すと左端に3pxの縦罫が入る＝「赤ペンで囲んだ」段差
+const Sheet = ({ children, className = '', mark, style }) => (
+  // 左端の縦罫は、カードの内寸（p-4＝16px）の中に収める。
+  // ここで paddingLeft を足すと className の p-4 を style 側が上書きして内寸が潰れるので足さない。
+  <View className={`bg-sheet border border-rule rounded-lg overflow-hidden ${className}`} style={style}>
+    {mark ? <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: mark }} /> : null}
+    {children}
+  </View>
+);
+
+// カードの中の見出し。サイズ＋太さ＋色の3つで階層を作る（太字だけで差をつけない）
+const SectionTitle = ({ children, right, icon, iconColor, className = '' }) => (
+  <View className={`flex-row items-center justify-between ${className}`} style={{ marginBottom: SP[3] }}>
+    <View className="flex-row items-center" style={{ gap: SP[2] }}>
+      {icon ? <Icon name={icon} size={16} color={iconColor || C.muted} /> : null}
+      <Text className="text-base font-bold text-ink">{children}</Text>
+    </View>
+    {right}
+  </View>
+);
+
+// 画面の顔。紫のベタ帯はやめ、紙の上に見出しを置いて罫線で締める。
+// kicker は日付や英字などノートの上端の書き込み（Lora）、title は日本語の見出し。
+const PageTitle = ({ title, sub, kicker, right }) => (
+  <View className="bg-paper">
+    <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[3] }}>
+      <View className="flex-row items-end justify-between" style={{ gap: SP[3] }}>
+        <View className="flex-1">
+          {kicker ? (
+            <Text className="text-sm" style={{ fontFamily: F.enSemi, color: C.muted, letterSpacing: 0.8, marginBottom: SP[1] }}>
+              {kicker}
+            </Text>
+          ) : null}
+          <Text className="text-2xl font-bold text-ink" style={{ letterSpacing: -0.2 }} numberOfLines={1}>
+            {title}
+          </Text>
+          {sub ? (
+            <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1], lineHeight: 18 }} numberOfLines={1}>
+              {sub}
+            </Text>
+          ) : null}
+        </View>
+        {right}
+      </View>
+    </View>
+    <Rule />
+  </View>
+);
+
+// 押せるボタン。tone は navy（主役）/ line（枠だけ）/ red（赤ペン）/ green（正解）
+const TONES = {
+  navy: { bg: C.primary, fg: C.onPrimary, bd: C.primary },
+  red: { bg: C.accent, fg: C.onPrimary, bd: C.accent },
+  green: { bg: C.success, fg: C.onPrimary, bd: C.success },
+  line: { bg: 'transparent', fg: C.primary, bd: C.primary },
+  lineRed: { bg: 'transparent', fg: C.accent, bd: C.accent },
+  quiet: { bg: C.surface, fg: C.muted, bd: C.border },
+};
+const Btn = ({ label, onPress, tone = 'navy', icon, disabled, className = '', style, small }) => {
+  const t = TONES[disabled ? 'quiet' : tone] || TONES.navy;
+  return (
+    <TouchableOpacity
+      onPress={disabled ? undefined : onPress}
+      activeOpacity={0.75}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className={`flex-row items-center justify-center rounded ${className}`}
+      style={[
+        {
+          backgroundColor: t.bg,
+          borderWidth: 1,
+          borderColor: t.bd,
+          paddingVertical: small ? 8 : 12,
+          paddingHorizontal: SP[4],
+          minHeight: small ? 36 : 44,
+          gap: SP[2],
+          opacity: disabled ? 0.55 : 1,
+        },
+        style,
+      ]}
+    >
+      {icon ? <Icon name={icon} size={small ? 15 : 17} color={t.fg} /> : null}
+      <Text className={small ? 'text-xs font-bold' : 'text-sm font-bold'} style={{ color: t.fg }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+// 空っぽの画面。罫線だけ引いた白紙に、次の一手を1つだけ置く
+const EmptyState = ({ title, body, actionLabel, onAction, icon = 'create-outline', tone = 'navy' }) => (
+  <View className="items-center" style={{ paddingVertical: 40, paddingHorizontal: SP[4] }}>
+    {/* 白紙のノート。罫線を4本引いて「まだ何も書いていない」ことを絵にする */}
+    <View className="w-full bg-sheet border border-rule rounded-lg" style={{ maxWidth: 260, paddingVertical: SP[4], marginBottom: SP[4] }}>
+      <View style={{ position: 'absolute', left: 22, top: 0, bottom: 0, width: 1, backgroundColor: C.accentTint }} />
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={{ height: 1, backgroundColor: C.border, marginTop: i === 0 ? 0 : 17, marginHorizontal: SP[3] }} />
+      ))}
+      <View style={{ position: 'absolute', right: SP[3], bottom: SP[2] }}>
+        <Icon name={icon} size={20} color={C.border2} />
+      </View>
+    </View>
+    <Text className="text-base font-bold text-ink text-center" style={{ marginBottom: SP[1], lineHeight: 24 }}>
+      {title}
+    </Text>
+    {body ? (
+      <Text className="text-xs text-ink-soft text-center" style={{ lineHeight: 19, marginBottom: SP[4], maxWidth: 280 }}>
+        {body}
+      </Text>
+    ) : null}
+    {actionLabel && onAction ? <Btn label={actionLabel} onPress={onAction} tone={tone} /> : null}
+  </View>
+);
 
 export default function App() {
   // ===== 本棚 =====
@@ -89,6 +244,17 @@ export default function App() {
   const [lastDate, setLastDate] = useState(null);
   const [toast, setToast] = useState('');
   const [loaded, setLoaded] = useState(false);
+
+  /* 英単語と数字に使う書体を読む。
+     ⚠️ 読み終わるのを待って return null しないこと。待つと Web 版で一瞬まっ白になる。
+     読めていない間はシステム書体で描かれ、読めた時点で自然に差し替わる。 */
+  useFonts({
+    Lora_400Regular,
+    Lora_600SemiBold,
+    Lora_700Bold,
+    IBMPlexMono_400Regular,
+    IBMPlexMono_600SemiBold,
+  });
 
   const activeDeck = useMemo(
     () => decks.find((d) => d.id === activeId) || decks[0],
@@ -228,10 +394,18 @@ export default function App() {
             setDblTap(state.dt === true);
             if (typeof state.vol === 'number') setVolume(state.vol);
             if (state.time) setTimeLog(state.time);
-            // 貼り付けの区切りを読み違えていた頃に壊れた単語は normalizeState が
-            // 黙って直している。データを勝手に書き換えたことになるので必ず知らせる
+            // normalizeState が黙って書き換えたぶんは必ず知らせる。
+            // 直したことに気づかないまま使われるのが一番まずい。
+            //   1. 貼り付けの区切りを読み違えていた頃に壊れた単語 → 直した
+            //   2. 昔の記録から後付けしていた復習の予定 → 外した（今日から組み直す）
+            const notes = [];
             const fixed = countBrokenWords(parsed);
-            if (fixed > 0) setToast(`貼り付けで壊れていた${fixed}語を直しました`);
+            if (fixed > 0) notes.push(`貼り付けで壊れていた${fixed}語を直しました`);
+            if (parsed.srv !== SR_VERSION) {
+              const dropped = countScheduled(parsed);
+              if (dropped > 0) notes.push(`復習の予定を今日から組み直します（古い予定${dropped}語ぶんを外しました）`);
+            }
+            if (notes.length) setToast(notes.join('\n'));
           }
         }
       } catch (e) {
@@ -287,8 +461,7 @@ export default function App() {
         words: Math.max(0, total - cover),
         total,
         wordCnt: decks.reduce((n, d) => n + d.words.length, 0),
-        coverCnt: decks.filter((d) => !!d.cover).length,
-      });
+        coverCnt: decks.filter((d) => !!d.cover).length });
     }, 300);
     return () => clearTimeout(t);
   }, [scr, loaded, decks, activeId, streak, lastDate, dblTap, volume, timeLog]);
@@ -339,7 +512,16 @@ export default function App() {
 
   const mast = useMemo(() => words.filter((w) => w.progress >= 80).length, [words]);
   const learn = useMemo(() => words.filter((w) => w.progress >= 20 && w.progress < 80).length, [words]);
-  const newCnt = useMemo(() => words.filter(isNew).length, [words]);
+
+  // 覚え具合の段階ごとの語数。単語帳の絞り込みと統計の分布グラフが同じものを見る。
+  // 段階の数だけ filter を回すと 1900 語で6周するので、1語につき1回だけ数える。
+  // キーは LEVELS の k（'lv_review' など）と、どの段階にも入らない 'new'（未学習）。
+  const lvCount = useMemo(() => {
+    const m = { new: 0 };
+    for (const lv of LEVELS) m[lv.k] = 0;
+    for (const w of words) m[isNew(w) ? 'new' : getLevel(w.progress || 0).k]++;
+    return m;
+  }, [words]);
   const todayN = useMemo(() => {
     const t = getToday();
     return words.filter((w) => w.reviewedDates && w.reviewedDates.includes(t)).length;
@@ -430,8 +612,7 @@ export default function App() {
       const k = localDateStr(dt);
       d.push({
         date: `${dt.getMonth() + 1}/${dt.getDate()}`,
-        count: words.filter((w) => w.reviewedDates && w.reviewedDates.includes(k)).length,
-      });
+        count: words.filter((w) => w.reviewedDates && w.reviewedDates.includes(k)).length });
     }
     return d;
   }, [words]);
@@ -507,8 +688,10 @@ export default function App() {
     if (search) base = base.filter((w) => w.en.toLowerCase().includes(search.toLowerCase()) || w.ja.includes(search));
     if (wordFilter === 'weak') base = base.filter(isWeak);
     else if (wordFilter === 'new') base = base.filter(isNew);
-    else if (wordFilter === 'mastered') base = base.filter((w) => w.progress >= 80);
     else if (wordFilter === 'due') base = base.filter((w) => isDue(w, getToday()));
+    // 覚え具合の6段階。キーは LEVELS の k なので、段階を足しても分岐は増えない。
+    // 未学習は inLevel が弾くので「要復習」に混ざらない
+    else if (wordFilter.startsWith('lv_')) base = base.filter((w) => inLevel(w, wordFilter));
     return base;
   }, [words, search, wordFilter]);
 
@@ -550,8 +733,7 @@ export default function App() {
           reviewedDates: trimmed,
           due,
           ivl,
-          ef,
-        };
+          ef };
       })
     );
     recStreak();
@@ -834,8 +1016,7 @@ export default function App() {
         incorrect: 0,
         streak: 0,
         lastReviewed: null,
-        reviewedDates: [],
-      },
+        reviewedDates: [] },
     ]);
     setNid((n) => n + 1);
     setNewEn('');
@@ -870,8 +1051,7 @@ export default function App() {
   const deleteWord = async (id) => {
     const ok = await confirmDestructive({
       title: '削除確認',
-      message: 'この単語を削除しますか？',
-    });
+      message: 'この単語を削除しますか？' });
     if (ok) setWords((ws) => ws.filter((x) => x.id !== id));
   };
 
@@ -905,8 +1085,7 @@ export default function App() {
         const ok = await confirmDestructive({
           title: '本棚を復元',
           message: `今ある単語帳（${decks.length}冊）をすべて置き換えます。よろしいですか？`,
-          confirmLabel: '復元する',
-        });
+          confirmLabel: '復元する' });
         if (!ok) return;
         setDecks(plan.decks);
         setActiveId(plan.decks[0].id);
@@ -919,8 +1098,7 @@ export default function App() {
       const deck = makeDeck({
         ...src,
         id: nextDeckId(decks),
-        name: uniqueDeckName(decks, src.name),
-      });
+        name: uniqueDeckName(decks, src.name) });
       setDecks((ds) => [...ds, deck]);
       setActiveId(deck.id);
       setScr('shelf');
@@ -975,8 +1153,7 @@ export default function App() {
     const target = decks.find((d) => d.id === id);
     const ok = await confirmDestructive({
       title: '単語帳を削除',
-      message: `「${target.name}」（${target.words.length}語）と、その学習記録を削除します。元に戻せません。`,
-    });
+      message: `「${target.name}」（${target.words.length}語）と、その学習記録を削除します。元に戻せません。` });
     if (!ok) return;
     const rest = decks.filter((d) => d.id !== id);
     setDecks(rest);
@@ -1032,8 +1209,7 @@ export default function App() {
           Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
           setDragOff(0);
         }
-      },
-    })
+      } })
   ).current;
   /**
    * 「知ってた／知らない」ボタンが押されたときの入口。
@@ -1059,28 +1235,44 @@ export default function App() {
 
   // ===================== render helpers =====================
 
-  const Header = ({ title, back }) => (
-    <View className="bg-indigo-600 px-4 py-4 flex-row items-center" style={{ gap: 12 }}>
-      <TouchableOpacity onPress={() => setScr(back || 'study')} className="p-1">
-        <Icon name="arrow-back" size={22} color="#fff" />
-      </TouchableOpacity>
-      <Text className="text-white text-lg font-bold">{title}</Text>
+  // 画面上部の帯。ベタ塗りをやめ、紙の上に見出しを置いて罫線1本で締める
+  const Header = ({ title, back, right }) => (
+    <View className="bg-paper">
+      <View className="flex-row items-center" style={{ paddingHorizontal: SP[4], paddingVertical: SP[2], gap: SP[1] }}>
+        <TouchableOpacity
+          onPress={() => setScr(back || 'study')}
+          hitSlop={10}
+          accessibilityLabel="戻る"
+          activeOpacity={0.75}
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -SP[3] }}
+        >
+          <Icon name="chevron-back" size={24} color={C.primary} />
+        </TouchableOpacity>
+        <Text className="flex-1 text-lg font-bold text-ink" numberOfLines={1}>
+          {title}
+        </Text>
+        {right}
+      </View>
+      <Rule />
     </View>
   );
 
+  // 覚え具合のしるし。絵文字はやめ、藍の濃淡だけで「どこまで進んだか」を言う
   const LvBadge = ({ w }) => {
     const lv = getLevel(w.progress, !isNew(w));
     return (
-      <View className={`${lv.bg} px-2 py-0.5 rounded-full`}>
-        <Text className={`${lv.c} text-xs font-bold`}>
-          {lv.i} {lv.name}
-        </Text>
+      <View
+        className="flex-row items-center rounded-sm"
+        style={{ paddingHorizontal: SP[2], paddingVertical: SP[1], gap: SP[1], backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}
+      >
+        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: lv.barColor }} />
+        <Text className={`text-xs font-bold ${lv.c}`}>{lv.name}</Text>
       </View>
     );
   };
 
   // 発音ボタン。押した単語を読み上げる（事前生成の音声があればそれを鳴らす）
-  const SpeakButton = ({ word, size = 20, color = '#6366f1', hitSlop = 10 }) => (
+  const SpeakButton = ({ word, size = 20, color = C.primary, hitSlop = 10 }) => (
     <TouchableOpacity
       onPress={() => speakWord(word)}
       hitSlop={hitSlop}
@@ -1092,308 +1284,480 @@ export default function App() {
   );
 
   // ===================== Dashboard =====================
-  const renderDash = () => (
-    <ScrollView>
-      <View className="bg-indigo-600 px-5 pt-8 pb-12">
-        <Text className="text-2xl font-bold text-white mb-1">📚 英単語マスター</Text>
-        {/* 今どの単語帳をやっているか。押すと本棚に行って切り替えられる */}
-        <TouchableOpacity onPress={() => setScr('shelf')} className="flex-row items-center" style={{ gap: 4 }}>
-          <Text className="text-indigo-200 text-sm" numberOfLines={1}>
-            {activeDeck ? activeDeck.name : '単語帳なし'}
-          </Text>
-          <Icon name="chevron-forward" size={14} color="#c7d2fe" />
-        </TouchableOpacity>
-      </View>
-      <View className="px-4 -mt-6 pb-4" style={{ gap: 12 }}>
-        <View className="flex-row" style={{ gap: 12 }}>
-          <View className="flex-1 bg-white rounded-2xl p-4 flex-row items-center" style={{ gap: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <View className="bg-orange-100 p-2.5 rounded-xl">
-              <Icon name="flame" size={22} color="#f97316" />
-            </View>
-            <View>
-              <Text className="text-2xl font-bold text-gray-800">{shownStreak}</Text>
-              <Text className="text-xs text-gray-500">連続日数</Text>
-            </View>
-          </View>
-          <View className="flex-1 bg-white rounded-2xl p-4 flex-row items-center" style={{ gap: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <View className="bg-blue-100 p-2.5 rounded-xl">
-              <Icon name="locate" size={22} color="#3b82f6" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-2xl font-bold text-gray-800">
-                {todayN}
-                <Text className="text-xs text-gray-400">語</Text>
-              </Text>
-              <Text className="text-xs text-gray-500">今日の学習</Text>
-              {/* 学習時間はフラッシュカードでしか測れないので、記録があるときだけ出す。
-                  1行に並べるとカード幅に収まらず見切れるため、行を分けている */}
-              {todayTime.n > 0 && (
-                <Text className="text-xs text-indigo-500 font-semibold">{formatDuration(todayTime.ms)}</Text>
-              )}
-            </View>
-          </View>
-        </View>
+  const renderDash = () => {
+    // ノートの上端に鉛筆で書く日付のつもりで、今日を英字にする（例: 8/28 FRI）。
+    // getToday() は 'YYYY-MM-DD' を返すので、そこから作る（state は増やさない）
+    const [dY, dM, dD] = getToday().split('-').map(Number);
+    const dateKicker = `${dM}/${dD} ${['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(dY, dM - 1, dD).getDay()]}`;
 
-        {/*
-          今日の復習（間隔反復）。
-          忘れる直前に復習するのが一番効率がよいので、ホーム画面の上のほうに置いている。
-          まだ一度も学習していない単語帳では予定が1件も無いので、そのときは出さない。
-        */}
-        {scheduledCnt > 0 && (
-          <View
-            className={`rounded-2xl p-5 border ${
-              dueWords.length > 0 ? 'bg-indigo-50 border-indigo-100' : 'bg-emerald-50 border-emerald-100'
-            }`}
-          >
-            <View className="flex-row justify-between items-center mb-3">
-              <View className="flex-row items-center" style={{ gap: 6 }}>
-                <Icon
-                  name={dueWords.length > 0 ? 'calendar' : 'checkmark-circle'}
-                  size={18}
-                  color={dueWords.length > 0 ? '#4f46e5' : '#059669'}
-                />
-                <Text className={`font-semibold ${dueWords.length > 0 ? 'text-indigo-700' : 'text-emerald-700'}`}>
-                  今日の復習
-                </Text>
-              </View>
-              {dueWords.length > 0 && (
-                <View className="bg-indigo-100 px-2.5 py-1 rounded-full">
-                  <Text className="text-indigo-600 text-xs font-bold">{dueWords.length}語</Text>
+    return (
+      <ScrollView>
+        {/* 画面の顔。紫のベタ帯はやめ、紙に見出しを置いて罫線で締める。
+            右のボタンを押すと本棚に行って単語帳を切り替えられる */}
+        <PageTitle
+          title="英単語マスター"
+          kicker={dateKicker}
+          sub={
+            activeDeck ? (
+              <>{activeDeck.name} ・ <Text className="text-xs" style={NUM}>{words.length}</Text>語</>
+            ) : (
+              '単語帳なし'
+            )
+          }
+          right={
+            <Btn
+              label="切りかえ"
+              tone="line"
+              small
+              icon="swap-horizontal"
+              onPress={() => setScr('shelf')}
+              style={{ minHeight: 44 }}
+            />
+          }
+        />
+
+        {words.length === 0 ? (
+          // 単語が0件だと今日やることを出しようがない。学習画面と同じ白紙の画面を出す
+          <EmptyState
+            title="このノートはまだ白紙です"
+            body="単語を書き込むと、今日やることが自動で決まります。"
+            actionLabel="単語を書き込む"
+            onAction={() => setScr('words')}
+          />
+        ) : (
+          <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], gap: SP[3] }}>
+            {/* 連続日数と今日の学習。丸いアイコン座布団はやめ、罫線1本で仕切った2列の数字にする */}
+            <Sheet className="p-4">
+              <View className="flex-row items-center">
+                <View className="flex-1">
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-3xl text-ink" style={NUM_BOLD}>
+                      {shownStreak}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">日</Text>
+                  </View>
+                  <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                    連続日数
+                  </Text>
                 </View>
-              )}
-            </View>
 
-            {dueWords.length > 0 ? (
-              <>
-                <View style={{ gap: 6 }}>
-                  {dueWords.slice(0, 3).map((w) => {
-                    const over = daysBetween(getToday(), w.due);
-                    return (
-                      <View key={w.id} className="flex-row items-center justify-between bg-white/70 rounded-lg px-3 py-2">
-                        <Text className="text-sm font-medium text-gray-800">{w.en}</Text>
-                        <View className="flex-row items-center" style={{ gap: 8 }}>
-                          <Text className="text-xs text-gray-500" numberOfLines={1}>
-                            {w.ja}
+                <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: C.border, marginHorizontal: SP[4] }} />
+
+                <View className="flex-1">
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-3xl text-ink" style={NUM_BOLD}>
+                      {todayN}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">語</Text>
+                  </View>
+                  <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                    今日の学習
+                  </Text>
+                  {/* 学習時間はフラッシュカードでしか測れないので、記録があるときだけ出す。
+                      1行に並べるとカード幅に収まらず見切れるため、行を分けている */}
+                  {todayTime.n > 0 && (
+                    <Text className="text-xs text-navy" style={[NUM, { marginTop: SP[1] }]}>
+                      {formatDuration(todayTime.ms)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </Sheet>
+
+            {/*
+              今日の復習（間隔反復）。
+              忘れる直前に復習するのが一番効率がよいので、ホーム画面の上のほうに置いている。
+              まだ一度も学習していない単語帳では予定が1件も無いので、そのときは出さない。
+              一覧に日本語訳は出さない（始める前に答えが見えてしまうため）。
+            */}
+            {scheduledCnt > 0 && (
+              <Sheet mark={dueWords.length > 0 ? C.primary : C.success} className="p-4">
+                <SectionTitle
+                  icon={dueWords.length > 0 ? 'calendar-outline' : 'checkmark-circle-outline'}
+                  iconColor={dueWords.length > 0 ? C.primary : C.success}
+                  right={
+                    dueWords.length > 0 ? (
+                      <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                        <Text className="text-base text-navy" style={NUM_BOLD}>
+                          {dueWords.length}
+                        </Text>
+                        <Text className="text-xs text-ink-soft">語</Text>
+                      </View>
+                    ) : null
+                  }
+                >
+                  今日の復習
+                </SectionTitle>
+
+                {dueWords.length > 0 ? (
+                  <>
+                    {/* 1語＝1行。行の下に罫線を引いてノートの体裁にする */}
+                    <View>
+                      {dueWords.slice(0, 3).map((w) => {
+                        const over = daysBetween(getToday(), w.due);
+                        return (
+                          <View key={w.id}>
+                            <View
+                              className="flex-row items-center justify-between"
+                              style={{ paddingVertical: SP[2], gap: SP[3], minHeight: 40 }}
+                            >
+                              <Text
+                                className="text-base text-ink flex-1"
+                                style={{ fontFamily: F.enSemi }}
+                                numberOfLines={1}
+                              >
+                                {w.en}
+                              </Text>
+                              {/* 期限を過ぎているものは何日放置しているかを赤ペンで書く */}
+                              {over < 0 && (
+                                <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                                  <Text className="text-sm" style={[NUM_BOLD, { color: C.accent }]}>
+                                    {-over}
+                                  </Text>
+                                  <Text className="text-xs" style={{ color: C.accent }}>
+                                    日超過
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            <Rule />
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {dueWords.length > 3 && (
+                      <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2] }}>
+                        ほか <Text style={NUM}>{dueWords.length - 3}</Text> 語
+                      </Text>
+                    )}
+
+                    {/* この画面で唯一のベタ塗りボタン＝いま次にやること */}
+                    <Btn
+                      label="復習を始める"
+                      tone="navy"
+                      icon="play"
+                      onPress={() => openConfig('flashcard', 'due')}
+                      style={{ marginTop: SP[3] }}
+                    />
+                  </>
+                ) : (
+                  <Text className="text-sm" style={{ color: C.success, lineHeight: 21 }}>
+                    今日の復習は終わりました 🎉
+                    {nextDueDay && (
+                      <Text className="text-sm text-ink-soft">
+                        {`\n次は${formatDue(nextDueDay, getToday())}（`}
+                        <Text style={NUM}>{scheduledCnt}</Text>
+                        {'語が予定に乗っています）'}
+                      </Text>
+                    )}
+                  </Text>
+                )}
+              </Sheet>
+            )}
+
+            {/* 苦手な単語。ここも訳は出さない（テストの前に答えを見せない） */}
+            {weakWords.length > 0 && (
+              <Sheet mark={C.accent} className="p-4">
+                <SectionTitle
+                  icon="alert-circle-outline"
+                  iconColor={C.accent}
+                  right={
+                    <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                      <Text className="text-base" style={[NUM_BOLD, { color: C.accent }]}>
+                        {weakWords.length}
+                      </Text>
+                      <Text className="text-xs text-ink-soft">語</Text>
+                    </View>
+                  }
+                >
+                  苦手な単語
+                </SectionTitle>
+
+                <View>
+                  {weakWords.slice(0, 3).map((w) => (
+                    <View key={w.id}>
+                      <View
+                        className="flex-row items-center justify-between"
+                        style={{ paddingVertical: SP[2], gap: SP[3], minHeight: 40 }}
+                      >
+                        <Text
+                          className="text-base text-ink flex-1"
+                          style={{ fontFamily: F.enSemi }}
+                          numberOfLines={1}
+                        >
+                          {w.en}
+                        </Text>
+                        <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                          <Text className="text-sm" style={[NUM_BOLD, { color: C.accent }]}>
+                            {w.progress}
                           </Text>
-                          {/* 期限を過ぎているものは何日放置しているかを出す */}
-                          {over < 0 && <Text className="text-xs font-bold text-rose-500">{-over}日超過</Text>}
+                          <Text className="text-xs" style={{ color: C.accent }}>
+                            %
+                          </Text>
                         </View>
                       </View>
-                    );
-                  })}
+                      <Rule />
+                    </View>
+                  ))}
                 </View>
-                {dueWords.length > 3 && (
-                  <Text className="text-xs text-gray-400 mt-2 text-center">ほか {dueWords.length - 3} 語</Text>
-                )}
-                <TouchableOpacity onPress={() => openConfig('flashcard', 'due')} className="bg-indigo-600 rounded-xl py-2.5 mt-3">
-                  <Text className="text-white text-sm font-bold text-center">復習を始める</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <Text className="text-sm text-emerald-700">
-                今日の復習は終わりました 🎉
-                {nextDueDay && (
-                  <Text className="text-emerald-600">{`\n次は${formatDue(nextDueDay, getToday())}（${scheduledCnt}語が予定に乗っています）`}</Text>
-                )}
-              </Text>
-            )}
-          </View>
-        )}
 
-        <View className="bg-white rounded-2xl p-5" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="font-semibold text-gray-800">全体の進捗</Text>
-            <Text className="text-lg font-bold text-indigo-600">{avgP}%</Text>
-          </View>
-          <View className="h-3 bg-gray-100 rounded-full overflow-hidden">
-            <View className="h-3 bg-indigo-500 rounded-full" style={{ width: `${avgP}%` }} />
-          </View>
-          <View className="flex-row justify-between mt-3">
-            <Text className="text-xs text-gray-500">🟢 マスター {mast}</Text>
-            <Text className="text-xs text-gray-500">🟡 学習中 {learn}</Text>
-            <Text className="text-xs text-gray-500">⚪ 未学習 {newCnt}</Text>
-          </View>
-        </View>
-
-        {weakWords.length > 0 && (
-          <View className="bg-rose-50 rounded-2xl p-5 border border-rose-100">
-            <View className="flex-row justify-between items-center mb-3">
-              <View className="flex-row items-center" style={{ gap: 6 }}>
-                <Icon name="warning" size={18} color="#e11d48" />
-                <Text className="font-semibold text-rose-700">苦手な単語</Text>
-              </View>
-              <View className="bg-rose-100 px-2.5 py-1 rounded-full">
-                <Text className="text-rose-600 text-xs font-bold">{weakWords.length}語</Text>
-              </View>
-            </View>
-            <View style={{ gap: 6 }}>
-              {weakWords.slice(0, 3).map((w) => (
-                <View key={w.id} className="flex-row items-center justify-between bg-white/70 rounded-lg px-3 py-2">
-                  <Text className="text-sm font-medium text-gray-800">{w.en}</Text>
-                  <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <Text className="text-xs text-gray-500">{w.ja}</Text>
-                    <Text className="text-xs font-bold text-rose-500">{w.progress}%</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-            <TouchableOpacity
-              onPress={() => {
-                setCfgMode('quiz');
-                setWordSel('weak');
-                setRStart(1);
-                setREnd(words.length);
-                setRST('1');
-                setRET(String(words.length));
-                setNumQ(9999);
-                setScr('config');
-              }}
-              className="bg-rose-500 rounded-xl py-2.5 mt-3"
-            >
-              <Text className="text-white text-sm font-bold text-center">苦手克服モードで学習</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View className="bg-white rounded-2xl p-5" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-          <Text className="font-semibold text-gray-800 mb-3">クイックスタート</Text>
-          <View className="flex-row" style={{ gap: 8 }}>
-            <TouchableOpacity onPress={() => openConfig('flashcard')} className="flex-1 bg-indigo-50 rounded-xl p-3 flex-row items-center" style={{ gap: 8 }}>
-              <Icon name="layers" size={18} color="#4f46e5" />
-              <Text className="text-indigo-700 text-sm font-medium">フラッシュカード</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => openConfig('quiz')} className="flex-1 bg-violet-50 rounded-xl p-3 flex-row items-center" style={{ gap: 8 }}>
-              <Icon name="brain" size={18} color="#7c3aed" />
-              <Text className="text-violet-700 text-sm font-medium">4択クイズ</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/*
-          発音の音量。iPhone 本体の音量は変えず、アプリの中だけで下げられる。
-          スライダーは追加ライブラリが要るので、押すだけで決まる4段階にしてある。
-        */}
-        <View className="bg-white rounded-2xl p-5" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="font-semibold text-gray-800">発音の音量</Text>
-            <Text className="text-xs text-gray-400">端末の音量は変わりません</Text>
-          </View>
-          <View className="flex-row" style={{ gap: 6 }}>
-            {[
-              { v: 0, i: 'volume-mute', l: '消音' },
-              { v: 0.3, i: 'volume-low', l: '小' },
-              { v: 0.6, i: 'volume-medium', l: '中' },
-              { v: 1, i: 'volume-high', l: '大' },
-            ].map((o) => {
-              const active = Math.abs(volume - o.v) < 0.01;
-              return (
-                <TouchableOpacity
-                  key={o.l}
+                <Btn
+                  label="苦手克服モードで学習"
+                  tone="lineRed"
+                  icon="brain"
                   onPress={() => {
-                    setVolume(o.v);
-                    // 変えた音量ですぐ聞けるように、見本を1語鳴らす（消音のときは鳴らさない）
-                    if (o.v > 0) {
-                      setSpeechVolume(o.v);
-                      speakWord(words[0] ? words[0].en : 'sample');
-                    }
+                    setCfgMode('quiz');
+                    setWordSel('weak');
+                    setRStart(1);
+                    setREnd(words.length);
+                    setRST('1');
+                    setRET(String(words.length));
+                    setNumQ(9999);
+                    setScr('config');
                   }}
-                  className={`flex-1 py-2.5 rounded-xl border-2 items-center ${active ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}`}
-                  style={{ gap: 2 }}
-                  accessibilityLabel={`音量 ${o.l}`}
-                >
-                  <Icon name={o.i} size={18} color={active ? '#fff' : '#9ca3af'} />
-                  <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-gray-500'}`}>{o.l}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+                  style={{ marginTop: SP[3] }}
+                />
+              </Sheet>
+            )}
 
-        <View className="bg-white rounded-2xl p-5" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-          <Text className="font-semibold text-gray-800 mb-3">データ管理</Text>
-          <View className="flex-row" style={{ gap: 8 }}>
-            <TouchableOpacity onPress={exportData} className="flex-1 bg-emerald-50 rounded-xl p-3 flex-row items-center" style={{ gap: 8 }}>
-              <Icon name="download" size={18} color="#059669" />
-              <Text className="text-emerald-700 text-sm font-medium">保存</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={importData} className="flex-1 bg-amber-50 rounded-xl p-3 flex-row items-center" style={{ gap: 8 }}>
-              <Icon name="cloud-upload" size={18} color="#d97706" />
-              <Text className="text-amber-700 text-sm font-medium">読込</Text>
-            </TouchableOpacity>
+            {/* 全体の進捗。覚え具合は虹色をやめ、藍1色の濃淡で「濃いほど覚えている」を表す */}
+            <Sheet className="p-4">
+              <SectionTitle
+                right={
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-lg text-navy" style={NUM_BOLD}>
+                      {avgP}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">%</Text>
+                  </View>
+                }
+              >
+                全体の進捗
+              </SectionTitle>
+
+              <View style={{ height: 8, borderRadius: R.sm, backgroundColor: C.navyTint, overflow: 'hidden' }}>
+                <View style={{ height: 8, borderRadius: R.sm, backgroundColor: C.primary, width: `${avgP}%` }} />
+              </View>
+
+              <View className="flex-row" style={{ marginTop: SP[3], gap: SP[4] }}>
+                {[
+                  { c: C.lv5, l: 'マスター', n: mast },
+                  { c: C.lv3, l: '学習中', n: learn },
+                  { c: C.lv0, l: '未学習', n: lvCount.new },
+                ].map((g) => (
+                  <View key={g.l} className="flex-row items-center" style={{ gap: SP[1] }}>
+                    <View style={{ width: 8, height: 8, borderRadius: R.sm, backgroundColor: g.c }} />
+                    <Text className="text-xs text-ink-soft">{g.l}</Text>
+                    <Text className="text-xs text-ink" style={NUM_BOLD}>
+                      {g.n}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </Sheet>
+
+            <BarChart7 data={last7} />
           </View>
+        )}
+
+        {/* ここから下は「読むだけ・たまに使う」もの。ベタ塗りはやめ、罫線と枠だけにする */}
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[5], paddingBottom: SP[5], gap: SP[3] }}>
+          {/* 単語が1語も無いときは押しても始められないので、クイックスタート自体を出さない */}
+          {words.length > 0 && (
+          <Sheet className="p-4">
+            <SectionTitle icon="flash-outline">クイックスタート</SectionTitle>
+            <View className="flex-row" style={{ gap: SP[2] }}>
+              <Btn
+                label="フラッシュカード"
+                tone="line"
+                small
+                icon="layers-outline"
+                onPress={() => openConfig('flashcard')}
+                className="flex-1"
+                style={{ minHeight: 44, paddingHorizontal: SP[2] }}
+              />
+              <Btn
+                label="4択クイズ"
+                tone="line"
+                small
+                icon="brain"
+                onPress={() => openConfig('quiz')}
+                className="flex-1"
+                style={{ minHeight: 44, paddingHorizontal: SP[2] }}
+              />
+            </View>
+          </Sheet>
+          )}
 
           {/*
-            保存データの大きさ。「保存できません」が出たときに、
-            単語と表紙写真のどちらが容量を食っているかを自分で見られるようにしている。
+            発音の音量。iPhone 本体の音量は変えず、アプリの中だけで下げられる。
+            スライダーは追加ライブラリが要るので、押すだけで決まる4段階にしてある。
+            選択中だけ藍のベタ塗り＝いまどれを選んでいるかを色の面で言う。
           */}
-          {dataSize && (
-            <View className="mt-3 pt-3 border-t border-gray-100">
-              <View className="flex-row justify-between items-center mb-1.5">
-                <Text className="text-xs font-medium text-gray-600">保存データの大きさ</Text>
-                <Text className="text-xs font-bold text-gray-700">{formatBytes(dataSize.total * 2)}</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text className="text-xs text-gray-400">単語 {dataSize.wordCnt}語</Text>
-                <Text className="text-xs text-gray-400">{formatBytes(dataSize.words * 2)}</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text className="text-xs text-gray-400">表紙写真 {dataSize.coverCnt}枚</Text>
-                <Text className="text-xs text-gray-400">{formatBytes(dataSize.cover * 2)}</Text>
-              </View>
-              {/*
-                使用量（quota.used）は出さない。ブラウザ側の集計が遅れていて、
-                すぐ上の「保存データの大きさ」と食い違って見えるため。
-                知りたいのは「まだどれだけ入るか」なので上限だけ出す。
-              */}
-              {quota && (
-                <Text className="text-xs text-gray-400 mt-1.5">
-                  この端末で保存できる上限 約{formatBytes(quota.quota)}
-                </Text>
-              )}
+          <Sheet className="p-4">
+            <SectionTitle right={<Text className="text-xs text-ink-soft">端末の音量は変わりません</Text>}>
+              発音の音量
+            </SectionTitle>
+            {/* 4つから1つ選ぶ帯。<Btn> ではなく設定画面（出題モード）と同じ書き方にそろえてある。
+                Btn は読み上げ名が label 固定で「音量 大」と読ませられず、押すたびに「大」としか言えないため */}
+            <View className="flex-row" style={{ gap: SP[2] }}>
+              {[
+                { v: 0, i: 'volume-mute', l: '消音' },
+                { v: 0.3, i: 'volume-low', l: '小' },
+                { v: 0.6, i: 'volume-medium', l: '中' },
+                { v: 1, i: 'volume-high', l: '大' },
+              ].map((o) => {
+                const active = Math.abs(volume - o.v) < 0.01;
+                return (
+                  <TouchableOpacity
+                    key={o.l}
+                    onPress={() => {
+                      setVolume(o.v);
+                      // 変えた音量ですぐ聞けるように、見本を1語鳴らす（消音のときは鳴らさない）
+                      if (o.v > 0) {
+                        setSpeechVolume(o.v);
+                        speakWord(words[0] ? words[0].en : 'sample');
+                      }
+                    }}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`音量 ${o.l}`}
+                    accessibilityState={{ selected: active }}
+                    className="flex-1 items-center justify-center rounded"
+                    style={{
+                      backgroundColor: active ? C.primary : C.surface,
+                      borderWidth: 1,
+                      borderColor: active ? C.primary : C.border,
+                      paddingVertical: SP[2],
+                      paddingHorizontal: SP[1],
+                      minHeight: 44,
+                      gap: SP[1],
+                    }}
+                  >
+                    <Icon name={o.i} size={16} color={active ? C.onPrimary : C.muted} />
+                    <Text
+                      className="text-xs font-bold"
+                      style={{ color: active ? C.onPrimary : C.text }}
+                      numberOfLines={1}
+                    >
+                      {o.l}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          )}
-        </View>
+          </Sheet>
 
-        <BarChart7 data={last7} />
-      </View>
-    </ScrollView>
-  );
+          <Sheet className="p-4">
+            <SectionTitle icon="save-outline">データ管理</SectionTitle>
+            <View className="flex-row" style={{ gap: SP[2] }}>
+              <Btn label="保存" tone="line" icon="download-outline" onPress={exportData} className="flex-1" />
+              <Btn label="読込" tone="line" icon="cloud-upload-outline" onPress={importData} className="flex-1" />
+            </View>
+
+            {/*
+              保存データの大きさ。「保存できません」が出たときに、
+              単語と表紙写真のどちらが容量を食っているかを自分で見られるようにしている。
+            */}
+            {dataSize && (
+              <View style={{ marginTop: SP[3] }}>
+                <Rule />
+                <View className="flex-row justify-between items-baseline" style={{ marginTop: SP[3] }}>
+                  <Text className="text-xs text-ink">保存データの大きさ</Text>
+                  <Text className="text-xs text-ink" style={NUM_BOLD}>
+                    {formatBytes(dataSize.total * 2)}
+                  </Text>
+                </View>
+                <View className="flex-row justify-between items-baseline" style={{ marginTop: SP[2] }}>
+                  <Text className="text-xs text-ink-soft">単語 <Text style={NUM}>{dataSize.wordCnt}</Text>語</Text>
+                  <Text className="text-xs text-ink-soft" style={NUM}>
+                    {formatBytes(dataSize.words * 2)}
+                  </Text>
+                </View>
+                <View className="flex-row justify-between items-baseline" style={{ marginTop: SP[1] }}>
+                  <Text className="text-xs text-ink-soft">表紙写真 <Text style={NUM}>{dataSize.coverCnt}</Text>枚</Text>
+                  <Text className="text-xs text-ink-soft" style={NUM}>
+                    {formatBytes(dataSize.cover * 2)}
+                  </Text>
+                </View>
+                {/*
+                  使用量（quota.used）は出さない。ブラウザ側の集計が遅れていて、
+                  すぐ上の「保存データの大きさ」と食い違って見えるため。
+                  知りたいのは「まだどれだけ入るか」なので上限だけ出す。
+                */}
+                {quota && (
+                  <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2], lineHeight: 19 }}>
+                    この端末で保存できる上限 約<Text style={NUM}>{formatBytes(quota.quota)}</Text>
+                  </Text>
+                )}
+              </View>
+            )}
+          </Sheet>
+        </View>
+      </ScrollView>
+    );
+  };
 
   // ===================== Study mode menu =====================
   const renderStudy = () => {
     const modes = [
-      { m: 'flashcard', icon: 'layers', t: 'フラッシュカード', d: 'スワイプで直感的に暗記', lb: 'bg-indigo-50', bg: '#6366f1' },
-      { m: 'quiz', icon: 'brain', t: '4択クイズ', d: '4つの選択肢から正解を選ぶ', lb: 'bg-violet-50', bg: '#8b5cf6' },
-      { m: 'typing', icon: 'text', t: 'タイピング（日→英）', d: '日本語を見て英語を入力', lb: 'bg-blue-50', bg: '#3b82f6' },
-      { m: 'reverse', icon: 'refresh-circle', t: '逆引き（英→日）', d: '英語を見て日本語を入力', lb: 'bg-teal-50', bg: '#14b8a6' },
-      { m: 'matching', icon: 'shuffle', t: 'マッチング', d: '英語と日本語をペアにする', lb: 'bg-amber-50', bg: '#f59e0b' },
-      { m: 'speed', icon: 'flash', t: 'スピードチャレンジ', d: '60秒で何問解けるか挑戦！', lb: 'bg-rose-50', bg: '#f43f5e' },
+      { m: 'flashcard', icon: 'layers-outline', t: 'フラッシュカード', d: 'スワイプで直感的に暗記' },
+      { m: 'quiz', icon: 'brain', t: '4択クイズ', d: '4つの選択肢から正解を選ぶ' },
+      { m: 'typing', icon: 'create-outline', t: 'タイピング（日→英）', d: '日本語を見て英語を入力' },
+      { m: 'reverse', icon: 'swap-horizontal-outline', t: '逆引き（英→日）', d: '英語を見て日本語を入力' },
+      { m: 'matching', icon: 'shuffle-outline', t: 'マッチング', d: '英語と日本語をペアにする' },
+      { m: 'speed', icon: 'flash-outline', t: 'スピードチャレンジ', d: '60秒で何問解けるか挑戦' },
     ];
     return (
       <ScrollView>
-        <View className="bg-indigo-600 px-5 pt-8 pb-12">
-          <Text className="text-2xl font-bold text-white mb-1">🎯 学習モード</Text>
-          <Text className="text-indigo-200 text-sm">モードを選んで設定画面へ</Text>
-        </View>
-        <View className="px-4 -mt-6 pb-4" style={{ gap: 10 }}>
-          {modes.map(({ m, icon, t, d, lb, bg }) => (
-            <TouchableOpacity
-              key={m}
-              onPress={() => openConfig(m)}
-              className={`${lb} rounded-2xl p-4 flex-row items-center`}
-              style={{ gap: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}
-            >
-              <View className="p-3 rounded-xl" style={{ backgroundColor: bg }}>
-                <Icon name={icon} size={22} color="#fff" />
-              </View>
-              <View className="flex-1">
-                <Text className="font-semibold text-gray-800">{t}</Text>
-                <Text className="text-xs text-gray-500 mt-0.5">{d}</Text>
-              </View>
-              <Icon name="chevron-forward" size={20} color="#d1d5db" />
-            </TouchableOpacity>
-          ))}
-        </View>
+        <PageTitle title="学習モード" sub="モードを選んで設定画面へ" />
+        {words.length === 0 ? (
+          // 単語が0件だとどのモードも始められない。ダッシュボード／学習設定と同じ白紙の画面を出す
+          <EmptyState
+            title="このノートはまだ白紙です"
+            body="単語を書き込むと、ここからモードを選んで練習を始められます。"
+            actionLabel="単語を書き込む"
+            onAction={() => setScr('words')}
+            icon="create-outline"
+          />
+        ) : (
+          <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5] }}>
+            {/* 1枚の紙に「1行＝1モード」を並べる。色でモードを分けず、藍1色で「押せる」だけを言う */}
+            <Sheet>
+              {modes.map(({ m, icon, t, d }, i) => (
+                <View key={m}>
+                  <TouchableOpacity
+                    onPress={() => openConfig(m)}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    // モード名だけだと説明文が読み上げられない。1行ぜんぶを1つの読み上げにする
+                    accessibilityLabel={`${t}。${d}`}
+                    className="flex-row items-center"
+                    style={{ minHeight: 64, paddingHorizontal: SP[4], paddingVertical: SP[3], gap: SP[3] }}
+                  >
+                    <View
+                      className="items-center justify-center"
+                      style={{ width: 40, height: 40, borderWidth: 1, borderColor: C.primary, borderRadius: R.md }}
+                    >
+                      <Icon name={icon} size={20} color={C.primary} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-base font-bold text-ink">{t}</Text>
+                      <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1], lineHeight: 19 }}>
+                        {d}
+                      </Text>
+                    </View>
+                    <Icon name="chevron-forward" size={18} color={C.muted2} />
+                  </TouchableOpacity>
+                  {/* 単語一覧などと違いこの一覧はスクロールせず6行で終わるので、最終行に罫を引くと
+                      Sheet の下枠と重なって2px の二重線に見える。ここだけ最終行の罫を省く */}
+                  {i < modes.length - 1 ? <Rule /> : null}
+                </View>
+              ))}
+            </Sheet>
+          </View>
+        )}
       </ScrollView>
     );
   };
@@ -1404,160 +1768,215 @@ export default function App() {
     const isMat = cfgMode === 'matching';
     const dNQ = isMat ? Math.min(6, poolInfo.pool) : actualNumQ;
     return (
-      // 「学習を開始」までスクロールせずに届くよう、余白と文字を詰めてある。
+      // 「学習を開始」までスクロールせずに届くよう、かたまりの数を5つ以内に抑えてある。
       // 要素を足すときは実機幅（375×812）で開始ボタンが見えるか確かめること。
       <ScrollView>
-        <Header title="学習設定" back="study" />
-        <View className="px-4 py-3" style={{ gap: 12 }}>
-          <View className="bg-indigo-50 rounded-lg py-1.5">
-            <Text className="font-bold text-indigo-700 text-center">{mn[cfgMode]}</Text>
-          </View>
-
-          <View>
-            <View className="flex-row items-center mb-1.5" style={{ gap: 6 }}>
-              <Icon name="filter" size={14} color="#374151" />
-              <Text className="font-semibold text-gray-800 text-sm">出題モード</Text>
-            </View>
-            {/* 4つ並ぶので、375px 幅でも折り返さないよう文字と余白を1段階詰めてある */}
-            <View className="flex-row" style={{ gap: 6 }}>
-              {[
-                { k: 'normal', l: '🎯 通常', d: 'バランス', on: 'bg-indigo-50 border-indigo-500', tx: 'text-indigo-700' },
-                { k: 'new', l: '✨ 新規', d: `${poolInfo.nw}語`, on: 'bg-emerald-50 border-emerald-500', tx: 'text-emerald-700' },
-                { k: 'weak', l: '💪 苦手', d: `${poolInfo.wk}語`, on: 'bg-rose-50 border-rose-500', tx: 'text-rose-700' },
-                { k: 'due', l: '📅 復習', d: `${poolInfo.du}語`, on: 'bg-violet-50 border-violet-500', tx: 'text-violet-700' },
-              ].map((mi) => {
-                const active = wordSel === mi.k;
-                const tc = active ? mi.tx : 'text-gray-600';
-                return (
-                  <TouchableOpacity
-                    key={mi.k}
-                    onPress={() => setWordSel(mi.k)}
-                    className={`flex-1 rounded-xl py-2 px-1 border-2 ${active ? mi.on : 'bg-white border-gray-200'}`}
-                  >
-                    <Text className={`font-semibold text-xs text-center ${tc}`} numberOfLines={1}>
-                      {mi.l}
-                    </Text>
-                    <Text className={`text-xs text-center ${tc} opacity-70`} numberOfLines={1}>
-                      {mi.d}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          <View>
-            <Text className="font-semibold text-gray-800 text-sm mb-1.5">📖 出題範囲（全{words.length}語）</Text>
-            <View className="flex-row items-center" style={{ gap: 8 }}>
-              <TextInput
-                keyboardType="number-pad"
-                value={rST}
-                onChangeText={setRST}
-                onBlur={handleRSBlur}
-                className="flex-1 bg-white border-2 border-gray-200 rounded-lg py-1.5 px-3 text-center font-bold"
-              />
-              <Text className="text-gray-400">〜</Text>
-              <TextInput
-                keyboardType="number-pad"
-                value={rET}
-                onChangeText={setRET}
-                onBlur={handleREBlur}
-                className="flex-1 bg-white border-2 border-gray-200 rounded-lg py-1.5 px-3 text-center font-bold"
-              />
-            </View>
-          </View>
-
-          {!isMat && (
+        {/* モード名はヘッダのタイトルに入れる。バンドを1枚減らしたぶん、下の余白を広く取れる */}
+        <Header title={`${mn[cfgMode] || '学習'}の設定`} back="study" />
+        {words.length === 0 ? (
+          <EmptyState
+            title="このノートはまだ白紙です"
+            body="単語を1語でも書き込むと、ここから学習を始められます。"
+            actionLabel="単語を書き込む"
+            onAction={() => setScr('words')}
+            icon="create-outline"
+          />
+        ) : (
+          <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+            {/* ── 出題モード ── 見出しを他画面と同じ SectionTitle（16px）にしたので、
+                そのぶんかたまり同士は 12px に詰めて「学習を開始」がスクロールなしで届く高さを保っている */}
             <View>
-              <Text className="font-semibold text-gray-800 text-sm mb-1.5">📝 出題数</Text>
-              {/* 「全」を先頭に置いている。既定が全なので、選択中のものが左端に来るほうが分かりやすい */}
-              <View className="flex-row" style={{ gap: 6 }}>
-                {[9999, 10, 20, 30, 50].map((n) => {
-                  const active = numQ === n;
-                  const label = n === 9999 ? '全' : String(n);
+              <SectionTitle>出題モード</SectionTitle>
+              {/* 4つ並ぶので、375px 幅でも折り返さないよう文字を12pxに抑えてある */}
+              <View className="flex-row" style={{ gap: SP[2] }}>
+                {[
+                  { k: 'normal', l: '通常', d: 'バランス' },
+                  { k: 'new', l: '新規', d: poolInfo.nw },
+                  { k: 'weak', l: '苦手', d: poolInfo.wk },
+                  { k: 'due', l: '復習', d: poolInfo.du },
+                ].map((mi) => {
+                  const active = wordSel === mi.k;
                   return (
                     <TouchableOpacity
-                      key={n}
-                      onPress={() => setNumQ(n)}
-                      className={`flex-1 py-2 rounded-xl border-2 ${active ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}`}
+                      key={mi.k}
+                      onPress={() => setWordSel(mi.k)}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      className="flex-1 items-center justify-center rounded"
+                      style={{
+                        backgroundColor: active ? C.primary : C.surface,
+                        borderWidth: 1,
+                        borderColor: active ? C.primary : C.border,
+                        paddingVertical: SP[2],
+                        paddingHorizontal: SP[1],
+                        minHeight: 48,
+                        gap: SP[1],
+                      }}
                     >
-                      <Text className={`text-center font-bold ${active ? 'text-white' : 'text-gray-500'}`}>{label}</Text>
+                      <Text className="text-xs font-bold text-center" style={{ color: active ? C.onPrimary : C.text }} numberOfLines={1}>
+                        {mi.l}
+                      </Text>
+                      <Text className="text-xs text-center" style={{ color: active ? C.navyTint : C.muted }} numberOfLines={1}>
+                        {typeof mi.d === 'number' ? <Text style={NUM}>{mi.d}</Text> : null}
+                        {typeof mi.d === 'number' ? '語' : mi.d}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-              <View className="flex-row items-center mt-1.5" style={{ gap: 8 }}>
-                <Text className="text-xs text-gray-500">カスタム</Text>
+            </View>
+
+            {/* ── 出題範囲 ── */}
+            <View>
+              <SectionTitle
+                right={
+                  <Text className="text-xs text-ink-soft">
+                    全<Text style={NUM}>{words.length}</Text>語
+                  </Text>
+                }
+              >
+                出題範囲
+              </SectionTitle>
+              <View className="flex-row items-center" style={{ gap: SP[2] }}>
                 <TextInput
                   keyboardType="number-pad"
-                  value={numQ === 9999 ? '' : String(numQ)}
-                  onChangeText={(t) => {
-                    const v = parseInt(t.replace(/[^0-9]/g, ''), 10);
-                    if (!isNaN(v) && v > 0) setNumQ(Math.min(v, 9999));
-                    else if (t === '') setNumQ(1);
-                  }}
-                  placeholder="例: 15"
-                  className="flex-1 bg-white border-2 border-gray-200 rounded-lg py-1.5 px-3 text-center font-bold"
+                  value={rST}
+                  onChangeText={setRST}
+                  onBlur={handleRSBlur}
+                  className="flex-1 bg-sheet border border-rule rounded px-3 py-3 text-base text-center"
+                  style={[{ minWidth: 0 }, NUM_BOLD, { color: C.text, minHeight: 44 }]}
                 />
-                <Text className="text-xs text-gray-500">問</Text>
+                <Text className="text-sm text-ink-soft">〜</Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={rET}
+                  onChangeText={setRET}
+                  onBlur={handleREBlur}
+                  className="flex-1 bg-sheet border border-rule rounded px-3 py-3 text-base text-center"
+                  style={[{ minWidth: 0 }, NUM_BOLD, { color: C.text, minHeight: 44 }]}
+                />
               </View>
             </View>
-          )}
 
-          {/* 3行あった要約を1行にまとめて縦幅を稼いでいる */}
-          <View className="bg-indigo-50 rounded-xl px-3 py-2 border border-indigo-100 flex-row items-center justify-between">
-            <Text className="text-xs text-gray-600 flex-1 pr-2">
-              {wordSel === 'due' ? (
-                poolInfo.du > 0 ? (
-                  <>
-                    復習日が来た<Text className="font-bold text-indigo-600">{poolInfo.du}</Text>語だけ出題します
-                  </>
-                ) : (
-                  '今日の復習はもうありません'
-                )
-              ) : (
-                <>
-                  No.{rStart}〜{rEnd} ／ 対象<Text className="font-bold text-indigo-600">{poolInfo.pool}</Text>語
-                </>
-              )}
-            </Text>
-            <Text className="text-xl font-black text-indigo-600">
-              {dNQ}
-              <Text className="text-xs text-gray-400 font-normal"> 問</Text>
-            </Text>
-          </View>
+            {/* ── 出題数 ── マッチングは6問固定なので出さない */}
+            {!isMat && (
+              <View>
+                <SectionTitle>出題数</SectionTitle>
+                {/* 「全」を先頭に置いている。既定が全なので、選択中のものが左端に来るほうが分かりやすい */}
+                <View className="flex-row" style={{ gap: SP[2] }}>
+                  {[9999, 10, 20, 30, 50].map((n) => {
+                    const active = numQ === n;
+                    const label = n === 9999 ? '全' : String(n);
+                    return (
+                      <TouchableOpacity
+                        key={n}
+                        onPress={() => setNumQ(n)}
+                        activeOpacity={0.75}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        className="flex-1 items-center justify-center rounded"
+                        style={{
+                          backgroundColor: active ? C.primary : C.surface,
+                          borderWidth: 1,
+                          borderColor: active ? C.primary : C.border,
+                          paddingVertical: SP[2],
+                          minHeight: 44,
+                        }}
+                      >
+                        <Text
+                          className="text-sm text-center"
+                          style={[{ color: active ? C.onPrimary : C.text }, n === 9999 ? { fontWeight: '700' } : NUM_BOLD]}
+                        >
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <View className="flex-row items-center" style={{ gap: SP[2], marginTop: SP[2] }}>
+                  <Text className="text-xs text-ink-soft">カスタム</Text>
+                  <TextInput
+                    keyboardType="number-pad"
+                    value={numQ === 9999 ? '' : String(numQ)}
+                    onChangeText={(t) => {
+                      const v = parseInt(t.replace(/[^0-9]/g, ''), 10);
+                      if (!isNaN(v) && v > 0) setNumQ(Math.min(v, 9999));
+                      else if (t === '') setNumQ(1);
+                    }}
+                    placeholder="例: 15"
+                    placeholderTextColor={C.muted2}
+                    className="flex-1 bg-sheet border border-rule rounded px-3 py-3 text-base text-center"
+                    style={[NUM_BOLD, { color: C.text, minHeight: 44 }]}
+                  />
+                  <Text className="text-xs text-ink-soft">問</Text>
+                </View>
+              </View>
+            )}
 
-          {/* ダブルタップモードはフラッシュカードにしか効かないので、そのときだけ出す */}
-          {cfgMode === 'flashcard' && (
-            <TouchableOpacity
-              onPress={() => setDblTap((v) => !v)}
-              className="bg-white rounded-xl px-3 py-2 flex-row items-center border border-gray-200"
-              style={{ gap: 10 }}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: dblTap }}
-            >
-              <Icon name="hand-left" size={18} color={dblTap ? '#6366f1' : '#9ca3af'} />
-              <View className="flex-1">
-                <Text className="font-semibold text-gray-800 text-sm">ダブルタップモード</Text>
-                <Text className="text-xs text-gray-400">
-                  {dblTap ? '1回目で意味を表示、もう一度で判定' : '1回押すとすぐ判定'}
+            {/* ダブルタップモードはフラッシュカードにしか効かないので、そのときだけ出す */}
+            {cfgMode === 'flashcard' && (
+              <TouchableOpacity
+                onPress={() => setDblTap((v) => !v)}
+                activeOpacity={0.75}
+                className="bg-sheet border border-rule rounded-lg flex-row items-center"
+                style={{ padding: SP[4], gap: SP[3] }}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: dblTap }}
+              >
+                <Icon name="hand-left-outline" size={18} color={dblTap ? C.primary : C.muted} />
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-ink">ダブルタップモード</Text>
+                  <Text className="text-xs text-ink-soft" style={{ lineHeight: 19, marginTop: SP[1] }}>
+                    {dblTap ? '1回目で意味を表示、もう一度で判定' : '1回押すとすぐ判定'}
+                  </Text>
+                </View>
+                <View
+                  className="w-11 h-6 rounded-full justify-center"
+                  style={{ padding: SP[1], backgroundColor: dblTap ? C.primary : C.border2 }}
+                >
+                  <View className="w-4 h-4 rounded-full" style={{ backgroundColor: C.surface, marginLeft: dblTap ? 20 : 0 }} />
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* いま見てほしい1ブロック。要約と開始ボタンをひとまとめにして左端に藍の縦罫を引く */}
+            <Sheet mark={C.primary} className="p-4">
+              <View className="flex-row items-end justify-between" style={{ gap: SP[3], marginBottom: SP[3] }}>
+                <Text className="flex-1 text-xs text-ink-soft" style={{ lineHeight: 19 }}>
+                  {wordSel === 'due' ? (
+                    poolInfo.du > 0 ? (
+                      <>
+                        復習日が来た<Text className="text-ink" style={NUM_BOLD}>{poolInfo.du}</Text>語だけ出題します
+                      </>
+                    ) : (
+                      '今日の復習はもうありません'
+                    )
+                  ) : (
+                    <>
+                      No.<Text style={NUM}>{rStart}</Text>〜<Text style={NUM}>{rEnd}</Text> ／ 対象
+                      <Text className="text-ink" style={NUM_BOLD}>{poolInfo.pool}</Text>語
+                    </>
+                  )}
                 </Text>
+                <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                  <Text className="text-2xl" style={[NUM_BOLD, { color: C.primary }]}>
+                    {dNQ}
+                  </Text>
+                  <Text className="text-xs text-ink-soft">問</Text>
+                </View>
               </View>
-              <View className={`w-11 h-6 rounded-full justify-center ${dblTap ? 'bg-indigo-600' : 'bg-gray-300'}`} style={{ padding: 3 }}>
-                <View className="w-4 h-4 rounded-full bg-white" style={{ marginLeft: dblTap ? 20 : 0 }} />
-              </View>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            onPress={startFromConfig}
-            className="bg-indigo-600 rounded-xl py-4 flex-row items-center justify-center"
-            style={{ gap: 8 }}
-          >
-            <Icon name="play" size={22} color="#fff" />
-            <Text className="text-white font-bold text-lg">学習を開始</Text>
-          </TouchableOpacity>
-        </View>
+              {/* 押せない条件は startFromConfig 側のトーストで知らせる（元の動きのまま） */}
+              <Btn
+                label="学習を開始"
+                onPress={startFromConfig}
+                tone="navy"
+                icon="play"
+                style={{ paddingVertical: SP[4], minHeight: 52 }}
+              />
+            </Sheet>
+          </View>
+        )}
       </ScrollView>
     );
   };
@@ -1565,26 +1984,52 @@ export default function App() {
   // ===================== Flashcard =====================
   const renderFlash = () => {
     const w = sWords[sIdx];
-    if (!w) return null;
+    // 出題できる語が無いとき。return null にすると真っ白になって戻れなくなる
+    if (!w)
+      return (
+        <View>
+          <Header title="フラッシュカード" />
+          <EmptyState
+            title="出題できる単語がありません"
+            body="いまの条件に合う単語が見つかりませんでした。学習メニューに戻って条件を選び直すか、単語を書き足してください。"
+            actionLabel="学習メニューへ"
+            onAction={() => setScr('study')}
+            icon="albums-outline"
+          />
+        </View>
+      );
     const rot = pan.interpolate({ inputRange: [-300, 0, 300], outputRange: ['-12deg', '0deg', '12deg'] });
     const bgTint =
       dragOff > 20
-        ? `rgba(209,250,229,${Math.min(0.4, (dragOff - 20) / 200)})`
+        ? `rgba(233,239,226,${Math.min(0.4, (dragOff - 20) / 200)})`
         : dragOff < -20
-        ? `rgba(254,226,226,${Math.min(0.4, (Math.abs(dragOff) - 20) / 200)})`
-        : '#ffffff';
+        ? `rgba(247,231,227,${Math.min(0.4, (Math.abs(dragOff) - 20) / 200)})`
+        : C.surface;
     return (
       <View>
         <Header title="フラッシュカード" />
-        <View className="px-4 py-6">
-          <Text className="text-center text-sm text-gray-400 mb-2">
-            {sIdx + 1} / {sWords.length}
-          </Text>
-          <Text className="text-center text-xs text-gray-400 mb-2">⚡ 早く答えるほど得点アップ</Text>
-          <View className="flex-row justify-between mb-3 px-4">
-            <Text className="text-xs text-rose-400">← 知らない</Text>
-            <Text className="text-xs text-emerald-400">知ってた →</Text>
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          {/* 何枚目か。数字は等幅にして桁が動いてもガタつかせない。
+              進み具合は藍1色の細い罫で言う（クイズ・タイピングと同じ形にそろえてある） */}
+          <View>
+            <Text className="text-xs text-ink-soft" style={NUM}>
+              {sIdx + 1} / {sWords.length}
+            </Text>
+            <View className="rounded-sm overflow-hidden" style={{ height: 4, marginTop: SP[2], backgroundColor: C.border }}>
+              <View style={{ height: 4, width: `${((sIdx + 1) / sWords.length) * 100}%`, backgroundColor: C.primary }} />
+            </View>
+            <View className="flex-row items-center" style={{ gap: SP[1], marginTop: SP[2] }}>
+              <Icon name="flash-outline" size={13} color={C.muted} />
+              <Text className="text-xs text-ink-soft">早く答えるほど得点アップ</Text>
+            </View>
           </View>
+
+          {/* スワイプの向き。朱＝知らない／苔＝知ってた */}
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xs text-vermilion">← 知らない</Text>
+            <Text className="text-xs text-moss">知ってた →</Text>
+          </View>
+
           <Animated.View
             {...panResponder.panHandlers}
             style={{ transform: [{ translateX: pan }, { rotate: rot }] }}
@@ -1594,53 +2039,96 @@ export default function App() {
                 if (Math.abs(dragOff) < 5) setFlipped(!flipped);
               }}
             >
-              <View
-                className="rounded-3xl items-center justify-center"
-                style={{
-                  backgroundColor: bgTint,
-                  height: 256,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                {!flipped ? (
-                  <>
-                    <Text className="text-3xl font-bold text-gray-800">{w.en}</Text>
-                    <View className="mt-2">
-                      <LvBadge w={w} />
-                    </View>
-                    <Text className="text-xs text-gray-300 mt-4">タップで意味を表示</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text className="text-lg text-gray-400 mb-2">{w.en}</Text>
-                    <Text className="text-3xl font-bold text-indigo-600">{w.ja}</Text>
-                    <View className="mt-2">
-                      <LvBadge w={w} />
-                    </View>
-                  </>
-                )}
-              </View>
+              {/* ノートの1ページ。いま見てほしい1枚なので左端に藍の縦罫、その内側に朱のマージン罫 */}
+              {/* この画面の主役。左端の縦罫は朱の「マージン罫」1本だけにする
+                  （藍の mark を足すと縦線が2本並んでノートに見えなくなる） */}
+              <Sheet className="justify-center" style={{ backgroundColor: bgTint, minHeight: 280 }}>
+                <View style={{ position: 'absolute', left: 22, top: 0, bottom: 0, width: 1, backgroundColor: C.accentTint }} />
+                <View className="items-center" style={{ paddingHorizontal: SP[5], paddingVertical: SP[5] }}>
+                  <View style={{ marginBottom: SP[4] }}>
+                    <LvBadge w={w} />
+                  </View>
+                  {!flipped ? (
+                    <>
+                      <Text className="text-4xl text-ink text-center" style={{ fontFamily: F.enBold, lineHeight: 46 }}>
+                        {w.en}
+                      </Text>
+                      <Rule className="w-full mt-3" color={C.border2} />
+                      <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[3] }}>
+                        タップで意味を表示
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      {/* 単語は消さない。同じ罫の上に残したまま小さくして、意味を一段下に書き足す */}
+                      <Text className="text-2xl text-ink text-center" style={{ fontFamily: F.enSemi, lineHeight: 32 }}>
+                        {w.en}
+                      </Text>
+                      <Rule className="w-full mt-3" color={C.border2} />
+                      <Text className="text-2xl font-bold text-ink text-center" style={{ marginTop: SP[3], lineHeight: 34 }}>
+                        {w.ja}
+                      </Text>
+                    </>
+                  )}
+                </View>
+              </Sheet>
             </Pressable>
           </Animated.View>
-          <View className="flex-row mt-5" style={{ gap: 12 }}>
-            <TouchableOpacity onPress={() => hFlashTap(false)} className="flex-1 bg-rose-100 rounded-xl py-3.5 flex-row items-center justify-center" style={{ gap: 8 }}>
-              <Icon name="close" size={20} color="#be123c" />
-              <Text className="text-rose-700 font-semibold">知らない</Text>
+
+          {/* 2つとも同じ重みの自己申告なので、どちらも「枠だけ」で対称にする。
+              朱＝知らない（赤ペンの印）／苔＝知ってた（正解）。ベタ塗りにすると片方だけ押しやすくなる */}
+          <View className="flex-row" style={{ gap: SP[3] }}>
+            <TouchableOpacity
+              onPress={() => hFlashTap(false)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="知らない"
+              className="flex-row items-center justify-center rounded"
+              style={{
+                flex: 1,
+                minHeight: 48,
+                gap: SP[2],
+                paddingVertical: SP[3],
+                paddingHorizontal: SP[4],
+                borderWidth: 1,
+                borderColor: C.accent,
+                backgroundColor: C.accentSoft,
+              }}
+            >
+              <Icon name="close" size={17} color={C.accent} />
+              <Text className="text-sm font-bold" style={{ color: C.accent }}>
+                知らない
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => hFlashTap(true)} className="flex-1 bg-emerald-100 rounded-xl py-3.5 flex-row items-center justify-center" style={{ gap: 8 }}>
-              <Icon name="checkmark" size={20} color="#047857" />
-              <Text className="text-emerald-700 font-semibold">知ってた</Text>
+            <TouchableOpacity
+              onPress={() => hFlashTap(true)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="知ってた"
+              className="flex-row items-center justify-center rounded"
+              style={{
+                flex: 1,
+                minHeight: 48,
+                gap: SP[2],
+                paddingVertical: SP[3],
+                paddingHorizontal: SP[4],
+                borderWidth: 1,
+                borderColor: C.success,
+                backgroundColor: C.successSoft,
+              }}
+            >
+              <Icon name="checkmark" size={17} color={C.success} />
+              <Text className="text-sm font-bold" style={{ color: C.success }}>
+                知ってた
+              </Text>
             </TouchableOpacity>
           </View>
 
           {/* いま1回目なのか2回目なのかが分かるようにする */}
           {dblTap && (
-            <View className="flex-row items-center justify-center mt-3" style={{ gap: 6 }}>
-              <Icon name={flipped ? 'checkmark-circle' : 'information-circle'} size={14} color={flipped ? '#059669' : '#9ca3af'} />
-              <Text className={`text-xs ${flipped ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+            <View className="flex-row items-center justify-center" style={{ gap: SP[2] }}>
+              <Icon name={flipped ? 'checkmark-circle' : 'information-circle'} size={14} color={flipped ? C.success : C.muted} />
+              <Text className={`text-xs ${flipped ? 'text-moss font-bold' : 'text-ink-soft'}`} style={{ lineHeight: 19 }}>
                 {flipped ? 'もう一度押すと判定されます' : '1回押すと意味が出ます（判定されません）'}
               </Text>
             </View>
@@ -1653,35 +2141,85 @@ export default function App() {
   // ===================== Quiz =====================
   const renderQuiz = () => {
     const w = sWords[sIdx];
-    if (!w) return null;
+    if (!w)
+      return (
+        <View>
+          <Header title="4択クイズ" />
+          <EmptyState
+            title="出題できる単語がありません"
+            body="いまの条件に合う単語が見つかりませんでした。学習メニューに戻って条件を選び直すか、単語を書き足してください。"
+            actionLabel="学習メニューへ"
+            onAction={() => setScr('study')}
+            icon="help-circle-outline"
+          />
+        </View>
+      );
     return (
       <View>
         <Header title="4択クイズ" />
-        <View className="px-4 py-6">
-          <Text className="text-center text-sm text-gray-400 mb-4">
-            {sIdx + 1} / {sWords.length}
-          </Text>
-          <View className="bg-white rounded-3xl items-center justify-center mb-5" style={{ height: 192, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-            <Text className="text-sm text-gray-400 mb-2">この単語の意味は？</Text>
-            <Text className="text-3xl font-bold text-gray-800">{w.en}</Text>
-            <View className="mt-2"><LvBadge w={w} /></View>
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          {/* 何問目か。数字は等幅にして桁が動いてもガタつかせない。進み具合は藍1色の細い罫で言う */}
+          <View>
+            <Text className="text-xs text-ink-soft" style={NUM}>
+              {sIdx + 1} / {sWords.length}
+            </Text>
+            <View className="rounded-sm overflow-hidden" style={{ height: 4, marginTop: SP[2], backgroundColor: C.border }}>
+              <View style={{ height: 4, width: `${((sIdx + 1) / sWords.length) * 100}%`, backgroundColor: C.primary }} />
+            </View>
           </View>
-          <View style={{ gap: 10 }}>
+
+          {/* 問題。いま一番見てほしいので左端に藍の縦罫を入れる */}
+          <Sheet mark={C.primary} className="p-6 items-center">
+            <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>
+              この単語の意味は？
+            </Text>
+            <Text className="text-3xl text-ink text-center" style={{ fontFamily: F.enBold }}>
+              {w.en}
+            </Text>
+            <View style={{ marginTop: SP[3] }}>
+              <LvBadge w={w} />
+            </View>
+          </Sheet>
+
+          {/* 選択肢。ふだんは藍の枠だけ。答えたあとだけ苔（正解）と朱（外した方）の面が出る */}
+          <View style={{ gap: SP[2] }}>
             {opts.map((o) => {
-              let bgClr = 'bg-white border-gray-200';
-              let txtClr = 'text-gray-800';
+              // 押せるものなので枠は藍（<Btn tone="line"> と同じ意味）。読むだけの Sheet と見分ける
+              let face = 'bg-sheet border-navy';
+              let txtClr = 'text-ink';
+              let markClr = null;
+              let tailIcon = null;
               if (answered) {
                 if (o.id === w.id) {
-                  bgClr = 'bg-emerald-50 border-emerald-500';
-                  txtClr = 'text-emerald-800';
+                  face = 'bg-moss-soft border-moss';
+                  txtClr = 'text-moss';
+                  markClr = C.success;
+                  tailIcon = 'checkmark';
                 } else if (o.id === selAns) {
-                  bgClr = 'bg-rose-50 border-rose-400';
-                  txtClr = 'text-rose-800';
+                  face = 'bg-vermilion-soft border-vermilion';
+                  txtClr = 'text-vermilion';
+                  markClr = C.accent;
+                  tailIcon = 'close';
                 }
               }
               return (
-                <TouchableOpacity key={o.id} onPress={() => hQuiz(o)} className={`rounded-xl py-3.5 px-5 border-2 ${bgClr}`}>
-                  <Text className={`font-medium ${txtClr}`}>{o.ja}</Text>
+                <TouchableOpacity
+                  key={o.id}
+                  onPress={() => hQuiz(o)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={o.ja}
+                  className={`flex-row items-center overflow-hidden rounded border py-4 px-4 ${face}`}
+                  style={{ minHeight: 52, gap: SP[3] }}
+                >
+                  {/* 左端の縦罫。色だけに頼らないよう、行末のアイコンと2つで伝える */}
+                  {markClr ? (
+                    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: markClr }} />
+                  ) : null}
+                  <Text className={`flex-1 text-base ${txtClr}`} style={{ lineHeight: 24 }}>
+                    {o.ja}
+                  </Text>
+                  {tailIcon ? <Icon name={tailIcon} size={18} color={markClr} /> : null}
                 </TouchableOpacity>
               );
             })}
@@ -1694,7 +2232,20 @@ export default function App() {
   // ===================== Typing / Reverse =====================
   const renderTyping = (isRev) => {
     const w = sWords[sIdx];
-    if (!w) return null;
+    // 出題できる語が0のとき return null にすると真っ白になって戻れない（DESIGN.md「空っぽの画面」）
+    if (!w)
+      return (
+        <View>
+          <Header title={isRev ? '逆引き（英→日）' : 'タイピング（日→英）'} />
+          <EmptyState
+            title="出題できる単語がありません"
+            body="いまの条件に合う単語が見つかりませんでした。学習メニューに戻って条件を選び直すか、単語を書き足してください。"
+            actionLabel="学習メニューへ"
+            onAction={() => setScr('study')}
+            icon="create-outline"
+          />
+        </View>
+      );
     const ok = isRev ? typed.trim().length > 0 && w.ja.includes(typed.trim()) : typed.trim().toLowerCase() === w.en.toLowerCase();
     const title = isRev ? '逆引き（英→日）' : 'タイピング（日→英）';
     const display = isRev ? w.en : w.ja;
@@ -1703,56 +2254,102 @@ export default function App() {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Header title={title} />
-        <ScrollView keyboardShouldPersistTaps="handled">
-          <View className="px-4 py-6">
-            <Text className="text-center text-sm text-gray-400 mb-4">
-              {sIdx + 1} / {sWords.length}
-            </Text>
-            <View className="bg-white rounded-3xl items-center justify-center mb-5" style={{ height: 192, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-              <Text className="text-sm text-gray-400 mb-2">{isRev ? '日本語の意味を入力' : '英語で入力'}</Text>
-              <Text className={`text-3xl font-bold ${isRev ? 'text-gray-800' : 'text-indigo-600'}`}>{display}</Text>
-              <View className="mt-2"><LvBadge w={w} /></View>
+        <ScrollView className="bg-paper" keyboardShouldPersistTaps="handled">
+          <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+            {/* 何問目か。数字は等幅にして桁が動いてもガタつかせない。進み具合は藍1色の細い罫で言う */}
+            <View>
+              <Text className="text-xs text-ink-soft" style={NUM}>
+                {sIdx + 1} / {sWords.length}
+              </Text>
+              <View className="rounded-sm overflow-hidden" style={{ height: 4, marginTop: SP[2], backgroundColor: C.border }}>
+                <View style={{ height: 4, width: `${((sIdx + 1) / sWords.length) * 100}%`, backgroundColor: C.primary }} />
+              </View>
             </View>
+
+            {/* 問題。いま一番見てほしいので左端に藍の縦罫を入れる */}
+            <Sheet mark={C.primary} className="p-6 items-center">
+              <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>
+                {isRev ? '日本語の意味を入力' : '英語で入力'}
+              </Text>
+              {/* 出す語が英語のときだけ Lora。日本語の意味には書体を当てない（偽の太字になる） */}
+              {isRev ? (
+                <Text className="text-3xl text-ink text-center" style={{ fontFamily: F.enBold, lineHeight: 38 }}>
+                  {display}
+                </Text>
+              ) : (
+                <Text className="text-2xl font-bold text-ink text-center" style={{ lineHeight: 32 }}>
+                  {display}
+                </Text>
+              )}
+              <View style={{ marginTop: SP[3] }}>
+                <LvBadge w={w} />
+              </View>
+            </Sheet>
+
+            {/* 答えを書く欄。書けるあいだは枠が藍（＝ここを操作する）、答え合わせ後は罫線の色に落とす */}
             <TextInput
               value={typed}
               onChangeText={setTyped}
               onSubmitEditing={() => !answered && hSub()}
               editable={!answered}
               placeholder={isRev ? '日本語を入力...' : '英語を入力...'}
-              className="bg-white border-2 border-gray-200 rounded-xl py-4 px-5 text-lg mb-3"
+              placeholderTextColor={C.muted2}
+              className="text-lg text-ink"
+              style={[
+                {
+                  height: 52,
+                  paddingHorizontal: SP[4],
+                  paddingVertical: 0,
+                  borderRadius: R.md,
+                  borderWidth: 1,
+                  borderColor: answered ? C.border : C.primary,
+                  backgroundColor: answered ? C.bg2 : C.surface,
+                },
+                isRev ? null : { fontFamily: F.en },
+              ]}
               autoCapitalize="none"
               autoCorrect={false}
             />
-            {answered && (
-              <View className="mb-3">
-                {ok ? (
-                  <View className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex-row items-center" style={{ gap: 8 }}>
-                    <Icon name="checkmark" size={20} color="#047857" />
-                    <Text className="text-emerald-700 font-semibold">正解！</Text>
+
+            {/* 判定。色だけに頼らないよう、左端の縦罫とアイコンと言葉の3つで伝える */}
+            {answered &&
+              (ok ? (
+                <View className="overflow-hidden rounded border bg-moss-soft border-moss" style={{ padding: SP[4] }}>
+                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: C.success }} />
+                  <View className="flex-row items-center" style={{ gap: SP[2] }}>
+                    <Icon name="checkmark-circle" size={18} color={C.success} />
+                    <Text className="text-sm font-bold text-moss">正解</Text>
                   </View>
-                ) : (
-                  <View className="bg-rose-50 border border-rose-200 rounded-xl p-4">
-                    <View className="flex-row items-center" style={{ gap: 8 }}>
-                      <Icon name="close" size={20} color="#be123c" />
-                      <Text className="text-rose-700 font-semibold">不正解</Text>
-                    </View>
-                    <Text className="mt-1 text-sm text-rose-700">
-                      正解: <Text className="font-bold">{answer}</Text>
-                    </Text>
+                </View>
+              ) : (
+                <View className="overflow-hidden rounded border bg-vermilion-soft border-vermilion" style={{ padding: SP[4] }}>
+                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: C.accent }} />
+                  <View className="flex-row items-center" style={{ gap: SP[2] }}>
+                    <Icon name="close-circle" size={18} color={C.accent} />
+                    <Text className="text-sm font-bold text-vermilion">不正解</Text>
                   </View>
-                )}
-              </View>
-            )}
+                  <Text className="text-xs text-vermilion" style={{ marginTop: SP[2] }}>
+                    正しい答え
+                  </Text>
+                  <Text
+                    className="text-base text-vermilion"
+                    style={[{ marginTop: SP[1], lineHeight: 24 }, isRev ? null : { fontFamily: F.enSemi }]}
+                  >
+                    {answer}
+                  </Text>
+                </View>
+              ))}
+
+            {/* ベタ塗りの藍は画面に1つだけ＝「次にやること」 */}
             {!answered ? (
-              <TouchableOpacity onPress={hSub} className="bg-indigo-600 rounded-xl py-4">
-                <Text className="text-white text-center font-semibold">回答する</Text>
-              </TouchableOpacity>
+              <Btn label="回答する" onPress={hSub} tone="navy" icon="checkmark-outline" />
             ) : (
-              <TouchableOpacity onPress={hTypeNext} className="bg-indigo-600 rounded-xl py-4">
-                <Text className="text-white text-center font-semibold">
-                  {sIdx + 1 < sWords.length ? '次へ' : '結果を見る'}
-                </Text>
-              </TouchableOpacity>
+              <Btn
+                label={sIdx + 1 < sWords.length ? '次へ' : '結果を見る'}
+                onPress={hTypeNext}
+                tone="navy"
+                icon={sIdx + 1 < sWords.length ? 'arrow-forward-outline' : 'flag-outline'}
+              />
             )}
           </View>
         </ScrollView>
@@ -1761,105 +2358,284 @@ export default function App() {
   };
 
   // ===================== Matching =====================
-  const renderMatch = () => (
-    <ScrollView>
-      <Header title="マッチング" />
-      <View className="px-4 py-6">
-        <View className="flex-row justify-between mb-4">
-          <Text className="text-sm text-gray-500">ペア: {matched.size}/{mWords.length}</Text>
-          <Text className="text-sm text-rose-500">ミス: {mErr}</Text>
+  const renderMatch = () => {
+    // 出せる単語が1語も無いとき。左右の列が空のまま理由も出ないので、何をすればいいかを1つ置く
+    if (mWords.length === 0)
+      return (
+        <View>
+          <Header title="マッチング" />
+          <EmptyState
+            title="組み合わせる単語がありません"
+            body="いまの条件に合う単語が見つかりませんでした。学習メニューに戻って条件を選び直すか、単語を書き足してください。"
+            actionLabel="学習メニューへ"
+            onAction={() => setScr('study')}
+            icon="link-outline"
+          />
         </View>
-        <View className="flex-row" style={{ gap: 12 }}>
-          <View className="flex-1" style={{ gap: 8 }}>
-            <Text className="text-xs text-gray-400 text-center font-semibold mb-1">English</Text>
-            {mWords.map((w) => {
-              const m = matched.has(w.id);
-              const sel = selEn === w.id;
-              const cls = m
-                ? 'bg-emerald-100 border-emerald-200'
-                : sel
-                ? 'bg-indigo-500 border-indigo-500'
-                : 'bg-white border-gray-200';
-              const tc = m ? 'text-emerald-400' : sel ? 'text-white' : 'text-gray-800';
-              return (
-                <TouchableOpacity key={'e' + w.id} onPress={() => hMatch('en', w)} className={`rounded-xl py-3 px-2 border-2 ${cls}`}>
-                  <Text className={`text-sm font-medium text-center ${tc}`}>{w.en}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <View className="flex-1" style={{ gap: 8 }}>
-            <Text className="text-xs text-gray-400 text-center font-semibold mb-1">日本語</Text>
-            {mJa.map((w) => {
-              const m = matched.has(w.id);
-              const sel = selJa === w.id;
-              const cls = m
-                ? 'bg-emerald-100 border-emerald-200'
-                : sel
-                ? 'bg-amber-500 border-amber-500'
-                : 'bg-white border-gray-200';
-              const tc = m ? 'text-emerald-400' : sel ? 'text-white' : 'text-gray-800';
-              return (
-                <TouchableOpacity key={'j' + w.id} onPress={() => hMatch('ja', w)} className={`rounded-xl py-3 px-2 border-2 ${cls}`}>
-                  <Text className={`text-sm font-medium text-center ${tc}`}>{w.ja}</Text>
-                </TouchableOpacity>
-              );
-            })}
+      );
+    return (
+      <ScrollView>
+        <Header title="マッチング" />
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          {/* いまどこまで進んだか。この画面で一番見てほしいので左端に藍の縦罫を入れる */}
+          <Sheet mark={C.primary} className="p-4">
+            <View className="flex-row items-end justify-between" style={{ gap: SP[3], marginBottom: SP[3] }}>
+              <View>
+                <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>
+                  そろったペア
+                </Text>
+                <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                  <Text className="text-2xl text-navy" style={NUM_BOLD}>
+                    {matched.size}
+                  </Text>
+                  <Text className="text-sm text-ink-soft" style={NUM}>
+                    / {mWords.length}
+                  </Text>
+                </View>
+              </View>
+              <View className="items-end">
+                <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>
+                  ミス
+                </Text>
+                <Text className={`text-2xl ${mErr > 0 ? 'text-vermilion' : 'text-ink-soft'}`} style={NUM_BOLD}>
+                  {mErr}
+                </Text>
+              </View>
+            </View>
+            {/* 進み具合の帯。高さ4pxは他の出題画面と同じ。虹色は使わず藍1色 */}
+            <View className="rounded-sm overflow-hidden" style={{ height: 4, backgroundColor: C.border }}>
+              <View
+                style={{
+                  height: 4,
+                  width: `${Math.round((matched.size / mWords.length) * 100)}%`,
+                  backgroundColor: C.primary,
+                }}
+              />
+            </View>
+          </Sheet>
+
+          <Text className="text-xs text-ink-soft" style={{ lineHeight: 19 }}>
+            英語と日本語を1つずつ選ぶと、合っているかどうかが判定されます。
+          </Text>
+
+          <View className="flex-row" style={{ gap: SP[3] }}>
+            {/* ── 英語の側 ── */}
+            <View className="flex-1">
+              <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>
+                English
+              </Text>
+              <Rule />
+              {/* 押せるものなので枠は藍（<Btn tone="line"> と同じ意味）。
+                  選んでいる間は藍のベタ塗り＝いま押しているのがどれか一目で分かる。
+                  そろったペアは苔の枠＋面＋チェック印にして、色以外でも終わりが伝わるようにする。
+                  枠は常に1px。選択で太さを変えると文字の位置がずれる */}
+              <View style={{ gap: SP[2], marginTop: SP[2] }}>
+                {mWords.map((w) => {
+                  const m = matched.has(w.id);
+                  const sel = selEn === w.id;
+                  return (
+                    <TouchableOpacity
+                      key={'e' + w.id}
+                      onPress={() => hMatch('en', w)}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={w.en}
+                      accessibilityState={{ selected: sel }}
+                      className="rounded items-center justify-center"
+                      style={{
+                        minHeight: 48,
+                        paddingVertical: SP[2],
+                        paddingHorizontal: SP[2],
+                        borderWidth: 1,
+                        borderColor: m ? C.success : C.primary,
+                        backgroundColor: m ? C.successSoft : sel ? C.primary : C.surface,
+                      }}
+                    >
+                      <View className="flex-row items-center justify-center" style={{ gap: SP[1] }}>
+                        {m ? <Icon name="checkmark" size={14} color={C.success} /> : null}
+                        {/* 途中で「…」に切らない。全文が読めないと組み合わせを選べない */}
+                        <Text
+                          className="text-base text-center"
+                          style={{
+                            flexShrink: 1,
+                            fontFamily: F.enSemi,
+                            color: m ? C.success : sel ? C.onPrimary : C.text,
+                          }}
+                        >
+                          {w.en}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* ── 日本語の側。書体は当てない（システム書体のまま） ── */}
+            <View className="flex-1">
+              <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>
+                日本語
+              </Text>
+              <Rule />
+              <View style={{ gap: SP[2], marginTop: SP[2] }}>
+                {mJa.map((w) => {
+                  const m = matched.has(w.id);
+                  const sel = selJa === w.id;
+                  return (
+                    <TouchableOpacity
+                      key={'j' + w.id}
+                      onPress={() => hMatch('ja', w)}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={w.ja}
+                      accessibilityState={{ selected: sel }}
+                      className="rounded items-center justify-center"
+                      style={{
+                        minHeight: 48,
+                        paddingVertical: SP[2],
+                        paddingHorizontal: SP[2],
+                        borderWidth: 1,
+                        borderColor: m ? C.success : C.primary,
+                        backgroundColor: m ? C.successSoft : sel ? C.primary : C.surface,
+                      }}
+                    >
+                      <View className="flex-row items-center justify-center" style={{ gap: SP[1] }}>
+                        {m ? <Icon name="checkmark" size={14} color={C.success} /> : null}
+                        {/* こちらも省略しない。意味は最後まで読めて初めて選べる */}
+                        <Text
+                          className="text-sm text-center"
+                          style={{
+                            flexShrink: 1,
+                            lineHeight: 21,
+                            color: m ? C.success : sel ? C.onPrimary : C.text,
+                          }}
+                        >
+                          {w.ja}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
           </View>
         </View>
-      </View>
-    </ScrollView>
-  );
+      </ScrollView>
+    );
+  };
 
   // ===================== Speed =====================
   const renderSpeed = () => {
     const w = sWords[sIdx % sWords.length];
-    if (!w) return null;
+    if (!w)
+      return (
+        <View>
+          <Header title="スピードチャレンジ" back="study" />
+          <EmptyState
+            title="出題できる単語がありません"
+            body="いまの条件に合う単語が見つかりませんでした。学習メニューに戻って条件を選び直すか、単語を書き足してください。"
+            actionLabel="学習メニューへ"
+            onAction={() => setScr('study')}
+            icon="timer-outline"
+          />
+        </View>
+      );
     return (
       <View>
-        <View className="bg-rose-600 px-4 py-4 flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => {
-              if (tRef.current) clearInterval(tRef.current);
-              setScr('study');
-            }}
-            className="p-1"
-          >
-            <Icon name="arrow-back" size={22} color="#fff" />
-          </TouchableOpacity>
-          <Text className="text-white font-bold">⚡ スピードチャレンジ</Text>
-          <View className="flex-row items-center bg-rose-700 rounded-lg px-2.5 py-1" style={{ gap: 6 }}>
-            <Icon name="time" size={16} color="#fff" />
-            <Text className="text-white text-lg font-bold">{timer}</Text>
-          </View>
-        </View>
-        <View className="px-4 py-5">
-          <View className="items-center mb-4">
-            <View className="bg-rose-100 px-3 py-1 rounded-full">
-              <Text className="text-rose-600 font-bold text-sm">
-                {spScore}正解 / {spTotal}問
-              </Text>
+        {/* 上部バーは他の学習画面と同じ Header。
+            戻ると scr が speed から外れ、App 側の useEffect が時計を止める */}
+        <Header title="スピードチャレンジ" back="study" />
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          {/* のこり時間と正解数。数字は等幅にして、秒が減っても桁がガタつかないようにする。
+              持ち時間は開始時にいつも60秒なので、そのぶんを藍1色の細い帯で減らしていく */}
+          <View>
+            <View className="flex-row items-end justify-between" style={{ gap: SP[3] }}>
+              <View>
+                <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>
+                  のこり時間
+                </Text>
+                <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                  {/* 10秒を切ったら朱＝赤ペンの色にして急かす */}
+                  <Text className="text-2xl" style={[NUM_BOLD, { color: timer <= 10 ? C.accent : C.text }]}>
+                    {timer}
+                  </Text>
+                  <Text className="text-xs text-ink-soft">秒</Text>
+                </View>
+              </View>
+              <View className="items-end">
+                <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>
+                  正解
+                </Text>
+                <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                  <Text className="text-2xl text-moss" style={NUM_BOLD}>
+                    {spScore}
+                  </Text>
+                  <Text className="text-sm text-ink-soft" style={NUM}>
+                    / {spTotal}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View className="rounded-sm overflow-hidden" style={{ height: 4, marginTop: SP[2], backgroundColor: C.border }}>
+              <View
+                style={{
+                  height: 4,
+                  width: `${Math.max(0, Math.min(100, (timer / 60) * 100))}%`,
+                  backgroundColor: C.primary,
+                }}
+              />
             </View>
           </View>
-          <View className="bg-white rounded-2xl items-center justify-center mb-4" style={{ height: 144, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-            <Text className="text-3xl font-bold text-gray-800">{w.en}</Text>
-          </View>
-          <View style={{ gap: 8 }}>
+
+          {/* 問題。いま一番見てほしいので左端に藍の縦罫を入れる */}
+          <Sheet mark={C.primary} className="p-6 items-center">
+            <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>
+              この単語の意味は？
+            </Text>
+            <Text className="text-3xl text-ink text-center" style={{ fontFamily: F.enBold }}>
+              {w.en}
+            </Text>
+          </Sheet>
+
+          {/* 選択肢。ふだんは藍の枠だけ。答えたあとだけ苔（正解）と朱（外した方）の面が出る */}
+          <View style={{ gap: SP[2] }}>
             {opts.map((o) => {
-              let bgClr = 'bg-white border-gray-200';
-              let txtClr = 'text-gray-800';
+              // 押せるものなので枠は藍（<Btn tone="line"> と同じ意味）。読むだけの Sheet と見分ける
+              let face = 'bg-sheet border-navy';
+              let txtClr = 'text-ink';
+              let markClr = null;
+              let tailIcon = null;
               if (answered) {
                 if (o.id === w.id) {
-                  bgClr = 'bg-emerald-50 border-emerald-400';
-                  txtClr = 'text-emerald-800';
+                  face = 'bg-moss-soft border-moss';
+                  txtClr = 'text-moss';
+                  markClr = C.success;
+                  tailIcon = 'checkmark';
                 } else if (o.id === selAns) {
-                  bgClr = 'bg-rose-50 border-rose-400';
-                  txtClr = 'text-rose-800';
+                  face = 'bg-vermilion-soft border-vermilion';
+                  txtClr = 'text-vermilion';
+                  markClr = C.accent;
+                  tailIcon = 'close';
                 }
               }
               return (
-                <TouchableOpacity key={o.id} onPress={() => hSpeed(o)} className={`rounded-xl py-3 px-4 border-2 ${bgClr}`}>
-                  <Text className={`font-medium ${txtClr}`}>{o.ja}</Text>
+                <TouchableOpacity
+                  key={o.id}
+                  onPress={() => hSpeed(o)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={o.ja}
+                  className={`flex-row items-center overflow-hidden rounded border py-4 px-4 ${face}`}
+                  style={{ minHeight: 52, gap: SP[3] }}
+                >
+                  {/* 左端の縦罫。色だけに頼らないよう、行末のアイコンと2つで伝える */}
+                  {markClr ? (
+                    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: markClr }} />
+                  ) : null}
+                  <Text className={`flex-1 text-base ${txtClr}`} style={{ lineHeight: 24 }}>
+                    {o.ja}
+                  </Text>
+                  {tailIcon ? <Icon name={tailIcon} size={18} color={markClr} /> : null}
                 </TouchableOpacity>
               );
             })}
@@ -1875,61 +2651,142 @@ export default function App() {
     const tot = sMode === 'speed' ? spTotal : results.length;
     const pct = tot > 0 ? Math.round((sc / tot) * 100) : 0;
     const emoji = pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '💪';
+    // 見出しの下に「何の結果か」を出すための対応表（この画面の中だけで使う）
+    const MODE_LABEL = {
+      flashcard: 'フラッシュカード',
+      quiz: '4択クイズ',
+      typing: 'タイピング',
+      reverse: '逆引き',
+      matching: 'マッチング',
+      speed: 'スピード',
+    };
+    const modeLabel = MODE_LABEL[sMode] || '学習';
     return (
       <ScrollView>
-        <View className="bg-indigo-600 px-5 pt-8 pb-12 items-center">
-          <Text style={{ fontSize: 60 }}>{emoji}</Text>
-          <Text className="text-2xl font-bold text-white mb-1">学習完了！</Text>
-        </View>
-        <View className="px-4 -mt-6 pb-4" style={{ gap: 16 }}>
-          <View className="bg-white rounded-2xl p-6 items-center" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <Text className="text-5xl font-bold text-indigo-600">{pct}%</Text>
-            <Text className="text-gray-500 mt-2">
-              {sc} / {tot} 正解
-            </Text>
-          </View>
-          {results.length > 0 && sMode !== 'speed' && (
-            <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-              <Text className="font-semibold text-gray-800 mb-3">結果一覧</Text>
-              <View style={{ gap: 6, maxHeight: 280 }}>
-                <ScrollView>
-                  {results.map((r, i) => (
-                    <View key={i} className={`flex-row items-center justify-between py-2.5 px-3 rounded-lg mb-1 ${r.correct ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                      <View className="flex-1 flex-row" style={{ flexWrap: 'wrap' }}>
-                        <Text className="font-medium text-gray-800">{r.word.en}</Text>
-                        <Text className="text-gray-400 mx-1">→</Text>
-                        <Text className="text-gray-600">{r.word.ja}</Text>
+        <PageTitle
+          title="学習おわり"
+          sub={
+            <>
+              {modeLabel} ・{' '}
+              <Text className="text-xs" style={NUM}>
+                {tot}
+              </Text>
+              問
+            </>
+          }
+        />
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          {tot === 0 ? (
+            /* 1問も答えないまま抜けたとき。0% や採点欄を出すと嘘になるので出さない。
+               下の「もう一度 / モード選択」は消さない（消すとこの画面から出られなくなる） */
+            <EmptyState
+              title="今回は記録なし"
+              body="1問も答えないまま終わりました。下の「もう一度」からやり直せます。"
+              icon="refresh-outline"
+            />
+          ) : (
+            <>
+              {/* 採点欄。主役は正答率ではなく「8 / 10」の形 */}
+              <Sheet mark={C.primary} className="p-6 items-center">
+                <Text className="text-xs text-ink-soft" style={{ letterSpacing: 0.4 }}>
+                  正解した数
+                </Text>
+                <View className="flex-row items-baseline" style={{ marginTop: SP[2], gap: SP[2] }}>
+                  <Text className="text-4xl text-navy" style={NUM_BOLD}>
+                    {sc}
+                  </Text>
+                  <Text className="text-2xl text-ink-faint" style={NUM}>
+                    /
+                  </Text>
+                  <Text className="text-2xl text-ink-soft" style={NUM}>
+                    {tot}
+                  </Text>
+                </View>
+                <Text className="text-sm text-ink-soft" style={{ marginTop: SP[2] }}>
+                  正答率{' '}
+                  <Text className="text-sm" style={NUM_BOLD}>
+                    {pct}
+                  </Text>
+                  %
+                </Text>
+                <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                  {pct >= 80 ? 'よくできました' : pct >= 50 ? 'その調子' : 'ここからが本番'} {emoji}
+                </Text>
+              </Sheet>
+
+              {/* 結果一覧。カードを並べず、1行＝1罫線の帳簿にする。
+                  並び順は答えた順のまま（元の results をそのまま描く） */}
+              {results.length > 0 && sMode !== 'speed' && (
+                <View style={{ marginTop: SP[2] }}>
+                  <SectionTitle
+                    icon="reader-outline"
+                    right={
+                      <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                        <Text className="text-base text-ink" style={NUM_BOLD}>
+                          {tot - sc}
+                        </Text>
+                        <Text className="text-xs text-ink-soft">語まちがい</Text>
                       </View>
-                      <View className="flex-row items-center" style={{ gap: 6 }}>
-                        {/* 正解時だけ、かかった時間と速さボーナスを出す（フラッシュカードのみ ms が入る） */}
-                        {r.correct && typeof r.ms === 'number' && (
-                          <>
-                            {speedFactor(r.ms) > 1.05 && <Text className="text-xs">⚡</Text>}
-                            <Text className="text-xs text-gray-400">{(r.ms / 1000).toFixed(1)}秒</Text>
-                          </>
-                        )}
-                        {r.delta != null && r.delta !== 0 && (
-                          <Text className={`text-xs font-bold ${r.delta > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {r.delta > 0 ? '+' : ''}
-                            {r.delta}%
-                          </Text>
-                        )}
-                        {r.correct ? <Icon name="checkmark" size={16} color="#10b981" /> : <Icon name="close" size={16} color="#f43f5e" />}
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
+                    }
+                  >
+                    結果一覧
+                  </SectionTitle>
+                  <Rule />
+                  <View style={{ maxHeight: 320 }}>
+                    <ScrollView>
+                      {results.map((r, i) => (
+                        <View key={i}>
+                          <View className="flex-row items-center" style={{ paddingVertical: SP[3], gap: SP[3], minHeight: 44 }}>
+                            <Icon
+                              name={r.correct ? 'checkmark' : 'close'}
+                              size={16}
+                              color={r.correct ? C.success : C.accent}
+                            />
+                            <View className="flex-1">
+                              <Text className="text-base text-ink" style={{ fontFamily: F.enSemi }} numberOfLines={1}>
+                                {r.word.en}
+                              </Text>
+                              <Text className="text-sm text-ink-soft" style={{ lineHeight: 21, marginTop: SP[1] }} numberOfLines={2}>
+                                {r.word.ja}
+                              </Text>
+                            </View>
+                            {/* 正解時だけ、かかった時間と速さボーナスを出す（フラッシュカードのみ ms が入る） */}
+                            {r.correct && typeof r.ms === 'number' && (
+                              <View className="flex-row items-center" style={{ gap: SP[1] }}>
+                                {speedFactor(r.ms) > 1.05 && <Icon name="flash" size={12} color={C.ochre} />}
+                                <Text className="text-xs text-ink-soft">
+                                  <Text className="text-xs" style={NUM}>
+                                    {(r.ms / 1000).toFixed(1)}
+                                  </Text>
+                                  秒
+                                </Text>
+                              </View>
+                            )}
+                            {r.delta != null && r.delta !== 0 && (
+                              <Text
+                                className="text-xs"
+                                style={[NUM_BOLD, { color: r.delta > 0 ? C.success : C.accent, minWidth: 40, textAlign: 'right' }]}
+                              >
+                                {r.delta > 0 ? '+' : ''}
+                                {r.delta}%
+                              </Text>
+                            )}
+                          </View>
+                          <Rule />
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+              )}
+            </>
           )}
-          <View className="flex-row" style={{ gap: 12 }}>
-            <TouchableOpacity onPress={startFromConfig} className="flex-1 bg-indigo-100 rounded-xl py-3.5 flex-row items-center justify-center" style={{ gap: 8 }}>
-              <Icon name="refresh" size={18} color="#4f46e5" />
-              <Text className="text-indigo-700 font-semibold">もう一度</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setScr('study')} className="flex-1 bg-gray-100 rounded-xl py-3.5">
-              <Text className="text-gray-700 font-semibold text-center">モード選択</Text>
-            </TouchableOpacity>
+
+          {/* ベタ塗りは「もう一度」の1つだけ。戻る側は控えめに。
+              記録なしのときも出す＝この画面から必ず出られるようにする */}
+          <View className="flex-row" style={{ gap: SP[3], marginTop: SP[2] }}>
+            <Btn label="もう一度" onPress={startFromConfig} tone="navy" icon="refresh" className="flex-1" />
+            <Btn label="モード選択" onPress={() => setScr('study')} tone="quiet" className="flex-1" />
           </View>
         </View>
       </ScrollView>
@@ -1938,151 +2795,284 @@ export default function App() {
 
   // ===================== Words list =====================
   const renderWords = () => {
-    const filterTabs = [
+    /* 絞り込みは2段に分けてある。
+       上＝いま何をしたいか（全て／今日の復習／苦手／未学習）。
+       下＝覚え具合の段階（LEVELS と同じ並び。左が覚えていない側）。
+       ひとつながりの10個にすると375px幅で3段に折り返し、単語リストが下に押し出される。 */
+    const stateTabs = [
       { k: 'all', l: '全て', n: words.length },
       { k: 'due', l: '今日の復習', n: dueWords.length },
       { k: 'weak', l: '苦手', n: weakWords.length },
-      { k: 'new', l: '未学習', n: newCnt },
-      { k: 'mastered', l: 'マスター', n: mast },
+      { k: 'new', l: '未学習', n: lvCount.new },
     ];
+    const levelTabs = LEVELS.map((lv) => ({ k: lv.k, l: lv.name, n: lvCount[lv.k], dot: lv.barColor }));
+    const curTab = [...stateTabs, ...levelTabs].find((t) => t.k === wordFilter);
+
+    /* 空っぽのときは3通りに出し分ける。
+       「単語が見つかりません」の一言だけだと、次に何をすればいいのか分からないため。 */
+    const emptyView =
+      words.length === 0 ? (
+        <EmptyState
+          icon="create-outline"
+          title="このノートはまだ白紙です"
+          body="英語と意味を1語ずつ書き込むか、コピーした一覧をまとめて貼り付けて取り込めます。"
+          actionLabel="単語を書き込む"
+          onAction={() => { setWordsTab('manage'); setShowAdd(true); setShowBulk(false); }}
+        />
+      ) : search ? (
+        <EmptyState
+          icon="search-outline"
+          tone="line"
+          title={`「${search}」に一致する単語はありません`}
+          body="つづりの一部でも、日本語の意味でも探せます。"
+          actionLabel="検索をやめる"
+          onAction={() => setSearch('')}
+        />
+      ) : (
+        <EmptyState
+          icon="funnel-outline"
+          tone="line"
+          title={`${curTab ? curTab.l : 'この条件'}の単語はありません`}
+          body="ほかの単語は「全て」に入っています。"
+          actionLabel="全てを見る"
+          onAction={() => setWordFilter('all')}
+        />
+      );
 
     const renderWordItem = ({ item: w }) => {
       const lv = getLevel(w.progress, !isNew(w));
       if (editId === w.id) {
         return (
-          <View className="bg-white rounded-xl p-4 mb-2" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3 }}>
-            <TextInput value={editEn} onChangeText={setEditEn} className="bg-gray-50 rounded-lg py-2 px-3 border mb-2" autoCapitalize="none" />
-            <TextInput value={editJa} onChangeText={setEditJa} onSubmitEditing={saveEdit} className="bg-gray-50 rounded-lg py-2 px-3 border mb-2" />
-            <View className="flex-row" style={{ gap: 8 }}>
-              <TouchableOpacity onPress={saveEdit} className="bg-indigo-600 rounded-lg px-4 py-1.5">
-                <Text className="text-white text-xs font-semibold">保存</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEditId(null)} className="bg-gray-200 rounded-lg px-4 py-1.5">
-                <Text className="text-gray-600 text-xs font-semibold">取消</Text>
-              </TouchableOpacity>
+          <View>
+            <View style={{ paddingVertical: SP[3], paddingLeft: SP[2] }}>
+              <TextInput
+                value={editEn}
+                onChangeText={setEditEn}
+                autoCapitalize="none"
+                placeholderTextColor={C.muted2}
+                className="bg-paper border border-rule rounded text-base text-ink"
+                style={{ fontFamily: F.enSemi, paddingVertical: SP[3], paddingHorizontal: SP[3], minHeight: 44, marginBottom: SP[2] }}
+              />
+              <TextInput
+                value={editJa}
+                onChangeText={setEditJa}
+                onSubmitEditing={saveEdit}
+                placeholderTextColor={C.muted2}
+                className="bg-paper border border-rule rounded text-sm text-ink"
+                style={{ paddingVertical: SP[3], paddingHorizontal: SP[3], minHeight: 44, marginBottom: SP[3] }}
+              />
+              <View className="flex-row" style={{ gap: SP[2] }}>
+                <Btn label="保存" onPress={saveEdit} tone="navy" small style={{ minHeight: 44 }} />
+                <Btn label="取消" onPress={() => setEditId(null)} tone="quiet" small style={{ minHeight: 44 }} />
+              </View>
             </View>
+            <Rule />
           </View>
         );
       }
+      const weak = isWeak(w);
+      const dueNow = w.due ? isDue(w, getToday()) : false;
+      // 期限を過ぎたぶんだけ朱（赤ペン）。今日ぶんは藍。ホーム画面の「◯日超過」と同じ決め方に揃える
+      const overdue = w.due ? daysBetween(getToday(), w.due) < 0 : false;
       return (
-        <View className="bg-white rounded-xl p-4 mb-2" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3 }}>
-          <View className="flex-row items-start justify-between mb-2">
+        <View>
+          <View className="flex-row items-center" style={{ minHeight: 56, paddingVertical: SP[2], paddingLeft: SP[2], gap: SP[2] }}>
+            {/* 苦手な行だけ、左端に赤ペンで縦線を引いた印 */}
+            {weak ? (
+              <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: C.accent }} />
+            ) : null}
+
+            <Text className="text-xs text-ink-soft" style={[NUM, { width: 30 }]}>
+              {words.indexOf(w) + 1}
+            </Text>
+
             <View className="flex-1">
-              <View className="flex-row items-center mb-1" style={{ gap: 6, flexWrap: 'wrap' }}>
-                <Text className="text-xs text-gray-300">No.{words.indexOf(w) + 1}</Text>
-                <Text className="font-semibold text-gray-800">{w.en}</Text>
-                {w.streak > 0 && <Text className="text-xs text-orange-500">🔥{w.streak}</Text>}
-                {isWeak(w) && (
-                  <View className="bg-rose-100 px-1.5 py-0.5 rounded">
-                    <Text className="text-rose-600 text-xs font-bold">苦手</Text>
+              <View className="flex-row items-center" style={{ gap: SP[1] }}>
+                <Text className="text-base text-ink flex-1" style={{ fontFamily: F.enSemi }} numberOfLines={1}>
+                  {w.en}
+                </Text>
+                <SpeakButton word={w.en} size={16} color={C.primary} hitSlop={10} />
+                {w.streak > 0 ? (
+                  <View className="flex-row items-center" style={{ gap: SP[1] }}>
+                    <Icon name="flame" size={12} color={C.ochre} />
+                    <Text className="text-xs" style={[NUM, { color: C.ochre }]}>{w.streak}</Text>
                   </View>
-                )}
+                ) : null}
               </View>
-              <Text className="text-sm text-gray-500">{w.ja}</Text>
-            </View>
-            <View className="flex-row" style={{ gap: 2 }}>
-              <SpeakButton word={w.en} size={16} color="#6366f1" hitSlop={6} />
-              <TouchableOpacity onPress={() => { setEditId(w.id); setEditEn(w.en); setEditJa(w.ja); }} className="p-1.5">
-                <Icon name="create" size={14} color="#9ca3af" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => deleteWord(w.id)} className="p-1.5">
-                <Icon name="trash" size={14} color="#9ca3af" />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View className="flex-row items-center mb-1.5" style={{ gap: 8 }}>
-            <View className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-              <View className="h-2.5 rounded-full" style={{ width: `${w.progress}%`, backgroundColor: lv.barColor }} />
-            </View>
-            <Text className={`text-xs font-bold ${lv.c}`}>{w.progress}%</Text>
-          </View>
-          <View className="flex-row items-center" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <LvBadge w={w} />
-            <Text className="text-xs text-gray-400">✓{w.correct} ✗{w.incorrect}</Text>
-            {/* 次回復習日。一度も学習していない単語には予定が付かないので出ない */}
-            {w.due && (
-              <Text className={`text-xs ${isDue(w, getToday()) ? 'font-bold text-violet-600' : 'text-gray-400'}`}>
-                📅 {formatDue(w.due, getToday())}
+              <Text className="text-sm text-ink-soft" style={{ lineHeight: 21 }} numberOfLines={2}>
+                {w.ja}
               </Text>
-            )}
+              <View className="flex-row items-center" style={{ gap: SP[2], marginTop: SP[1], flexWrap: 'wrap' }}>
+                <View className="flex-row items-center" style={{ gap: SP[1] }}>
+                  <Icon name="checkmark" size={12} color={C.muted2} />
+                  <Text className="text-xs text-ink-soft" style={NUM}>{w.correct}</Text>
+                  <Icon name="close" size={12} color={C.muted2} style={{ marginLeft: SP[1] }} />
+                  <Text className="text-xs text-ink-soft" style={NUM}>{w.incorrect}</Text>
+                </View>
+                {/* 覚え具合のしるし。苦手な行だけは朱の「苦手」に差し替える
+                    ＝ LvBadge の「要復習」と左端の朱の縦罫と意味が重なるので、1行につきどちらか一方だけ出す。
+                    右カラムに置くと右が太って主役の英単語が途中で切れるので、記録と同じ行に置く */}
+                {weak ? (
+                  <Text className="text-xs font-bold text-vermilion">苦手</Text>
+                ) : (
+                  <LvBadge w={w} />
+                )}
+                {/* 次回復習日。一度も学習していない単語には予定が付かないので出ない */}
+                {w.due ? (
+                  <View className="flex-row items-center" style={{ gap: SP[1] }}>
+                    <Icon name="calendar-outline" size={12} color={overdue ? C.accent : dueNow ? C.primary : C.muted2} />
+                    <Text className="text-xs" style={{ color: overdue ? C.accent : dueNow ? C.primary : C.muted, fontWeight: dueNow ? '700' : '400' }}>
+                      {formatDue(w.due, getToday())}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
+            <View style={{ alignItems: 'flex-end', gap: SP[1] }}>
+              <View className="flex-row items-center" style={{ gap: SP[1] }}>
+                <TouchableOpacity
+                  onPress={() => { setEditId(w.id); setEditEn(w.en); setEditJa(w.ja); }}
+                  activeOpacity={0.75}
+                  hitSlop={4}
+                  accessibilityLabel={`${w.en} を書き直す`}
+                  style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Icon name="create-outline" size={16} color={C.muted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => deleteWord(w.id)}
+                  activeOpacity={0.75}
+                  hitSlop={4}
+                  accessibilityLabel={`${w.en} を消す`}
+                  style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Icon name="trash-outline" size={16} color={C.muted} />
+                </TouchableOpacity>
+              </View>
+              <View className="flex-row items-center" style={{ gap: SP[2] }}>
+                <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.bg2, overflow: 'hidden' }}>
+                  <View style={{ width: `${w.progress}%`, height: 4, backgroundColor: lv.barColor }} />
+                </View>
+                <Text className={`text-sm ${lv.c}`} style={[NUM_BOLD, { width: 34, textAlign: 'right' }]}>
+                  {w.progress}
+                  <Text className="text-xs text-ink-soft">%</Text>
+                </Text>
+              </View>
+            </View>
           </View>
+          <Rule />
         </View>
       );
     };
 
     return (
       <View style={{ flex: 1 }}>
-        <View className="bg-indigo-600 px-5 pt-8 pb-12">
-          <View className="flex-row justify-between items-center">
-            <View>
-              <Text className="text-2xl font-bold text-white mb-1">📖 単語帳</Text>
-              <Text className="text-indigo-200 text-sm">{words.length}語登録済み</Text>
-            </View>
-            <View className="flex-row" style={{ gap: 8 }}>
-              <TouchableOpacity onPress={() => { setShowBulk(true); setShowAdd(false); }} className="bg-white/20 rounded-xl p-2.5">
-                <Icon name="document-text" size={20} color="#fff" />
+        <PageTitle
+          title="単語帳"
+          sub={`${activeDeck ? activeDeck.name : '単語帳なし'} ・ ${words.length}語`}
+          right={
+            <View className="flex-row" style={{ gap: SP[2] }}>
+              <TouchableOpacity
+                onPress={() => { setWordsTab('manage'); setShowBulk(true); setShowAdd(false); }}
+                activeOpacity={0.75}
+                accessibilityLabel="まとめて追加"
+                className="bg-sheet border border-rule rounded items-center justify-center"
+                style={{ width: 44, height: 44 }}
+              >
+                <Icon name="document-text-outline" size={18} color={C.primary} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setShowAdd(true); setShowBulk(false); }} className="bg-white/20 rounded-xl p-2.5">
-                <Icon name="add" size={20} color="#fff" />
-              </TouchableOpacity>
+              {/* ベタ塗りは1画面に1つ。入力パネルを開いている間は、パネル側の「追加」が主役になるので枠だけにする */}
+              <Btn
+                label="追加"
+                icon="add"
+                onPress={() => { setWordsTab('manage'); setShowAdd(true); setShowBulk(false); }}
+                tone={showAdd || showBulk ? 'line' : 'navy'}
+              />
             </View>
-          </View>
-        </View>
-        <View className="px-4 -mt-5" style={{ flex: 1 }}>
-          <View className="flex-row bg-white rounded-xl mb-4 overflow-hidden" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <TouchableOpacity onPress={() => setWordsTab('manage')} className={`flex-1 py-3 flex-row items-center justify-center ${wordsTab === 'manage' ? 'bg-indigo-600' : ''}`} style={{ gap: 6 }}>
-              <Icon name="create" size={16} color={wordsTab === 'manage' ? '#fff' : '#6b7280'} />
-              <Text className={`text-sm font-semibold ${wordsTab === 'manage' ? 'text-white' : 'text-gray-500'}`}>管理</Text>
+          }
+        />
+        <View style={{ flex: 1, paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          <View className="flex-row bg-sheet border border-rule rounded overflow-hidden">
+            <TouchableOpacity
+              onPress={() => setWordsTab('manage')}
+              activeOpacity={0.75}
+              className="flex-1 flex-row items-center justify-center"
+              style={{ minHeight: 44, gap: SP[2], backgroundColor: wordsTab === 'manage' ? C.primary : 'transparent' }}
+            >
+              <Icon name="create-outline" size={16} color={wordsTab === 'manage' ? C.onPrimary : C.muted} />
+              <Text className="text-sm font-bold" style={{ color: wordsTab === 'manage' ? C.onPrimary : C.muted }}>管理</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { setWordsTab('list'); setRevealed(new Set()); }} className={`flex-1 py-3 flex-row items-center justify-center ${wordsTab === 'list' ? 'bg-indigo-600' : ''}`} style={{ gap: 6 }}>
-              <Icon name="list" size={16} color={wordsTab === 'list' ? '#fff' : '#6b7280'} />
-              <Text className={`text-sm font-semibold ${wordsTab === 'list' ? 'text-white' : 'text-gray-500'}`}>学習シート</Text>
+            <View style={{ width: 1, backgroundColor: C.border }} />
+            <TouchableOpacity
+              onPress={() => { setWordsTab('list'); setRevealed(new Set()); }}
+              activeOpacity={0.75}
+              className="flex-1 flex-row items-center justify-center"
+              style={{ minHeight: 44, gap: SP[2], backgroundColor: wordsTab === 'list' ? C.primary : 'transparent' }}
+            >
+              <Icon name="list-outline" size={16} color={wordsTab === 'list' ? C.onPrimary : C.muted} />
+              <Text className="text-sm font-bold" style={{ color: wordsTab === 'list' ? C.onPrimary : C.muted }}>学習シート</Text>
             </TouchableOpacity>
           </View>
 
           {wordsTab === 'manage' ? (
             <>
               {showBulk && (
-                <View className="bg-violet-50 rounded-2xl p-4 mb-4 border border-violet-100" style={{ gap: 12 }}>
-                  <Text className="font-semibold text-violet-800">📋 一括追加</Text>
+                <Sheet mark={C.primary} className="p-4">
+                  <SectionTitle icon="document-text-outline">まとめて追加</SectionTitle>
                   <TextInput
                     value={bulkText}
                     onChangeText={setBulkText}
                     placeholder={'apple りんご\nbanana, バナナ'}
+                    placeholderTextColor={C.muted2}
                     multiline
                     numberOfLines={5}
-                    className="bg-white rounded-xl py-3 px-4 text-sm border border-violet-200"
-                    style={{ minHeight: 100, textAlignVertical: 'top' }}
+                    className="bg-paper border border-rule rounded text-sm text-ink"
+                    style={{ minHeight: 100, textAlignVertical: 'top', paddingVertical: SP[3], paddingHorizontal: SP[3], lineHeight: 21 }}
                   />
-                  <View className="flex-row justify-between items-center">
-                    <Text className={`text-xs font-semibold ${bulkCount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {bulkCount > 0 ? `✅ ${bulkCount}語検出` : '入力待ち...'}
-                    </Text>
-                    <View className="flex-row" style={{ gap: 8 }}>
-                      <TouchableOpacity onPress={() => { setShowBulk(false); setBulkText(''); }} className="bg-gray-200 rounded-lg px-4 py-2">
-                        <Text className="text-gray-600 text-sm font-semibold">取消</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={addBulk} disabled={bulkCount === 0} className={`rounded-lg px-4 py-2 ${bulkCount > 0 ? 'bg-violet-600' : 'bg-gray-200'}`}>
-                        <Text className={`text-sm font-semibold ${bulkCount > 0 ? 'text-white' : 'text-gray-400'}`}>追加</Text>
-                      </TouchableOpacity>
+                  <View className="flex-row justify-between items-center" style={{ marginTop: SP[3], gap: SP[3] }}>
+                    <View className="flex-1">
+                      {bulkCount > 0 ? (
+                        <Text className="text-xs text-moss" numberOfLines={1}>
+                          <Text className="text-xs" style={NUM_BOLD}>{bulkCount}</Text> 語を読み取りました
+                        </Text>
+                      ) : (
+                        <Text className="text-xs text-ink-soft" numberOfLines={1}>貼り付け待ち</Text>
+                      )}
+                    </View>
+                    <View className="flex-row" style={{ gap: SP[2] }}>
+                      <Btn label="取消" onPress={() => { setShowBulk(false); setBulkText(''); }} tone="quiet" small style={{ minHeight: 44 }} />
+                      <Btn label="追加" onPress={addBulk} disabled={bulkCount === 0} tone="navy" small style={{ minHeight: 44 }} />
                     </View>
                   </View>
-                </View>
+                </Sheet>
               )}
               {showAdd && (
-                <View className="bg-indigo-50 rounded-2xl p-4 mb-4 border border-indigo-100" style={{ gap: 12 }}>
-                  <Text className="font-semibold text-indigo-800">✨ 単語を追加</Text>
-                  <TextInput value={newEn} onChangeText={setNewEn} placeholder="英語" autoCapitalize="none" className="bg-white rounded-xl py-3 px-4 border border-indigo-200" />
-                  <TextInput value={newJa} onChangeText={setNewJa} placeholder="日本語" onSubmitEditing={addWord} className="bg-white rounded-xl py-3 px-4 border border-indigo-200" />
-                  <View className="flex-row" style={{ gap: 8 }}>
-                    <TouchableOpacity onPress={addWord} className="flex-1 bg-indigo-600 rounded-xl py-2.5">
-                      <Text className="text-white text-center text-sm font-semibold">追加</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setShowAdd(false); setNewEn(''); setNewJa(''); }} className="flex-1 bg-gray-200 rounded-xl py-2.5">
-                      <Text className="text-gray-600 text-center text-sm font-semibold">取消</Text>
-                    </TouchableOpacity>
+                <Sheet mark={C.primary} className="p-4">
+                  <SectionTitle icon="create-outline">単語を書き込む</SectionTitle>
+                  <TextInput
+                    value={newEn}
+                    onChangeText={setNewEn}
+                    placeholder="英語"
+                    placeholderTextColor={C.muted2}
+                    autoCapitalize="none"
+                    className="bg-paper border border-rule rounded text-base text-ink"
+                    style={{ fontFamily: F.enSemi, paddingVertical: SP[3], paddingHorizontal: SP[3], minHeight: 44, marginBottom: SP[2] }}
+                  />
+                  <TextInput
+                    value={newJa}
+                    onChangeText={setNewJa}
+                    placeholder="日本語"
+                    placeholderTextColor={C.muted2}
+                    onSubmitEditing={addWord}
+                    className="bg-paper border border-rule rounded text-sm text-ink"
+                    style={{ paddingVertical: SP[3], paddingHorizontal: SP[3], minHeight: 44, marginBottom: SP[3] }}
+                  />
+                  <View className="flex-row" style={{ gap: SP[2] }}>
+                    <Btn label="追加" onPress={addWord} tone="navy" className="flex-1" />
+                    <Btn label="取消" onPress={() => { setShowAdd(false); setNewEn(''); setNewJa(''); }} tone="quiet" className="flex-1" />
                   </View>
-                </View>
+                </Sheet>
               )}
 
               {/*
@@ -2091,39 +3081,126 @@ export default function App() {
                 高さ 5.6px になりタブが見えなくなっていた。
                 折り返す普通の行にすれば潰れず、幅が足りなければ2段になる。
               */}
-              <View className="flex-row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-                {filterTabs.map((t) => {
+              <View className="flex-row" style={{ gap: SP[2], flexWrap: 'wrap' }}>
+                {stateTabs.map((t) => {
                   const active = wordFilter === t.k;
                   return (
                     <TouchableOpacity
                       key={t.k}
                       onPress={() => setWordFilter(t.k)}
-                      className={`px-3 py-2 rounded-full ${active ? (t.k === 'weak' ? 'bg-rose-500' : 'bg-indigo-600') : 'bg-gray-100'}`}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t.l} ${t.n}語`}
+                      accessibilityState={{ selected: active }}
+                      className="flex-row items-center rounded-full"
+                      style={{
+                        minHeight: 44,
+                        paddingHorizontal: SP[3],
+                        gap: SP[1],
+                        borderWidth: 1,
+                        borderColor: active ? C.primary : C.border,
+                        backgroundColor: active ? C.primary : 'transparent',
+                      }}
                     >
-                      <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-gray-600'}`}>
-                        {t.l} ({t.n})
-                      </Text>
+                      <Text className="text-xs font-bold" style={{ color: active ? C.onPrimary : C.muted }}>{t.l}</Text>
+                      <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>{t.n}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              <View className="bg-white rounded-xl flex-row items-center px-4 py-3 mb-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-                <Icon name="search" size={18} color="#9ca3af" />
+              {/*
+                覚え具合の6段階。丸いチップを6つ足すと375px幅で2段に折り返し、
+                そのぶん単語リストが下に押し出される。幅を6等分した1本の帯にして1行に収めた。
+                左が覚えていない側で、右へ行くほど覚えている＝並びそのものが目盛りになる。
+                段階の色（藍の濃淡。要復習だけ朱）は下の罫線で出す。
+
+                実機幅 375px なら「マスター」まで収まる。320px（iPhone SE 初代）だけは
+                「マス…」と切れるが、並びの位置と語数で読めるのでそのままにしてある。
+
+                「全て」はこの帯に入っていないので、選んでいる段をもう一度押すと絞り込みを外す。
+              */}
+              <View>
+                <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>覚え具合</Text>
+                <View
+                  className="flex-row bg-sheet border border-rule rounded"
+                  style={{ overflow: 'hidden' }}
+                >
+                  {levelTabs.map((t, i) => {
+                    const active = wordFilter === t.k;
+                    return (
+                      <TouchableOpacity
+                        key={t.k}
+                        onPress={() => setWordFilter(active ? 'all' : t.k)}
+                        activeOpacity={0.75}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t.l} ${t.n}語`}
+                        accessibilityState={{ selected: active }}
+                        className="flex-1 items-center justify-center"
+                        style={{
+                          minHeight: 44,
+                          paddingVertical: SP[1],
+                          paddingHorizontal: 2,
+                          backgroundColor: active ? C.primary : 'transparent',
+                          borderLeftWidth: i === 0 ? 0 : 1,
+                          borderLeftColor: C.border,
+                        }}
+                      >
+                        <Text
+                          className="text-xs font-bold"
+                          style={{ color: active ? C.onPrimary : C.muted }}
+                          numberOfLines={1}
+                        >
+                          {t.l}
+                        </Text>
+                        <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>
+                          {t.n}
+                        </Text>
+                        {/* 段階の色。選んでいる間は地が藍なので引かない（濃い藍だと見えないため） */}
+                        <View
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: 2,
+                            backgroundColor: active ? 'transparent' : t.dot,
+                          }}
+                        />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View className="flex-row items-center bg-sheet border border-rule rounded" style={{ minHeight: 44, paddingHorizontal: SP[3], gap: SP[2] }}>
+                <Icon name="search" size={16} color={C.muted} />
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="単語を検索..."
-                  className="flex-1 ml-2 text-sm"
+                  placeholder="単語を検索"
+                  placeholderTextColor={C.muted2}
+                  className="flex-1 text-sm text-ink"
+                  style={{ minWidth: 0, paddingVertical: SP[3] }}
                   autoCapitalize="none"
                 />
+                {search ? (
+                  <TouchableOpacity
+                    onPress={() => setSearch('')}
+                    activeOpacity={0.75}
+                    accessibilityLabel="検索をやめる"
+                    style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Icon name="close-circle" size={16} color={C.muted2} />
+                  </TouchableOpacity>
+                ) : null}
               </View>
 
               <FlatList
                 data={filtered}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={renderWordItem}
-                ListEmptyComponent={<Text className="text-center text-gray-400 py-8">単語が見つかりません</Text>}
+                ListEmptyComponent={emptyView}
                 initialNumToRender={20}
                 windowSize={10}
                 contentContainerStyle={{ paddingBottom: 100 }}
@@ -2131,70 +3208,105 @@ export default function App() {
             </>
           ) : (
             <>
-              <View className="bg-white rounded-xl p-4 mb-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-                <View className="flex-row mb-3" style={{ gap: 8 }}>
+              <Sheet className="p-4">
+                <SectionTitle icon="eye-off-outline">かくして覚える</SectionTitle>
+                <View className="flex-row" style={{ gap: SP[2] }}>
                   <TouchableOpacity
                     onPress={() => { setListHideEn(!listHideEn); setRevealed(new Set()); }}
-                    className={`flex-1 rounded-xl py-2.5 flex-row items-center justify-center border-2 ${listHideEn ? 'bg-blue-50 border-blue-400' : 'bg-white border-gray-200'}`}
-                    style={{ gap: 6 }}
+                    activeOpacity={0.75}
+                    className="flex-1 flex-row items-center justify-center rounded"
+                    style={{
+                      minHeight: 44,
+                      gap: SP[2],
+                      borderWidth: 1,
+                      borderColor: listHideEn ? C.primary : C.border,
+                      backgroundColor: listHideEn ? C.primary : C.bg,
+                    }}
                   >
-                    <Icon name={listHideEn ? 'eye-off' : 'eye'} size={16} color={listHideEn ? '#1d4ed8' : '#6b7280'} />
-                    <Text className={`text-sm font-semibold ${listHideEn ? 'text-blue-700' : 'text-gray-500'}`}>英語</Text>
+                    <Icon name={listHideEn ? 'eye-off' : 'eye'} size={16} color={listHideEn ? C.onPrimary : C.muted} />
+                    <Text className="text-sm font-bold" style={{ color: listHideEn ? C.onPrimary : C.muted }}>英語をかくす</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => { setListHideJa(!listHideJa); setRevealed(new Set()); }}
-                    className={`flex-1 rounded-xl py-2.5 flex-row items-center justify-center border-2 ${listHideJa ? 'bg-violet-50 border-violet-400' : 'bg-white border-gray-200'}`}
-                    style={{ gap: 6 }}
+                    activeOpacity={0.75}
+                    className="flex-1 flex-row items-center justify-center rounded"
+                    style={{
+                      minHeight: 44,
+                      gap: SP[2],
+                      borderWidth: 1,
+                      borderColor: listHideJa ? C.primary : C.border,
+                      backgroundColor: listHideJa ? C.primary : C.bg,
+                    }}
                   >
-                    <Icon name={listHideJa ? 'eye-off' : 'eye'} size={16} color={listHideJa ? '#6d28d9' : '#6b7280'} />
-                    <Text className={`text-sm font-semibold ${listHideJa ? 'text-violet-700' : 'text-gray-500'}`}>日本語</Text>
+                    <Icon name={listHideJa ? 'eye-off' : 'eye'} size={16} color={listHideJa ? C.onPrimary : C.muted} />
+                    <Text className="text-sm font-bold" style={{ color: listHideJa ? C.onPrimary : C.muted }}>日本語をかくす</Text>
                   </TouchableOpacity>
                 </View>
-                <View className="flex-row" style={{ gap: 8 }}>
-                  <TouchableOpacity onPress={revealAll} className="flex-1 bg-emerald-50 rounded-lg py-2">
-                    <Text className="text-emerald-700 text-xs font-semibold text-center">全て表示</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={hideAll} className="flex-1 bg-gray-100 rounded-lg py-2">
-                    <Text className="text-gray-600 text-xs font-semibold text-center">全て隠す</Text>
-                  </TouchableOpacity>
+                <View className="flex-row" style={{ gap: SP[2], marginTop: SP[2] }}>
+                  <Btn label="全て表示" onPress={revealAll} tone="line" small className="flex-1" style={{ minHeight: 44 }} />
+                  <Btn label="全て隠す" onPress={hideAll} tone="quiet" small className="flex-1" style={{ minHeight: 44 }} />
                 </View>
-              </View>
+              </Sheet>
 
-              <View className="bg-white rounded-xl overflow-hidden" style={{ flex: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-                <View className="flex-row items-center bg-gray-50 border-b border-gray-100 px-3 py-2.5">
-                  <Text className="w-8 text-xs text-gray-400 font-semibold text-center">#</Text>
-                  <Text className="flex-1 text-xs text-gray-500 font-semibold px-2">English</Text>
-                  <Text className="flex-1 text-xs text-gray-500 font-semibold px-2">日本語</Text>
-                  <Text className="w-10 text-xs text-gray-400 font-semibold text-center">%</Text>
-                </View>
-                <FlatList
-                  data={filtered}
-                  keyExtractor={(item) => String(item.id)}
-                  initialNumToRender={30}
-                  windowSize={10}
-                  contentContainerStyle={{ paddingBottom: 100 }}
-                  renderItem={({ item: w }) => {
-                    const num = words.indexOf(w) + 1;
-                    const enKey = w.id + '-en';
-                    const jaKey = w.id + '-ja';
-                    const enHidden = listHideEn && !revealed.has(enKey);
-                    const jaHidden = listHideJa && !revealed.has(jaKey);
-                    const lv = getLevel(w.progress, !isNew(w));
-                    return (
-                      <View className="flex-row items-center px-3 py-3 border-b border-gray-50">
-                        <Text className="w-8 text-xs text-gray-300 text-center">{num}</Text>
-                        <TouchableOpacity onPress={() => listHideEn && toggleReveal(enKey)} className={`flex-1 px-2 py-1 rounded ${enHidden ? 'bg-blue-100' : ''}`}>
-                          <Text className={`text-sm ${enHidden ? 'text-blue-100' : 'text-gray-800 font-medium'}`}>{enHidden ? '••••••' : w.en}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => listHideJa && toggleReveal(jaKey)} className={`flex-1 px-2 py-1 rounded ${jaHidden ? 'bg-violet-100' : ''}`}>
-                          <Text className={`text-sm ${jaHidden ? 'text-violet-100' : 'text-gray-600'}`}>{jaHidden ? '••••••' : w.ja}</Text>
-                        </TouchableOpacity>
-                        <Text className={`w-10 text-xs font-bold text-center ${lv.c}`}>{w.progress}</Text>
-                      </View>
-                    );
-                  }}
-                />
-              </View>
+              {/* 0件のときは見出し行と一覧の紙片ごと出さない。
+                  <Sheet> の中に EmptyState の白紙カードを入れると枠が二重になるため */}
+              {filtered.length === 0 ? (
+                emptyView
+              ) : (
+                <Sheet style={{ flex: 1 }}>
+                  <View className="flex-row items-center bg-paper" style={{ paddingHorizontal: SP[3], paddingVertical: SP[2] }}>
+                    <Text className="w-8 text-xs text-ink-soft text-center">#</Text>
+                    <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>英語</Text>
+                    <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>日本語</Text>
+                    <Text className="w-10 text-xs text-ink-soft text-center">%</Text>
+                  </View>
+                  <Rule />
+                  <FlatList
+                    data={filtered}
+                    keyExtractor={(item) => String(item.id)}
+                    initialNumToRender={30}
+                    windowSize={10}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    renderItem={({ item: w }) => {
+                      const num = words.indexOf(w) + 1;
+                      const enKey = w.id + '-en';
+                      const jaKey = w.id + '-ja';
+                      const enHidden = listHideEn && !revealed.has(enKey);
+                      const jaHidden = listHideJa && !revealed.has(jaKey);
+                      const lv = getLevel(w.progress, !isNew(w));
+                      return (
+                        <View>
+                          <View className="flex-row items-center" style={{ minHeight: 44, paddingHorizontal: SP[3] }}>
+                            <Text className="w-8 text-xs text-ink-soft text-center" style={NUM}>{num}</Text>
+                            <TouchableOpacity
+                              onPress={() => listHideEn && toggleReveal(enKey)}
+                              activeOpacity={0.75}
+                              className="flex-1 rounded-sm justify-center"
+                              style={{ paddingHorizontal: SP[2], paddingVertical: SP[2], minHeight: 44, backgroundColor: enHidden ? C.navyTint : 'transparent' }}
+                            >
+                              <Text className="text-base" style={{ fontFamily: F.enSemi, color: enHidden ? C.navyTint : C.text }} numberOfLines={2}>
+                                {enHidden ? '••••••' : w.en}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => listHideJa && toggleReveal(jaKey)}
+                              activeOpacity={0.75}
+                              className="flex-1 rounded-sm justify-center"
+                              style={{ paddingHorizontal: SP[2], paddingVertical: SP[2], minHeight: 44, backgroundColor: jaHidden ? C.navyTint : 'transparent' }}
+                            >
+                              <Text className="text-sm" style={{ color: jaHidden ? C.navyTint : C.muted, lineHeight: 21 }} numberOfLines={2}>
+                                {jaHidden ? '••••••' : w.ja}
+                              </Text>
+                            </TouchableOpacity>
+                            <Text className={`w-10 text-sm text-center ${lv.c}`} style={NUM_BOLD}>{w.progress}</Text>
+                          </View>
+                          <Rule />
+                        </View>
+                      );
+                    }}
+                  />
+                </Sheet>
+              )}
             </>
           )}
         </View>
@@ -2205,214 +3317,311 @@ export default function App() {
   // ===================== 本棚 =====================
   const renderShelf = () => {
     const menuDeck = decks.find((d) => d.id === menuDeckId) || null;
-    // 表紙写真が無いときは、名前から色を決めて頭文字を出す（毎回同じ色になる）
-    const coverColors = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+    // 表紙写真が無いときは、名前から色を決めて頭文字を出す（毎回同じ色になる）。
+    // 色数は藍1色の濃淡だけに絞る。虹色に散らすと「色＝意味」が読めなくなるため
+    const coverColors = [C.primary, C.navyMid, C.navyDark];
     const colorOf = (name) => {
       let h = 0;
       for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 997;
       return coverColors[h % coverColors.length];
     };
+    // 見出しに出す本棚全体の量。1冊ごとの語数と進み具合は各カードの帯に出ている
+    const totalWords = decks.reduce((s, d) => s + d.words.length, 0);
 
     return (
       <ScrollView>
-        <View className="bg-indigo-600 px-5 pt-8 pb-12">
-          <Text className="text-2xl font-bold text-white mb-1">🗂 本棚</Text>
-          <Text className="text-indigo-200 text-sm">
-            {decks.length}冊 ／ 全{decks.reduce((s, d) => s + d.words.length, 0)}語
-          </Text>
-        </View>
-
-        <View className="px-4 -mt-6 pb-4" style={{ gap: 12 }}>
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xs text-gray-400 flex-1 pr-2">
-              {sorting ? '◀ ▶ で順番を入れ替えます' : 'タップで切り替え ／ 長押しで編集'}
-            </Text>
-            {/* 1冊しか無いときは並べ替えようがないので出さない */}
-            {decks.length > 1 && (
-              <TouchableOpacity
+        <PageTitle
+          title="本棚"
+          sub={
+            /* まず本棚全体の量。学習中の1冊は名前だけ続ける
+               （語数と％はその本の帯に出ているので、行が溢れないよう重ねて書かない） */
+            activeDeck ? (
+              <><Text className="text-xs" style={NUM}>{decks.length}</Text>冊 ・ 全<Text className="text-xs" style={NUM}>{totalWords}</Text>語 ／ 学習中：{activeDeck.name}</>
+            ) : (
+              '単語帳がありません'
+            )
+          }
+          right={
+            // 1冊しか無いときは並べ替えようがないので出さない
+            decks.length > 1 ? (
+              <Btn
+                label={sorting ? '完了' : '並べ替え'}
+                icon={sorting ? 'checkmark' : 'reorder-two-outline'}
+                tone={sorting ? 'navy' : 'line'}
+                small
                 onPress={() => setSorting((v) => !v)}
-                className={`rounded-full px-3.5 py-1.5 ${sorting ? 'bg-indigo-600' : 'bg-white border border-gray-200'}`}
-              >
-                <Text className={`text-xs font-bold ${sorting ? 'text-white' : 'text-gray-600'}`}>
-                  {sorting ? '完了' : '並べ替え'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+                style={{ minHeight: 44 }}
+              />
+            ) : null
+          }
+        />
 
-          <View className="flex-row" style={{ flexWrap: 'wrap', gap: 12 }}>
-            {decks.map((d, i) => {
-              const isActive = d.id === activeId;
-              const pct = d.words.length ? Math.round((d.words.reduce((s, w) => s + w.progress, 0) / d.words.length)) : 0;
-              const editing = editDeckId === d.id;
-              return (
-                <View key={d.id} style={{ width: '47%' }}>
-                  <TouchableOpacity
-                    // 並べ替え中は切り替えも編集メニューも出さない。
-                    // 矢印を押すつもりでカードに触れて単語帳が変わってしまうのを防ぐ
-                    disabled={sorting}
-                    onPressIn={() => startLongPress(() => setMenuDeckId(d.id))}
-                    onPressOut={cancelLongPress}
-                    // 長押しが成立していたら、指を離したときの通常タップは無視する
-                    onPress={() => { if (!longPress.current.fired) selectDeck(d.id); }}
-                    activeOpacity={0.85}
-                    // 長押しで iOS のテキスト選択メニューが出ないようにする
-                    style={{ userSelect: 'none' }}
-                  >
-                    {/* 本の表紙。写真は切り取らずに全体を見せる（余白は単語帳の色で埋める） */}
-                    <View
-                      className={`rounded-2xl overflow-hidden ${isActive ? 'border-2 border-indigo-600' : ''}`}
-                      style={{ aspectRatio: 3 / 4, backgroundColor: colorOf(d.name), shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6 }}
-                    >
-                      {d.cover ? (
-                        <Image source={{ uri: d.cover }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-                      ) : (
-                        <View className="flex-1 items-center justify-center">
-                          <Text className="text-white font-black" style={{ fontSize: 56 }}>
-                            {d.name.trim().charAt(0) || '?'}
-                          </Text>
-                        </View>
-                      )}
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          {decks.length === 0 ? (
+            <EmptyState
+              title="本棚が空です"
+              body="単語帳を1冊つくると、ここに並びます。書き出したファイルがあれば下から読み込めます。"
+              actionLabel="単語帳を作る"
+              onAction={createDeck}
+              icon="bookshelf"
+            />
+          ) : (
+            <>
+              <Text className="text-xs text-ink-soft" numberOfLines={1}>
+                {sorting ? '左右の矢印で順番を入れ替えます' : 'タップで切り替え ／ 長押しで編集'}
+              </Text>
 
-                      {/* 名前と語数は写真の上に重ねる。読めるように暗い帯を敷く */}
-                      <View
-                        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17,24,39,0.72)', paddingHorizontal: 10, paddingTop: 6, paddingBottom: 8 }}
+              <View className="flex-row" style={{ flexWrap: 'wrap', gap: SP[3] }}>
+                {decks.map((d, i) => {
+                  const isActive = d.id === activeId;
+                  const pct = d.words.length ? Math.round((d.words.reduce((s, w) => s + w.progress, 0) / d.words.length)) : 0;
+                  const editing = editDeckId === d.id;
+                  const initial = d.name.trim().charAt(0) || '?';
+                  // 頭文字が英字のときだけ Lora を当てる（日本語に当てると豆腐や偽の太字になる）
+                  const enInitial = /[A-Za-z0-9?]/.test(initial);
+                  return (
+                    <View key={d.id} style={{ width: '47%' }}>
+                      <TouchableOpacity
+                        // 並べ替え中は切り替えも編集メニューも出さない。
+                        // 矢印を押すつもりでカードに触れて単語帳が変わってしまうのを防ぐ
+                        disabled={sorting}
+                        onPressIn={() => startLongPress(() => setMenuDeckId(d.id))}
+                        onPressOut={cancelLongPress}
+                        // 長押しが成立していたら、指を離したときの通常タップは無視する
+                        onPress={() => { if (!longPress.current.fired) selectDeck(d.id); }}
+                        activeOpacity={0.75}
+                        // 長押しで iOS のテキスト選択メニューが出ないようにする
+                        style={{ userSelect: 'none' }}
                       >
-                        {editing ? (
-                          <TextInput
-                            value={editDeckName}
-                            onChangeText={setEditDeckName}
-                            onSubmitEditing={() => renameDeck(d.id, editDeckName)}
-                            onBlur={() => renameDeck(d.id, editDeckName)}
-                            autoFocus
-                            className="text-white text-sm font-bold border-b border-white pb-1"
-                          />
-                        ) : (
-                          <Text className="text-white text-sm font-bold" numberOfLines={2}>
-                            {d.name}
-                          </Text>
-                        )}
-                        <Text className="text-gray-300 text-xs mt-0.5">{d.words.length}語 ・ {pct}%</Text>
-                        <View className="bg-white/30 rounded-full mt-1.5" style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.3)' }}>
-                          <View className="bg-white rounded-full" style={{ height: 4, width: `${pct}%` }} />
-                        </View>
-                      </View>
+                        {/* 本の表紙。写真は切り取らずに全体を見せる（余白は単語帳の色で埋める）。
+                            影は使わず 1px の罫線だけで縁を作る */}
+                        <View
+                          className="rounded-lg overflow-hidden"
+                          style={{
+                            aspectRatio: 3 / 4,
+                            backgroundColor: colorOf(d.name),
+                            borderWidth: 1,
+                            borderColor: C.border,
+                          }}
+                        >
+                          {d.cover ? (
+                            <Image source={{ uri: d.cover }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+                          ) : (
+                            <View className="flex-1 items-center justify-center">
+                              <Text
+                                className={enInitial ? '' : 'font-bold'}
+                                style={{
+                                  fontSize: 52,
+                                  lineHeight: 62,
+                                  color: C.onPrimary,
+                                  fontFamily: enInitial ? F.enBold : undefined,
+                                }}
+                              >
+                                {initial}
+                              </Text>
+                            </View>
+                          )}
 
-                      {/* 並べ替え中は今が何番目かを出す。動いたことが一目で分かるように */}
-                      {sorting ? (
-                        <View style={{ position: 'absolute', top: 8, left: 8 }} className="bg-white rounded-full w-7 h-7 items-center justify-center">
-                          <Text className="text-indigo-700 text-xs font-black">{i + 1}</Text>
-                        </View>
-                      ) : null}
+                          {/* 名前と語数は写真の上に重ねる。読めるように暗い帯を敷く */}
+                          <View
+                            style={{
+                              position: 'absolute',
+                              // 栞（左端の縦帯）はこの帯より後ろで描くので、帯は端まで敷いてよい。
+                              // 中の文字は paddingHorizontal 8px なので 6px の栞には重ならない
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              backgroundColor: 'rgba(34,32,27,0.72)',
+                              paddingHorizontal: SP[2],
+                              paddingTop: SP[2],
+                              paddingBottom: SP[2],
+                            }}
+                          >
+                            {editing ? (
+                              <TextInput
+                                value={editDeckName}
+                                onChangeText={setEditDeckName}
+                                onSubmitEditing={() => renameDeck(d.id, editDeckName)}
+                                onBlur={() => renameDeck(d.id, editDeckName)}
+                                autoFocus
+                                className="text-sm font-bold"
+                                style={{
+                                  color: C.onPrimary,
+                                  borderBottomWidth: 1,
+                                  borderBottomColor: C.onPrimary,
+                                  paddingVertical: SP[2],
+                                  minHeight: 44,
+                                }}
+                              />
+                            ) : (
+                              <Text className="text-sm font-bold" style={{ color: C.onPrimary, lineHeight: 19 }} numberOfLines={2}>
+                                {d.name}
+                              </Text>
+                            )}
+                            <Text className="text-xs" style={{ color: C.navyTint, marginTop: SP[1] }} numberOfLines={1}>
+                              <Text className="text-xs" style={NUM}>{d.words.length}</Text>語 ・ <Text className="text-xs" style={NUM}>{pct}</Text>%
+                            </Text>
+                            <View style={{ height: 4, borderRadius: R.pill, backgroundColor: 'rgba(255,253,247,0.28)', marginTop: SP[1], overflow: 'hidden' }}>
+                              <View style={{ height: 4, width: `${pct}%`, borderRadius: R.pill, backgroundColor: C.onPrimary }} />
+                            </View>
+                          </View>
 
-                      {isActive && (
-                        <View style={{ position: 'absolute', top: 8, right: 8 }} className="bg-indigo-600 rounded-full px-2 py-1">
-                          <Text className="text-white text-xs font-bold">学習中</Text>
+                          {/* 並べ替え中は今が何番目かを出す。動いたことが一目で分かるように */}
+                          {sorting ? (
+                            <View
+                              style={{
+                                position: 'absolute',
+                                top: SP[2],
+                                left: SP[2],
+                                width: 24,
+                                height: 24,
+                                borderRadius: R.pill,
+                                backgroundColor: C.surface,
+                                borderWidth: 1,
+                                borderColor: C.border,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Text className="text-xs" style={{ ...NUM_BOLD, color: C.primary }}>{i + 1}</Text>
+                            </View>
+                          ) : null}
+
+                          {/* 学習中の1冊にだけ、藍の栞を挟んだように左端へ帯を差す。
+                              藍＝選んでいる・進行中。朱（赤ペンの印）はこの画面では削除メニューにしか使わない。
+                              「学習中」のバッジと意味が二重になるので、印はこの栞 1 本に寄せてある。
+                              表紙の地色も藍の濃淡なので、内側に1pxの紙色の罫を入れて帯として読めるようにする */}
+                          {isActive && (
+                            <View
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: 7,
+                                // 表紙も藍系なので、藍のベタ帯だと同化して見えない。
+                                // 紙色の帯の中に藍の線を1本入れて、写真の表紙でも必ず読めるようにする
+                                backgroundColor: C.surface,
+                                borderLeftWidth: 3,
+                                borderLeftColor: C.primary,
+                                borderRightWidth: 1,
+                                borderRightColor: C.border,
+                              }}
+                              accessible
+                              accessibilityLabel="学習中"
+                            />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+
+                      {/*
+                        並べ替えの矢印。カードの上に重ねると表紙が隠れるので下に出す。
+                        ドラッグではなくボタンにしているのは、Web とネイティブの両方で
+                        確実に動かすため（RNW では長押し・ドラッグ系が素直に動かない）。
+                      */}
+                      {sorting && (
+                        <View className="flex-row" style={{ gap: SP[2], marginTop: SP[2] }}>
+                          {[
+                            { dir: -1, icon: 'chevron-back', off: i === 0 },
+                            { dir: 1, icon: 'chevron-forward', off: i === decks.length - 1 },
+                          ].map((b) => (
+                            <Btn
+                              key={b.dir}
+                              label={b.dir === -1 ? '前へ' : '後へ'}
+                              icon={b.icon}
+                              tone="line"
+                              small
+                              disabled={b.off}
+                              onPress={() => moveDeckBy(d.id, b.dir)}
+                              className="flex-1"
+                              style={{ paddingHorizontal: SP[2], minHeight: 44 }}
+                            />
+                          ))}
                         </View>
                       )}
                     </View>
-                  </TouchableOpacity>
+                  );
+                })}
 
-                  {/*
-                    並べ替えの矢印。カードの上に重ねると表紙が隠れるので下に出す。
-                    ドラッグではなくボタンにしているのは、Web とネイティブの両方で
-                    確実に動かすため（RNW では長押し・ドラッグ系が素直に動かない）。
-                  */}
-                  {sorting && (
-                    <View className="flex-row mt-1.5" style={{ gap: 6 }}>
-                      {[
-                        { dir: -1, icon: 'chevron-back', off: i === 0 },
-                        { dir: 1, icon: 'chevron-forward', off: i === decks.length - 1 },
-                      ].map((b) => (
-                        <TouchableOpacity
-                          key={b.dir}
-                          onPress={() => moveDeckBy(d.id, b.dir)}
-                          disabled={b.off}
-                          className={`flex-1 rounded-lg py-2.5 items-center ${b.off ? 'bg-gray-100' : 'bg-indigo-50 border border-indigo-200'}`}
-                        >
-                          <Icon name={b.icon} size={18} color={b.off ? '#d1d5db' : '#4f46e5'} />
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-
-            {/* 追加カード。並べ替え中は順番の話に集中できるよう隠す */}
-            {!sorting && (
-            <TouchableOpacity onPress={createDeck} style={{ width: '47%' }}>
-              <View
-                className="rounded-2xl border-2 border-dashed border-gray-300 items-center justify-center bg-white"
-                style={{ aspectRatio: 3 / 4 }}
-              >
-                <Icon name="add" size={30} color="#9ca3af" />
-                <Text className="text-gray-400 text-xs mt-1 font-semibold">新しい単語帳</Text>
+                {/* 追加カード。並べ替え中は順番の話に集中できるよう隠す */}
+                {!sorting && (
+                <TouchableOpacity onPress={createDeck} activeOpacity={0.75} style={{ width: '47%' }}>
+                  <View
+                    className="rounded-lg items-center justify-center bg-sheet"
+                    style={{ aspectRatio: 3 / 4, borderWidth: 1, borderStyle: 'dashed', borderColor: C.border2, gap: SP[1] }}
+                  >
+                    <Icon name="add" size={28} color={C.primary} />
+                    <Text className="text-xs font-bold" style={{ color: C.primary }}>新しい単語帳</Text>
+                  </View>
+                </TouchableOpacity>
+                )}
               </View>
-            </TouchableOpacity>
-            )}
-          </View>
+            </>
+          )}
 
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <Text className="font-semibold text-gray-800 mb-1">ファイルから追加</Text>
-            <Text className="text-xs text-gray-400 mb-3">
+          <Sheet className="p-4" style={{ marginTop: SP[3] }}>
+            <SectionTitle icon="folder-open-outline">ファイルから追加</SectionTitle>
+            <Text className="text-xs text-ink-soft" style={{ lineHeight: 19, marginBottom: SP[3] }}>
               単語だけのファイルは1冊として追加します。本棚ごと書き出したファイルなら、全体を元に戻します。
             </Text>
-            <View className="flex-row" style={{ gap: 8 }}>
-              <TouchableOpacity onPress={importData} className="flex-1 bg-amber-50 rounded-xl p-3 flex-row items-center justify-center" style={{ gap: 8 }}>
-                <Icon name="cloud-upload" size={18} color="#b45309" />
-                <Text className="text-amber-700 text-sm font-semibold">読込</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={exportData} className="flex-1 bg-emerald-50 rounded-xl p-3 flex-row items-center justify-center" style={{ gap: 8 }}>
-                <Icon name="download" size={18} color="#047857" />
-                <Text className="text-emerald-700 text-sm font-semibold">本棚を保存</Text>
-              </TouchableOpacity>
+            <View className="flex-row" style={{ gap: SP[2] }}>
+              <Btn label="本棚を保存" icon="download-outline" tone="line" onPress={exportData} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
+              <Btn label="読込" icon="cloud-upload-outline" tone="line" onPress={importData} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
             </View>
-          </View>
+          </Sheet>
         </View>
 
         {/* 長押しで出す編集メニュー */}
         <Modal visible={menuDeck !== null} transparent animationType="fade" onRequestClose={() => setMenuDeckId(null)}>
           <Pressable
             onPress={() => setMenuDeckId(null)}
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}
+            style={{ flex: 1, backgroundColor: 'rgba(34,32,27,0.5)', justifyContent: 'flex-end', padding: SP[3] }}
           >
             {/* 中身のタップでは閉じないよう、押しても何もしない Pressable で包む */}
-            <Pressable onPress={() => {}} className="bg-white rounded-t-3xl px-4 pt-4 pb-8">
-              <Text className="text-center text-gray-800 font-bold mb-1" numberOfLines={1}>
-                {menuDeck ? menuDeck.name : ''}
-              </Text>
-              <Text className="text-center text-gray-400 text-xs mb-4">
-                {menuDeck ? `${menuDeck.words.length}語` : ''}
-              </Text>
+            <Pressable onPress={() => {}}>
+              <Sheet className="p-4">
+                <Text className="text-base font-bold text-ink text-center" numberOfLines={1}>
+                  {menuDeck ? menuDeck.name : ''}
+                </Text>
+                <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[1] }}>
+                  {menuDeck ? (
+                    <><Text className="text-xs" style={NUM}>{menuDeck.words.length}</Text>語</>
+                  ) : (
+                    ''
+                  )}
+                </Text>
 
-              {[
-                { i: 'image', l: menuDeck && menuDeck.cover ? '表紙の写真を変える' : '表紙に写真を付ける', on: () => changeCover(menuDeckId) },
-                ...(menuDeck && menuDeck.cover
-                  ? [{ i: 'close-circle', l: '表紙を外す', on: () => removeCover(menuDeckId) }]
-                  : []),
-                { i: 'create', l: '名前を変える', on: () => { setEditDeckId(menuDeckId); setEditDeckName(menuDeck.name); } },
-                // よく使う単語帳を先頭に置きたいことが多いので、1タップで済む道を用意する。
-                // すでに先頭なら出さない
-                ...(menuDeck && decks[0] && decks[0].id !== menuDeck.id
-                  ? [{ i: 'arrow-up', l: '本棚の先頭に移動', on: (id) => { moveDeckBy(id, -decks.length); setToast('先頭に移動しました'); } }]
-                  : []),
-                { i: 'trash', l: 'この単語帳を削除', on: () => deleteDeck(menuDeckId), danger: true },
-              ].map((it) => (
-                <TouchableOpacity
-                  key={it.l}
-                  onPress={() => { const id = menuDeckId; setMenuDeckId(null); setTimeout(() => it.on(id), 0); }}
-                  className="flex-row items-center py-3.5"
-                  style={{ gap: 12 }}
-                >
-                  <Icon name={it.i} size={20} color={it.danger ? '#e11d48' : '#4b5563'} />
-                  <Text className={`text-base ${it.danger ? 'text-rose-600' : 'text-gray-700'}`}>{it.l}</Text>
-                </TouchableOpacity>
-              ))}
+                <Rule className="my-4" />
 
-              <TouchableOpacity onPress={() => setMenuDeckId(null)} className="bg-gray-100 rounded-xl py-3 mt-2">
-                <Text className="text-center text-gray-600 font-semibold">閉じる</Text>
-              </TouchableOpacity>
+                {[
+                  { i: 'image-outline', l: menuDeck && menuDeck.cover ? '表紙の写真を変える' : '表紙に写真を付ける', on: () => changeCover(menuDeckId) },
+                  ...(menuDeck && menuDeck.cover
+                    ? [{ i: 'close-circle-outline', l: '表紙を外す', on: () => removeCover(menuDeckId) }]
+                    : []),
+                  { i: 'create-outline', l: '名前を変える', on: () => { setEditDeckId(menuDeckId); setEditDeckName(menuDeck.name); } },
+                  // よく使う単語帳を先頭に置きたいことが多いので、1タップで済む道を用意する。
+                  // すでに先頭なら出さない
+                  ...(menuDeck && decks[0] && decks[0].id !== menuDeck.id
+                    ? [{ i: 'arrow-up-outline', l: '本棚の先頭に移動', on: (id) => { moveDeckBy(id, -decks.length); setToast('先頭に移動しました'); } }]
+                    : []),
+                  { i: 'trash-outline', l: 'この単語帳を削除', on: () => deleteDeck(menuDeckId), danger: true },
+                ].map((it) => (
+                  <TouchableOpacity
+                    key={it.l}
+                    onPress={() => { const id = menuDeckId; setMenuDeckId(null); setTimeout(() => it.on(id), 0); }}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={it.l}
+                    className="flex-row items-center"
+                    style={{ gap: SP[3], paddingVertical: SP[3], minHeight: 48 }}
+                  >
+                    <Icon name={it.i} size={20} color={it.danger ? C.accent : C.primary} />
+                    <Text className="text-sm" style={{ color: it.danger ? C.accent : C.text }}>{it.l}</Text>
+                  </TouchableOpacity>
+                ))}
+
+                <Btn label="閉じる" tone="quiet" onPress={() => setMenuDeckId(null)} style={{ marginTop: SP[3] }} />
+              </Sheet>
             </Pressable>
           </Pressable>
         </Modal>
@@ -2430,259 +3639,438 @@ export default function App() {
     // 復習予定のグラフで、一番高いバーに合わせる基準
     const dueMax = Math.max(1, ...dueForecast.map((d) => d.count));
 
+    // 覚え具合は虹色をやめ、藍1色の濃淡で「濃いほど覚えている」を表す。
+    // 値は theme.js のランプ（getLevel() の barColor と同じ並び）。要復習だけ朱＝赤ペンの印
+    // 段階の並び・境目・色は LEVELS が持っている（src/lib/logic.js）。
+    // ここは表示のためにひっくり返すだけ（グラフは覚えている側を上にする）。
+    // 語数は単語帳の絞り込みと同じ lvCount を使う。同じ数を2通りに数えると必ずずれる。
+    const bandLabel = (lv) =>
+      `${lv.name}(${lv.max === Infinity ? `${lv.min}%↑` : `${lv.min}-${lv.max - 1}%`}${lv.min === 0 ? '触れた' : ''})`;
     const lvDist = [
-      { name: '完璧(90%↑)', count: words.filter((w) => w.progress >= 90).length, color: '#9333ea' },
-      { name: 'マスター(80-89%)', count: words.filter((w) => w.progress >= 80 && w.progress < 90).length, color: '#10b981' },
-      { name: '定着(60-79%)', count: words.filter((w) => w.progress >= 60 && w.progress < 80).length, color: '#3b82f6' },
-      { name: '学習中(40-59%)', count: words.filter((w) => w.progress >= 40 && w.progress < 60).length, color: '#f59e0b' },
-      { name: '初級(20-39%)', count: words.filter((w) => w.progress >= 20 && w.progress < 40).length, color: '#f97316' },
-      { name: '要復習(0-19%触れた)', count: words.filter((w) => w.progress < 20 && !isNew(w)).length, color: '#fb7185' },
-      { name: '未学習(未着手)', count: words.filter(isNew).length, color: '#9ca3af' },
+      ...[...LEVELS].reverse().map((lv) => ({ name: bandLabel(lv), count: lvCount[lv.k], barColor: lv.barColor })),
+      { name: '未学習(未着手)', count: lvCount.new, barColor: C.lv0 },
     ];
     return (
       <ScrollView>
-        <View className="bg-indigo-600 px-5 pt-8 pb-12">
-          <Text className="text-2xl font-bold text-white mb-1">📊 学習統計</Text>
-          <Text className="text-indigo-200 text-sm">あなたの学習の記録</Text>
-        </View>
-        <View className="px-4 -mt-6 pb-4" style={{ gap: 16 }}>
-          <View className="flex-row" style={{ gap: 8 }}>
-            <View className="flex-1 bg-white rounded-2xl p-3 items-center" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-              <Icon name="flame" size={20} color="#f97316" />
-              <Text className="text-xl font-bold text-gray-800 mt-1">{shownStreak}</Text>
-              <Text className="text-xs text-gray-500">連続日数</Text>
-            </View>
-            <View className="flex-1 bg-white rounded-2xl p-3 items-center" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-              <Icon name="locate" size={20} color="#3b82f6" />
-              <Text className="text-xl font-bold text-gray-800 mt-1">{todayN}</Text>
-              <Text className="text-xs text-gray-500">今日学習</Text>
-            </View>
-          </View>
+        {/* 画面の顔。紫のベタ帯はやめ、紙に見出しを置いて罫線で締める */}
+        <PageTitle
+          title="統計"
+          sub={activeDeck ? `${activeDeck.name}・${words.length}語` : '単語帳なし'}
+        />
 
-          {/* 学習時間。計測できるのはフラッシュカードだけなので、その旨を明記する */}
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="font-semibold text-gray-800">⏱ 学習時間</Text>
-              <Text className="text-xs text-gray-400">フラッシュカードのみ計測</Text>
-            </View>
-
-            <View className="flex-row items-end justify-between mb-3">
-              <View>
-                <Text className="text-xs text-gray-500 mb-0.5">今日</Text>
-                <Text className="text-3xl font-black text-indigo-600">{formatDuration(tToday.ms)}</Text>
-              </View>
-              <View className="items-end">
-                <Text className="text-xs text-gray-500 mb-0.5">1語あたり</Text>
-                <Text className="text-2xl font-black text-gray-800">
-                  {tToday.n > 0 ? (tToday.avgMs / 1000).toFixed(1) : '—'}
-                  <Text className="text-sm text-gray-400 font-normal"> 秒</Text>
-                </Text>
-              </View>
-            </View>
-
-            <View className="flex-row border-t border-gray-100 pt-3" style={{ gap: 8 }}>
-              {[
-                { l: '今日の語数', v: `${tToday.n}語` },
-                { l: '7日間', v: formatDuration(t7.ms) },
-                { l: '累計', v: formatDuration(tAll.ms) },
-              ].map((it) => (
-                <View key={it.l} className="flex-1 items-center">
-                  <Text className="text-sm font-bold text-gray-800">{it.v}</Text>
-                  <Text className="text-xs text-gray-400 mt-0.5">{it.l}</Text>
+        {/* まだ一度も解いていないときはグラフを全部0で並べても読めない。次の一手だけを出す。
+            ただし連続日数と学習時間は単語帳をまたいだ記録なので、
+            「この1冊がまだ0語」というだけで隠すと、他の単語帳でやった記録まで消えて見える。
+            アプリ全体でまだ何もしていないときだけ空状態にする。 */}
+        {totalStudied === 0 && shownStreak === 0 && tAll.n === 0 ? (
+          <EmptyState
+            title="まだ記録がありません"
+            body="1回学習すると、ここにグラフが出ます。"
+            actionLabel="学習をはじめる"
+            onAction={() => setScr('study')}
+            icon="stats-chart-outline"
+          />
+        ) : (
+          <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], gap: SP[3] }}>
+            {/* 連続日数と今日の学習。丸いアイコン座布団はやめ、罫線1本で仕切った2列の数字にする */}
+            <Sheet className="p-4">
+              <View className="flex-row items-center">
+                <View className="flex-1">
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-3xl text-ink" style={NUM_BOLD}>
+                      {shownStreak}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">日</Text>
+                  </View>
+                  <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                    連続日数
+                  </Text>
                 </View>
-              ))}
-            </View>
 
-            {tAll.n === 0 && (
-              <Text className="text-xs text-gray-400 text-center mt-3">
-                フラッシュカードで学習すると記録がたまります
-              </Text>
-            )}
-          </View>
+                <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: C.border, marginHorizontal: SP[4] }} />
 
-          {/*
-            復習予定（間隔反復）。
-            バーの高さは % ではなく px で出す。Web ではパーセント指定が 0px に潰れる
-            （BarChart7 と同じ理由。README の「Web 版 / ネイティブとの実装の違い」参照）。
-          */}
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <View className="flex-row justify-between items-center mb-1">
-              <Text className="font-semibold text-gray-800">📅 これからの復習予定</Text>
-              <Text className="text-xs text-gray-400">予定あり {scheduledCnt} 語</Text>
-            </View>
-            {scheduledCnt === 0 ? (
-              <Text className="text-xs text-gray-400 text-center py-6">学習すると復習の予定が入ります</Text>
-            ) : (
-              <>
-                <Text className="text-xs text-gray-400 mb-3">
-                  忘れそうな頃に出します。「今日」には期限を過ぎたぶんも含みます
-                </Text>
-                <View className="flex-row items-end justify-between" style={{ paddingHorizontal: 4 }}>
-                  {dueForecast.map((d, i) => (
-                    <View key={d.date} className="items-center" style={{ flex: 1 }}>
-                      <Text className="text-xs text-gray-400 mb-1">{d.count > 0 ? d.count : ''}</Text>
-                      <View style={{ height: 64, width: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <View
-                          style={{
-                            width: '60%',
-                            height: Math.max(2, (d.count / dueMax) * 64),
-                            // 今日ぶんだけ色を変えて「今やるもの」を目立たせる
-                            backgroundColor: i === 0 ? '#7c3aed' : '#c4b5fd',
-                            borderTopLeftRadius: 4,
-                            borderTopRightRadius: 4,
-                          }}
-                        />
-                      </View>
-                      <Text className={`text-xs mt-1 ${i === 0 ? 'font-bold text-violet-600' : 'text-gray-400'}`}>
-                        {i === 0 ? '今日' : d.date}
+                <View className="flex-1">
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-3xl text-ink" style={NUM_BOLD}>
+                      {todayN}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">語</Text>
+                  </View>
+                  <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                    今日の学習
+                  </Text>
+                </View>
+              </View>
+            </Sheet>
+
+            {/* 学習時間。計測できるのはフラッシュカードだけなので、その旨を明記する */}
+            <Sheet className="p-4">
+              <SectionTitle
+                icon="time-outline"
+                right={<Text className="text-xs text-ink-soft">フラッシュカードのみ計測</Text>}
+              >
+                学習時間
+              </SectionTitle>
+
+              <View className="flex-row items-end justify-between" style={{ gap: SP[3] }}>
+                <View>
+                  <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>
+                    今日
+                  </Text>
+                  <Text className="text-3xl text-navy" style={NUM_BOLD}>
+                    {formatDuration(tToday.ms)}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>
+                    1語あたり
+                  </Text>
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-2xl text-ink" style={NUM_BOLD}>
+                      {tToday.n > 0 ? (tToday.avgMs / 1000).toFixed(1) : '—'}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">秒</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={{ marginTop: SP[3] }}>
+                <Rule />
+              </View>
+
+              <View className="flex-row" style={{ paddingTop: SP[3], gap: SP[2] }}>
+                {[
+                  { l: '今日の語数', v: String(tToday.n), u: '語' },
+                  { l: '7日間', v: formatDuration(t7.ms), u: '' },
+                  { l: '累計', v: formatDuration(tAll.ms), u: '' },
+                ].map((it) => (
+                  <View key={it.l} className="flex-1 items-center">
+                    <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                      <Text className="text-sm text-ink" style={NUM_BOLD}>
+                        {it.v}
                       </Text>
+                      {it.u ? <Text className="text-xs text-ink-soft">{it.u}</Text> : null}
                     </View>
-                  ))}
-                </View>
-              </>
-            )}
-          </View>
+                    <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                      {it.l}
+                    </Text>
+                  </View>
+                ))}
+              </View>
 
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <View className="flex-row justify-between mb-2">
-              <Text className="font-semibold text-gray-800">📈 習熟度の内訳</Text>
-              <Text className="text-xs text-gray-400">全 {words.length} 語</Text>
-            </View>
-            <View className="flex-row" style={{ gap: 6 }}>
-              <View className="flex-1 bg-emerald-50 rounded-xl p-3 items-center border border-emerald-100">
-                <Text className="text-2xl font-bold text-emerald-600">{mast}</Text>
-                <Text className="text-xs text-gray-500">マスター</Text>
-                <Text className="text-xs text-gray-400">80%以上</Text>
-              </View>
-              <View className="flex-1 bg-amber-50 rounded-xl p-3 items-center border border-amber-100">
-                <Text className="text-2xl font-bold text-amber-600">{learn}</Text>
-                <Text className="text-xs text-gray-500">学習中</Text>
-                <Text className="text-xs text-gray-400">20〜79%</Text>
-              </View>
-              <View className="flex-1 bg-gray-50 rounded-xl p-3 items-center border border-gray-200">
-                <Text className="text-2xl font-bold text-gray-500">{newCnt}</Text>
-                <Text className="text-xs text-gray-500">未学習</Text>
-                <Text className="text-xs text-gray-400">未着手</Text>
-              </View>
-            </View>
-          </View>
-
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <Text className="font-semibold text-gray-800 mb-3">🎯 解答実績</Text>
-            <View className="flex-row mb-2" style={{ gap: 6 }}>
-              <View className="flex-1 bg-indigo-50 rounded-xl p-3 items-center">
-                <Text className="text-xl font-bold text-indigo-600">
-                  {totalStudied}
-                  <Text className="text-xs text-gray-400 font-normal">/{words.length}</Text>
+              {tAll.n === 0 && (
+                <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[3], lineHeight: 19 }}>
+                  フラッシュカードで学習すると記録がたまります
                 </Text>
-                <Text className="text-xs text-gray-500">解答済み</Text>
-              </View>
-              <View className="flex-1 bg-gray-50 rounded-xl p-3 items-center">
-                <Text className="text-xl font-bold text-gray-500">{neverStudied}</Text>
-                <Text className="text-xs text-gray-500">未解答</Text>
-              </View>
-            </View>
-            <View className="flex-row" style={{ gap: 6 }}>
-              <View className="flex-1 bg-emerald-50 rounded-xl p-3 items-center">
-                <Text className="text-xl font-bold text-emerald-600">{totalCorrect}</Text>
-                <Text className="text-xs text-gray-500">正解数</Text>
-              </View>
-              <View className="flex-1 bg-rose-50 rounded-xl p-3 items-center">
-                <Text className="text-xl font-bold text-rose-600">{totalIncorrect}</Text>
-                <Text className="text-xs text-gray-500">不正解数</Text>
-              </View>
-              <View className="flex-1 bg-blue-50 rounded-xl p-3 items-center">
-                <Text className="text-xl font-bold text-blue-600">{totalAccuracy}%</Text>
-                <Text className="text-xs text-gray-500">正解率</Text>
-              </View>
-            </View>
-          </View>
+              )}
+            </Sheet>
 
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <View className="flex-row justify-between mb-2">
-              <Text className="font-semibold text-gray-800">💪 苦手な単語</Text>
-              <View className="bg-rose-100 px-2.5 py-1 rounded-full">
-                <Text className="text-rose-600 text-xs font-bold">{weakWords.length}語</Text>
-              </View>
-            </View>
-            {weakWords.length > 0 ? (
-              <View style={{ maxHeight: 192 }}>
-                <ScrollView>
-                  {weakWords.map((w, i) => {
-                    const lv = getLevel(w.progress, !isNew(w));
-                    const t = w.correct + w.incorrect;
-                    const rate = t > 0 ? Math.round((w.correct / t) * 100) : 0;
-                    return (
-                      <View key={w.id} className="flex-row items-center bg-rose-50 rounded-lg p-2.5 mb-1.5" style={{ gap: 8 }}>
-                        <Text className="text-xs text-gray-400 w-4 text-right">{i + 1}</Text>
-                        <View className="flex-1">
-                          <View className="flex-row items-center" style={{ gap: 8 }}>
-                            <Text className="text-sm font-medium text-gray-800">{w.en}</Text>
-                            <Text className="text-xs text-gray-400">{w.ja}</Text>
-                          </View>
-                          <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
-                            <View className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <View className="h-1.5 rounded-full" style={{ width: `${w.progress}%`, backgroundColor: lv.barColor }} />
-                            </View>
-                            <Text className={`text-xs font-bold ${lv.c}`}>{w.progress}%</Text>
-                          </View>
+            {/*
+              復習予定（間隔反復）。この画面で一番見てほしいのは「これから何語やるか」なので、
+              ここだけ左端に藍の縦罫を入れる。
+              バーの高さは % ではなく px で出す。Web ではパーセント指定が 0px に潰れる
+              （BarChart7 と同じ理由。README の「Web 版 / ネイティブとの実装の違い」参照）。
+            */}
+            <Sheet mark={C.primary} className="p-4">
+              <SectionTitle
+                icon="calendar-outline"
+                iconColor={C.primary}
+                right={
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-xs text-ink-soft">予定あり</Text>
+                    <Text className="text-base text-navy" style={NUM_BOLD}>
+                      {scheduledCnt}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">語</Text>
+                  </View>
+                }
+              >
+                これからの復習予定
+              </SectionTitle>
+
+              {scheduledCnt === 0 ? (
+                <Text className="text-sm text-ink-soft text-center" style={{ paddingVertical: SP[5], lineHeight: 21 }}>
+                  学習すると復習の予定が入ります
+                </Text>
+              ) : (
+                <>
+                  <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[3], lineHeight: 19 }}>
+                    忘れそうな頃に出します。「今日」には期限を過ぎたぶんも含みます
+                  </Text>
+                  <View className="flex-row items-end justify-between" style={{ paddingHorizontal: SP[1] }}>
+                    {dueForecast.map((d, i) => (
+                      <View key={d.date} className="items-center" style={{ flex: 1 }}>
+                        <Text className="text-xs text-ink-soft" style={[NUM, { marginBottom: SP[1] }]}>
+                          {d.count > 0 ? d.count : ''}
+                        </Text>
+                        <View style={{ height: 64, width: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <View
+                            style={{
+                              width: '60%',
+                              height: Math.max(2, (d.count / dueMax) * 64),
+                              // 今日ぶんだけ濃い藍にして「今やるもの」を目立たせる
+                              backgroundColor: i === 0 ? C.primary : C.lv2,
+                              borderTopLeftRadius: R.sm,
+                              borderTopRightRadius: R.sm }}
+                          />
                         </View>
-                        <Text className="text-xs text-gray-400">
-                          ✓{w.correct} ✗{w.incorrect} ({rate}%)
+                        <Text
+                          className={`text-xs ${i === 0 ? 'font-bold text-navy' : 'text-ink-soft'}`}
+                          style={i === 0 ? { marginTop: SP[1] } : [NUM, { marginTop: SP[1] }]}
+                        >
+                          {i === 0 ? '今日' : d.date}
                         </Text>
                       </View>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            ) : (
-              <Text className="text-center text-gray-400 text-sm py-4">苦手な単語はありません 🎉</Text>
-            )}
-          </View>
-
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <Text className="font-semibold text-gray-800 mb-3">レベル分布</Text>
-            <View style={{ gap: 8 }}>
-              {lvDist.map((lv, i) => {
-                const pct = words.length ? (lv.count / words.length) * 100 : 0;
-                return (
-                  <View key={i} className="flex-row items-center" style={{ gap: 8 }}>
-                    <Text className="text-xs text-gray-500 text-right" style={{ width: 110 }}>{lv.name}</Text>
-                    <View className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
-                      <View className="h-4 rounded-full" style={{ width: `${pct}%`, backgroundColor: lv.color }} />
-                    </View>
-                    <Text className="text-xs font-bold text-gray-600 w-6 text-right">{lv.count}</Text>
+                    ))}
                   </View>
-                );
-              })}
-            </View>
-          </View>
+                </>
+              )}
+            </Sheet>
 
-          <BarChart7 data={last7} />
+            {/* 習熟度の内訳。色の面（バッジ）はやめ、罫線で仕切った3列の数字にする */}
+            <Sheet className="p-4">
+              <SectionTitle
+                right={
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-xs text-ink-soft">全</Text>
+                    <Text className="text-sm text-ink" style={NUM_BOLD}>
+                      {words.length}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">語</Text>
+                  </View>
+                }
+              >
+                習熟度の内訳
+              </SectionTitle>
+              <View className="flex-row items-center">
+                {[
+                  { c: C.lv5, l: 'マスター', d: '80%以上', n: mast },
+                  { c: C.lv3, l: '学習中', d: '20〜79%', n: learn },
+                  { c: C.lv0, l: '未学習', d: '未着手', n: lvCount.new },
+                ].map((g, i) => (
+                  <React.Fragment key={g.l}>
+                    {i > 0 && (
+                      <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: C.border, marginHorizontal: SP[3] }} />
+                    )}
+                    <View className="flex-1 items-center">
+                      <Text className="text-2xl" style={[NUM_BOLD, { color: g.c }]}>
+                        {g.n}
+                      </Text>
+                      <Text className="text-xs text-ink" style={{ marginTop: SP[1] }}>
+                        {g.l}
+                      </Text>
+                      <Text className="text-xs text-ink-soft">{g.d}</Text>
+                    </View>
+                  </React.Fragment>
+                ))}
+              </View>
+            </Sheet>
 
-          <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-            <Text className="font-semibold text-gray-800 mb-3">💾 データ管理</Text>
-            <View className="flex-row" style={{ gap: 8 }}>
-              <TouchableOpacity onPress={exportData} className="flex-1 bg-emerald-50 rounded-xl p-3 flex-row items-center justify-center" style={{ gap: 8 }}>
-                <Icon name="download" size={18} color="#059669" />
-                <Text className="text-emerald-700 text-sm font-semibold">保存</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={importData} className="flex-1 bg-amber-50 rounded-xl p-3 flex-row items-center justify-center" style={{ gap: 8 }}>
-                <Icon name="cloud-upload" size={18} color="#d97706" />
-                <Text className="text-amber-700 text-sm font-semibold">読込</Text>
-              </TouchableOpacity>
-            </View>
+            {/* 解答実績。数字だけの表なので、色の面はやめて罫線で段を作る */}
+            <Sheet className="p-4">
+              <SectionTitle icon="checkmark-done-outline">解答実績</SectionTitle>
+
+              <View className="flex-row items-center">
+                <View className="flex-1 items-center">
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-2xl text-navy" style={NUM_BOLD}>
+                      {totalStudied}
+                    </Text>
+                    <Text className="text-xs text-ink-soft" style={NUM}>
+                      /{words.length}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                    解答済み
+                  </Text>
+                </View>
+
+                <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: C.border, marginHorizontal: SP[3] }} />
+
+                <View className="flex-1 items-center">
+                  <Text className="text-2xl text-ink" style={NUM_BOLD}>
+                    {neverStudied}
+                  </Text>
+                  <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                    未解答
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ marginVertical: SP[3] }}>
+                <Rule />
+              </View>
+
+              <View className="flex-row items-center">
+                {[
+                  { l: '正解', n: totalCorrect, u: '' },
+                  { l: '不正解', n: totalIncorrect, u: '' },
+                  { l: '正解率', n: totalAccuracy, u: '%' },
+                ].map((it, i) => (
+                  <React.Fragment key={it.l}>
+                    {i > 0 && (
+                      <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: C.border, marginHorizontal: SP[3] }} />
+                    )}
+                    <View className="flex-1 items-center">
+                      <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                        <Text className="text-xl text-ink" style={NUM_BOLD}>
+                          {it.n}
+                        </Text>
+                        {it.u ? <Text className="text-xs text-ink-soft">{it.u}</Text> : null}
+                      </View>
+                      <Text className="text-xs text-ink-soft" style={{ marginTop: SP[1] }}>
+                        {it.l}
+                      </Text>
+                    </View>
+                  </React.Fragment>
+                ))}
+              </View>
+            </Sheet>
+
+            {/* 苦手な単語。赤ペンで印を付けた行なので、ここだけ左端の縦罫を朱にする。
+                入れ子のスクロールはやめ、上位5語だけ平置きする */}
+            <Sheet mark={C.accent} className="p-4">
+              <SectionTitle
+                icon="alert-circle-outline"
+                iconColor={C.accent}
+                right={
+                  <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                    <Text className="text-base" style={[NUM_BOLD, { color: C.accent }]}>
+                      {weakWords.length}
+                    </Text>
+                    <Text className="text-xs text-ink-soft">語</Text>
+                  </View>
+                }
+              >
+                苦手な単語
+              </SectionTitle>
+
+              {weakWords.length > 0 ? (
+                <>
+                  <View>
+                    {weakWords.slice(0, 5).map((w) => {
+                      const lv = getLevel(w.progress, !isNew(w));
+                      const t = w.correct + w.incorrect;
+                      const rate = t > 0 ? Math.round((w.correct / t) * 100) : 0;
+                      return (
+                        <View key={w.id}>
+                          <View style={{ paddingVertical: SP[2] }}>
+                            <View className="flex-row items-baseline justify-between" style={{ gap: SP[3] }}>
+                              <Text
+                                className="text-base text-ink flex-1"
+                                style={{ fontFamily: F.enSemi }}
+                                numberOfLines={1}
+                              >
+                                {w.en}
+                              </Text>
+                              <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                                <Text className="text-sm" style={[NUM_BOLD, { color: lv.barColor }]}>
+                                  {w.progress}
+                                </Text>
+                                <Text className="text-xs text-ink-soft">%</Text>
+                              </View>
+                            </View>
+                            <View className="flex-row items-baseline justify-between" style={{ gap: SP[3], marginTop: SP[1] }}>
+                              <Text className="text-xs text-ink-soft flex-1" numberOfLines={1}>
+                                {w.ja}
+                              </Text>
+                              <Text className="text-xs text-ink-soft">
+                                {'正解 '}<Text style={NUM}>{`${w.correct}/${t}`}</Text>{'（'}<Text style={NUM}>{rate}</Text>{'%）'}
+                              </Text>
+                            </View>
+                          </View>
+                          <Rule />
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {weakWords.length > 5 && (
+                    <View style={{ marginTop: SP[3] }}>
+                      {/* 5語で打ち切ったままだと続きに行けない。単語一覧の「苦手」タブへ送る */}
+                      <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>
+                        ほか <Text style={NUM}>{weakWords.length - 5}</Text> 語
+                      </Text>
+                      <Btn
+                        tone="line"
+                        small
+                        label="苦手な単語をぜんぶ見る"
+                        onPress={() => { setWordFilter('weak'); setScr('words'); }}
+                      />
+                    </View>
+                  )}
+                </>
+              ) : (
+                <Text className="text-sm text-center" style={{ color: C.success, paddingVertical: SP[3], lineHeight: 21 }}>
+                  苦手な単語はありません 🎉
+                </Text>
+              )}
+            </Sheet>
+
+            {/* レベル分布。横棒は藍1色の濃淡（要復習だけ朱）。高さ10px・角丸2px */}
+            <Sheet className="p-4">
+              <SectionTitle icon="stats-chart-outline">レベル分布</SectionTitle>
+              <View style={{ gap: SP[2] }}>
+                {lvDist.map((lv, i) => {
+                  const pct = words.length ? (lv.count / words.length) * 100 : 0;
+                  return (
+                    <View key={i} className="flex-row items-center" style={{ gap: SP[2] }}>
+                      <Text className="text-xs text-ink-soft text-right" style={{ width: 112, lineHeight: 19 }}>
+                        {lv.name}
+                      </Text>
+                      <View
+                        className="flex-1"
+                        style={{ height: 10, borderRadius: R.sm, backgroundColor: C.bg2, overflow: 'hidden' }}
+                      >
+                        <View style={{ height: 10, borderRadius: R.sm, width: `${pct}%`, backgroundColor: lv.barColor }} />
+                      </View>
+                      <Text className="text-xs text-ink text-right" style={[NUM_BOLD, { width: 30 }]}>
+                        {lv.count}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </Sheet>
+
+            <BarChart7 data={last7} />
           </View>
+        )}
+
+        {/* データ管理は「記録が0のときこそ使う（バックアップの読込）」ので、空のときも隠さない。
+            たまにしか使わないものなので段を1つ空け、ベタ塗りはやめて枠だけのボタンにする */}
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[5], paddingBottom: SP[5] }}>
+          <Sheet className="p-4">
+            <SectionTitle icon="save-outline">データ管理</SectionTitle>
+            <View className="flex-row" style={{ gap: SP[2] }}>
+              <Btn
+                label="保存"
+                tone="line"
+                icon="download-outline"
+                onPress={exportData}
+                className="flex-1"
+                style={{ paddingHorizontal: SP[2] }}
+              />
+              <Btn
+                label="読込"
+                tone="line"
+                icon="cloud-upload-outline"
+                onPress={importData}
+                className="flex-1"
+                style={{ paddingHorizontal: SP[2] }}
+              />
+            </View>
+          </Sheet>
         </View>
       </ScrollView>
     );
   };
-
   // ===================== Render Tree =====================
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" />
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }} edges={['top']}>
+      {/* 背景が明るい紙になったので、時計や電池のアイコンは黒にする */}
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
         <View style={{ flex: 1 }}>
           {scr === 'dashboard' && renderDash()}
           {scr === 'study' && renderStudy()}
@@ -2699,41 +4087,75 @@ export default function App() {
           {scr === 'stats' && renderStats()}
         </View>
 
-        {toast !== '' && (
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 90,
-              alignSelf: 'center',
-              backgroundColor: '#1f2937',
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-              borderRadius: 12,
-            }}
-          >
-            <Text className="text-white text-sm font-medium">{toast}</Text>
-          </View>
-        )}
-
-        <View className="bg-white border-t border-gray-100 flex-row">
-          {[
-            { k: 'home', s: 'dashboard', i: 'home', l: 'ホーム' },
-            { k: 'study', s: 'study', i: 'brain', l: '学習' },
-            { k: 'words', s: 'words', i: 'book', l: '単語帳' },
-            { k: 'shelf', s: 'shelf', i: 'library', l: '本棚' },
-            { k: 'stats', s: 'stats', i: 'trending-up', l: '統計' },
-          ].map((t) => {
-            const active = aTab === t.k;
-            return (
-              <TouchableOpacity key={t.k} onPress={() => setScr(t.s)} className="flex-1 py-3 items-center" style={{ gap: 2 }}>
-                <Icon name={t.i} size={22} color={active ? '#4f46e5' : '#9ca3af'} />
-                <Text className={`text-xs ${active ? 'text-indigo-600 font-bold' : 'text-gray-400'}`}>{t.l}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <Toast text={toast} />
+        <TabBar active={aTab} onSelect={setScr} />
       </SafeAreaView>
     </SafeAreaProvider>
+  );
+}
+
+/* 下タブ。影を使わないぶん、上辺だけ2pxの罫線で「浮いている」ことを言う。
+   iPhone のホームインジケータ（下の横棒）にラベルが重ならないよう、
+   useSafeAreaInsets().bottom を下の余白に足す。 */
+function TabBar({ active, onSelect }) {
+  const insets = useSafeAreaInsets();
+  const tabs = [
+    { k: 'home', s: 'dashboard', i: 'home-outline', on: 'home', l: 'ホーム' },
+    { k: 'study', s: 'study', i: 'school-outline', on: 'school', l: '学習' },
+    { k: 'words', s: 'words', i: 'list-outline', on: 'list', l: '単語帳' },
+    { k: 'shelf', s: 'shelf', i: 'library-outline', on: 'library', l: '本棚' },
+    { k: 'stats', s: 'stats', i: 'stats-chart-outline', on: 'stats-chart', l: '統計' },
+  ];
+  return (
+    <View style={{ backgroundColor: C.surface, borderTopWidth: 2, borderTopColor: C.border2, paddingBottom: insets.bottom }}>
+      <View className="flex-row">
+        {tabs.map((t) => {
+          const on = active === t.k;
+          return (
+            <TouchableOpacity
+              key={t.k}
+              onPress={() => onSelect(t.s)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={t.l}
+              className="flex-1 items-center"
+              style={{ paddingTop: SP[2], paddingBottom: SP[2], gap: SP[1], minHeight: 52 }}
+            >
+              {/* 選んでいるタブは、しおりのように上端へ藍の帯を出す */}
+              <View style={{ position: 'absolute', top: 0, left: 18, right: 18, height: 2, backgroundColor: on ? C.primary : 'transparent' }} />
+              <Icon name={on ? t.on : t.i} size={21} color={on ? C.primary : C.muted} />
+              <Text className="text-xs" style={{ color: on ? C.primary : C.muted, fontWeight: on ? '700' : '400' }}>
+                {t.l}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// 一言だけ知らせる帯。下タブの上に出す（安全領域ぶんも避ける）
+function Toast({ text }) {
+  const insets = useSafeAreaInsets();
+  if (!text) return null;
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left: SP[4],
+        right: SP[4],
+        bottom: 52 + insets.bottom + SP[3],
+        alignItems: 'center',
+      }}
+      pointerEvents="none"
+    >
+      <View style={{ backgroundColor: C.text, paddingHorizontal: SP[4], paddingVertical: SP[3], borderRadius: R.md }}>
+        <Text className="text-sm font-medium" style={{ color: C.surface, lineHeight: 21 }}>
+          {text}
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -2746,28 +4168,59 @@ const BAR_AREA = 80; // バーが伸びる領域の高さ(px)
 
 function BarChart7({ data }) {
   const max = Math.max(1, ...data.map((d) => d.count));
+  // 7日ぶん全部0なら棒を描かず、罫線と日付だけ残して一言添える
+  const empty = data.every((d) => d.count === 0);
   return (
-    <View className="bg-white rounded-2xl p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 }}>
-      <Text className="font-semibold text-gray-800 mb-2">過去7日間の学習語数</Text>
-      <View className="flex-row items-end justify-between" style={{ paddingHorizontal: 8 }}>
-        {data.map((d, i) => (
-          <View key={i} className="items-center" style={{ flex: 1 }}>
-            <Text className="text-xs text-gray-400 mb-1">{d.count > 0 ? d.count : ''}</Text>
-            <View style={{ height: BAR_AREA, width: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
-              <View
-                style={{
-                  width: '60%',
-                  height: Math.max(2, (d.count / max) * BAR_AREA),
-                  backgroundColor: '#6366f1',
-                  borderTopLeftRadius: 4,
-                  borderTopRightRadius: 4,
-                }}
-              />
+    <Sheet className="p-4">
+      {/* 統計画面の「レベル分布」が stats-chart なので、こちらは縦棒の bar-chart にして見分けをつける */}
+      <SectionTitle icon="bar-chart-outline">過去7日間の学習語数</SectionTitle>
+
+      {empty ? (
+        // 高さは棒のある時とそろえる（本数ラベル 16 ＋ すきま SP[1] ＋ 棒の領域）
+        <View style={{ height: 16 + SP[1] + BAR_AREA, alignItems: 'center', justifyContent: 'center' }}>
+          <Text className="text-sm text-ink-soft text-center" style={{ lineHeight: 21 }}>
+            学習するとここに記録が出ます
+          </Text>
+        </View>
+      ) : (
+        <View className="flex-row items-end">
+          {data.map((d, i) => (
+            <View key={i} className="items-center" style={{ flex: 1 }}>
+              <Text className="text-xs text-ink-soft" style={[NUM, { lineHeight: 16, marginBottom: SP[1] }]}>
+                {d.count > 0 ? d.count : ''}
+              </Text>
+              {/* 棒が伸びる領域。下端をそろえて罫線の上に立たせる */}
+              <View style={{ height: BAR_AREA, width: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
+                {d.count > 0 ? (
+                  <View
+                    style={{
+                      width: '40%',
+                      height: Math.max(2, (d.count / max) * BAR_AREA),
+                      backgroundColor: C.primary,
+                      borderTopLeftRadius: R.sm,
+                      borderTopRightRadius: R.sm }}
+                  />
+                ) : null}
+              </View>
             </View>
-            <Text className="text-xs text-gray-400 mt-1">{d.date}</Text>
-          </View>
+          ))}
+        </View>
+      )}
+
+      {/* ノートの横罫。棒はこの線の上に立っている */}
+      <Rule />
+
+      <View className="flex-row">
+        {data.map((d, i) => (
+          <Text
+            key={i}
+            className="text-xs text-center"
+            style={[NUM, { flex: 1, marginTop: SP[2], lineHeight: 16, color: i === data.length - 1 ? C.primary : C.muted }]}
+          >
+            {d.date}
+          </Text>
         ))}
       </View>
-    </View>
+    </Sheet>
   );
 }

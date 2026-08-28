@@ -8,24 +8,38 @@
 // 取り込み（読込）で渡される JSON も同じ2種類がありうるので、
 // どちらでも受けられるようにしてある。
 
-import { backfillSchedule, repairWord, SR_DEFAULT_EF } from './logic';
+import { clearSchedule, repairWord, SR_DEFAULT_EF } from './logic';
 
 export const STORAGE_KEY_V1 = '@eitango_state_v1';
 export const STORAGE_KEY_V2 = '@eitango_state_v2';
 
 /**
+ * 復習（間隔反復）の予定の作り方の版。保存データの `srv` に入れる。
+ *
+ * 1 … 予定を持つのは「実際に答えた単語」だけ。過去の記録からの後付けはしない。
+ *
+ * 保存データの `srv` がこの数と違えば、**読み込みのときに予定を1回だけ全部外す**。
+ * 版を上げる＝予定の作り方を変えたということなので、古い予定は当てにならない。
+ * 外すのは due / ivl / ef の3つだけで、習熟度・正解数・学習した日付には触らない。
+ */
+export const SR_VERSION = 1;
+
+/**
  * 単語1件を、欠けている項目を埋めた形にそろえる。
  *
  * 間隔反復の項目（due / ivl / ef）は後から足したので、古いデータには入っていない。
- * 学習済みなのに予定が無い単語には backfillSchedule が予定を後付けするので、
- * 間隔反復を入れる前に覚えた単語もそのまま復習モードに乗る。
+ * 無ければ「予定なし」として埋める。予定が付くのは、実際に答えたときだけ。
  *
  * repairWord は、貼り付けの区切りを読み違えていた頃に壊れた単語を直す。
  * 英単語の欄に意味が混ざったままだと出題時に答えが見えてしまうので、
  * 読み込みのたびに直す（正常な単語には触らないので何度通しても安全）。
+ *
+ * @param {object} w
+ * @param {number} fallbackId id が無いときに振る番号
+ * @param {boolean} [resetSchedule] true なら復習の予定を外す（SR_VERSION を参照）
  */
-export const normalizeWord = (w, fallbackId) =>
-  backfillSchedule(repairWord({
+export const normalizeWord = (w, fallbackId, resetSchedule = false) => {
+  const base = repairWord({
     ...w,
     id: typeof w.id === 'number' ? w.id : fallbackId,
     en: String(w.en ?? ''),
@@ -39,7 +53,9 @@ export const normalizeWord = (w, fallbackId) =>
     due: w.due ?? null,
     ivl: typeof w.ivl === 'number' ? w.ivl : 0,
     ef: typeof w.ef === 'number' ? w.ef : SR_DEFAULT_EF,
-  }));
+  });
+  return resetSchedule ? clearSchedule(base) : base;
+};
 
 /**
  * 保存されていた生データの中に、貼り付けで壊れた単語が何語あるか数える。
@@ -61,9 +77,28 @@ export const countBrokenWords = (raw) => {
   return n;
 };
 
+/**
+ * 保存されていた生データの中に、復習の予定が付いた単語が何語あるか数える。
+ *
+ * 予定の作り方を変えたときは読み込みで予定を外す（SR_VERSION）。
+ * 黙って消したことにならないよう、**外す前の生データ**を見て語数を知らせるために使う。
+ *
+ * @param {any} raw JSON.parse した保存データ（v1 / v2 どちらでも可）
+ * @returns {number}
+ */
+export const countScheduled = (raw) => {
+  if (!raw || typeof raw !== 'object') return 0;
+  const lists = Array.isArray(raw.decks)
+    ? raw.decks.map((d) => (d && Array.isArray(d.words) ? d.words : []))
+    : [Array.isArray(raw.w) ? raw.w : []];
+  let n = 0;
+  for (const list of lists) for (const w of list) if (w && w.due) n++;
+  return n;
+};
+
 /** 単語帳を1冊作る。nid（次に採番する単語ID）は省略時に単語から求める */
-export const makeDeck = ({ id, name, words = [], cover = null, nid }) => {
-  const ws = words.map((w, i) => normalizeWord(w, i + 1));
+export const makeDeck = ({ id, name, words = [], cover = null, nid, resetSchedule = false }) => {
+  const ws = words.map((w, i) => normalizeWord(w, i + 1, resetSchedule));
   return {
     id,
     name: String(name || '名称未設定'),
@@ -124,11 +159,16 @@ export const uniqueDeckName = (decks, name) => {
 export const normalizeState = (raw, { defaultName = 'マイ単語帳' } = {}) => {
   if (!raw || typeof raw !== 'object') return null;
 
+  // 復習の予定の作り方が変わっていれば、ここで1回だけ古い予定を落とす。
+  // 判定は保存データを見るだけで、印を書き戻す処理は要らない
+  // （読み込みの直後に buildState が今の SR_VERSION で保存し直すため）
+  const resetSchedule = raw.srv !== SR_VERSION;
+
   // --- v2 ---
   if (Array.isArray(raw.decks)) {
     const decks = raw.decks
       .filter((d) => d && Array.isArray(d.words))
-      .map((d, i) => makeDeck({ id: typeof d.id === 'number' ? d.id : i + 1, name: d.name, words: d.words, cover: d.cover, nid: d.nid }));
+      .map((d, i) => makeDeck({ id: typeof d.id === 'number' ? d.id : i + 1, name: d.name, words: d.words, cover: d.cover, nid: d.nid, resetSchedule }));
     if (!decks.length) return null;
     const active = decks.some((d) => d.id === raw.active) ? raw.active : decks[0].id;
     return {
@@ -145,7 +185,7 @@ export const normalizeState = (raw, { defaultName = 'マイ単語帳' } = {}) =>
 
   // --- v1 ---
   if (Array.isArray(raw.w) && raw.w.length) {
-    const deck = makeDeck({ id: 1, name: defaultName, words: raw.w, nid: typeof raw.n === 'number' ? raw.n : undefined });
+    const deck = makeDeck({ id: 1, name: defaultName, words: raw.w, nid: typeof raw.n === 'number' ? raw.n : undefined, resetSchedule });
     return {
       decks: [deck],
       active: 1,
@@ -178,12 +218,20 @@ export const planImport = (data, nameHint = '取り込んだ単語帳') => {
     return state ? { mode: 'replace', decks: state.decks } : null;
   }
 
-  // 単語の配列そのものを渡された場合も受ける
+  // 単語の配列そのものを渡された場合も受ける。
+  // 古い書き出しファイルには後付けの復習予定が入っていることがあるので、
+  // 保存データと同じ基準（srv）で判定して落とす
   const list = Array.isArray(data) ? data : data.w;
   if (Array.isArray(list) && list.length) {
     return {
       mode: 'add',
-      decks: [makeDeck({ id: 0, name: nameHint, words: list, nid: typeof data.n === 'number' ? data.n : undefined })],
+      decks: [makeDeck({
+        id: 0,
+        name: nameHint,
+        words: list,
+        nid: typeof data.n === 'number' ? data.n : undefined,
+        resetSchedule: data.srv !== SR_VERSION,
+      })],
     };
   }
 
@@ -199,6 +247,8 @@ export const deckNameFromFile = (fileName) => {
 /** 保存する形（v2）に組み立てる */
 export const buildState = ({ decks, active, s, ld, dt, vol, time }) => ({
   v: 2,
+  // 復習の予定の作り方の版。次に読むときの「予定を落とすか」の判定に使う
+  srv: SR_VERSION,
   decks,
   active,
   s,
