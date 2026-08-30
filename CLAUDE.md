@@ -397,18 +397,23 @@ UI を全面的に作り替えた。**色・余白・書体を触るときは必
 | ファイル | 役割 |
 |---|---|
 | `src/theme.js` | **色・角丸・余白・書体の唯一の出どころ**（CommonJS。`tailwind.config.js` も App.js もここを読む） |
-| `tailwind.config.js` | Tailwind の既定色を紙の色に**読み替えて**いる（`bg-white`→生成りの紙、`bg-indigo-600`→藍、`text-rose-500`→朱、`text-gray-400`→読める濃さの鉛筆）。`rounded-2xl` も 10px に丸め込まれる |
+| `tailwind.config.js` | 意味の分かる色名（`bg-paper` / `bg-sheet` / `border-rule` / `text-ink` / `bg-navy` …）と書体を定義。`rounded-2xl` も 10px に丸め込まれる。**Tailwind の既定色名はそのまま既定の色で出る**（2026-08-30 に読み替えを外した） |
 | `design/DESIGN.md` | 守るべきルール（影を使わない／13px以下にLoraを当てない／押せる＝色の面 など） |
 | `design/direction.json` | 採用案Aと不採用のB・C案の定義 |
 | `design/design-brief.html` | 3案の見くらべページ（ブラウザで開く） |
 
 ### 触る前に知っておくこと
 
-- 採用案は **A「英単語ノート」**（生成り #F7F3E9 の紙 / 罫線 / 朱の一点）。
+- 採用案は **A「英単語ノート」**。ただし **色だけは 2026-08-30 に刷新前へ戻した**（本人の希望）。
+  組み方（罫線で段差・影ゼロ・角丸3段・英字と数字だけ別書体）は A案のまま、色は
+  Tailwind 既定の indigo / rose / emerald / amber に戻っている。詳細は `src/theme.js` の冒頭。
 - **影は全画面ゼロ。** `shadowColor` や `elevation` を足さない。段差は 1px 罫線と紙の色差で作る。
   カードは `<Sheet>`、区切りは `<Rule>`、見出しは `<SectionTitle>` / `<PageTitle>`、ボタンは `<Btn>`、
   空っぽの画面は `<EmptyState>`。**新しくカードやボタンを書かない。**
-- **藍 `C.primary` = 押す／進捗。朱 `C.accent` = 赤ペンの印（間違い・苦手・期限超過）。** 混ぜない。
+- **`C.primary` = 押す／進捗。`C.accent` = 間違い・苦手・期限超過の印。** 混ぜない。
+  ⚠️ トークン名は A案由来のまま（`navy` / `vermilion` / `moss` / `ochre`）。色を戻したときに
+  名前まで変えると、色と関係ない差分が App.js の 38 か所に出るので残してある。
+  色相はおおむね合っている（navy=indigo・vermilion=rose・moss=emerald・ochre=amber）。
 - 書体は `@expo-google-fonts/lora`（英単語）と `@expo-google-fonts/ibm-plex-mono`（数字）を同梱。
   **日本語には当てない。** Web では `ff()`（App.js:76）がシステム書体のフォールバックを付け足す。
   `useFonts` の完了を待って `return null` しないこと（Web で一瞬まっ白になる）。

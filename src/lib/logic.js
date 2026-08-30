@@ -116,24 +116,24 @@ export const calcProg = (word, ok, mode = 'quiz', elapsedMs) => {
  *
  * `min` 以上 `max` 未満で1段。いちばん上だけ `max` を Infinity にしてある（progress が 100 まで来るため）。
  *
- * 色は虹色をやめ、藍1色の濃淡ランプ（濃いほど覚えている）。「要復習」だけは
- * 朱＝赤ペンでチェックした行、という別の意味なので色相を変えている。
+ * 色は段階ごとに色相を変える（赤 → 橙 → 黄 → 青 → 緑 → 紫）。
  * 値は src/theme.js の lv1〜lv6 と同じもの（logic.js は純粋関数だけにしたいので import しない）。
+ * ⚠️ 片方だけ直すとバッジの文字色とグラフのバーの色がずれる。必ず両方そろえる。
  */
 export const LEVELS = [
-  { k: 'lv_review',   name: '要復習',   min: 0,  max: 20,       c: 'text-rose-600',   bg: 'bg-rose-50',   bar: 'bg-rose-500',   barColor: '#A8352A', i: '' },
-  { k: 'lv_beginner', name: '初級',     min: 20, max: 40,       c: 'text-gray-500',   bg: 'bg-gray-100',  bar: 'bg-indigo-200', barColor: '#8FA3B9', i: '' },
-  { k: 'lv_learning', name: '学習中',   min: 40, max: 60,       c: 'text-indigo-500', bg: 'bg-indigo-50', bar: 'bg-indigo-300', barColor: '#6E88A4', i: '' },
-  { k: 'lv_settled',  name: '定着',     min: 60, max: 80,       c: 'text-indigo-500', bg: 'bg-indigo-50', bar: 'bg-indigo-400', barColor: '#4A6B8C', i: '' },
-  { k: 'lv_master',   name: 'マスター', min: 80, max: 90,       c: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-500', barColor: '#2F5175', i: '' },
-  { k: 'lv_perfect',  name: '完璧',     min: 90, max: Infinity, c: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-600', barColor: '#1F3A5F', i: '' },
+  { k: 'lv_review',   name: '要復習',   min: 0,  max: 20,       c: 'text-rose-600',    bg: 'bg-rose-50',    bar: 'bg-rose-400',    barColor: '#FB7185', i: '' },
+  { k: 'lv_beginner', name: '初級',     min: 20, max: 40,       c: 'text-orange-600',  bg: 'bg-orange-50',  bar: 'bg-orange-400',  barColor: '#FB923C', i: '' },
+  { k: 'lv_learning', name: '学習中',   min: 40, max: 60,       c: 'text-amber-600',   bg: 'bg-amber-50',   bar: 'bg-amber-500',   barColor: '#F59E0B', i: '' },
+  { k: 'lv_settled',  name: '定着',     min: 60, max: 80,       c: 'text-blue-600',    bg: 'bg-blue-50',    bar: 'bg-blue-500',    barColor: '#3B82F6', i: '' },
+  { k: 'lv_master',   name: 'マスター', min: 80, max: 90,       c: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500', barColor: '#10B981', i: '' },
+  { k: 'lv_perfect',  name: '完璧',     min: 90, max: Infinity, c: 'text-purple-600',  bg: 'bg-purple-50',  bar: 'bg-purple-500',  barColor: '#9333EA', i: '' },
 ];
 
 /**
  * まだ一度も出していない単語。**段階には含めない**。
  * progress 0 のまま「要復習」に混ぜると、手を付けていないだけの語が苦手に見えてしまう。
  */
-export const LEVEL_NEW = { k: 'new', name: '未学習', min: 0, max: 0, c: 'text-gray-300', bg: 'bg-gray-50', bar: 'bg-gray-300', barColor: '#8C8271', i: '' };
+export const LEVEL_NEW = { k: 'new', name: '未学習', min: 0, max: 0, c: 'text-gray-400', bg: 'bg-gray-50', bar: 'bg-gray-300', barColor: '#D1D5DB', i: '' };
 
 /**
  * 習熟度から段階を1つ返す。
