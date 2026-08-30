@@ -1787,13 +1787,15 @@ export default function App() {
                 そのぶんかたまり同士は 12px に詰めて「学習を開始」がスクロールなしで届く高さを保っている */}
             <View>
               <SectionTitle>出題モード</SectionTitle>
-              {/* 4つ並ぶので、375px 幅でも折り返さないよう文字を12pxに抑えてある */}
+              {/* 4つ並ぶので、375px 幅でも折り返さないよう文字を12pxに抑えてある。
+                  4つ目は「今日の復習」。ホームのカード・単語帳の絞り込み・統計もこの呼び方なので
+                  ここだけ「復習」にすると別のものに見え、実際に見落とされた。 */}
               <View className="flex-row" style={{ gap: SP[2] }}>
                 {[
                   { k: 'normal', l: '通常', d: 'バランス' },
                   { k: 'new', l: '新規', d: poolInfo.nw },
                   { k: 'weak', l: '苦手', d: poolInfo.wk },
-                  { k: 'due', l: '復習', d: poolInfo.du },
+                  { k: 'due', l: '今日の復習', d: poolInfo.du },
                 ].map((mi) => {
                   const active = wordSel === mi.k;
                   return (
@@ -1814,7 +1816,10 @@ export default function App() {
                         gap: SP[1],
                       }}
                     >
-                      <Text className="text-xs font-bold text-center" style={{ color: active ? C.onPrimary : C.text }} numberOfLines={1}>
+                      {/* 「今日の復習」だけ5文字あり、375px では1行に収まるが 320px だと
+                          「今日の…」と切れて肝心の語が消える。2行まで許して折り返させる。
+                          折り返すのは幅が足りないときだけなので、375px では見た目は変わらない。 */}
+                      <Text className="text-xs font-bold text-center" style={{ color: active ? C.onPrimary : C.text }} numberOfLines={2}>
                         {mi.l}
                       </Text>
                       <Text className="text-xs text-center" style={{ color: active ? C.navyTint : C.muted }} numberOfLines={1}>
