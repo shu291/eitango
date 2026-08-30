@@ -71,8 +71,8 @@ const C = {
   //    したいので theme.js を import していない）。片方だけ直さないこと。
   lv0: '#D1D5DB', // 未学習（gray-300）
   lv1: '#FB7185', // 要復習（rose-400）
-  lv2: '#FB923C', // 初級（orange-400）
-  lv3: '#F59E0B', // 学習中（amber-500）
+  lv2: '#FB923C', // うろ覚え（orange-400）
+  lv3: '#F59E0B', // あと一歩（amber-500）
   lv4: '#3B82F6', // 定着（blue-500）
   lv5: '#10B981', // マスター（emerald-500）
   lv6: '#9333EA', // 完璧（purple-600）

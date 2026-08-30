@@ -2808,6 +2808,136 @@ export default function App() {
     const levelTabs = LEVELS.map((lv) => ({ k: lv.k, l: lv.name, n: lvCount[lv.k], dot: lv.barColor }));
     const curTab = [...stateTabs, ...levelTabs].find((t) => t.k === wordFilter);
 
+    /* 絞り込みと検索。**管理タブと学習シートの両方**に同じものを出す。
+       学習シートは赤シートで隠して覚える画面なので、「定着だけ」「うろ覚えだけ」を
+       出せないと使いどころが限られる（以前はここに絞り込みが無く、管理タブで
+       選んでから切り替えるしかなかった）。
+       wordFilter / search は画面で1つなので、タブを行き来しても選んだ絞り込みは続く。 */
+    const filterBar = (
+      <>
+        {/*
+          以前はここを横スクロールの ScrollView にしていたが、Web では
+          ScrollView が flex: 1 1 auto を持つため、下の単語リストに押し潰されて
+          高さ 5.6px になりタブが見えなくなっていた。
+          折り返す普通の行にすれば潰れず、幅が足りなければ2段になる。
+        */}
+        <View className="flex-row" style={{ gap: SP[2], flexWrap: 'wrap' }}>
+          {stateTabs.map((t) => {
+            const active = wordFilter === t.k;
+            return (
+              <TouchableOpacity
+                key={t.k}
+                onPress={() => setWordFilter(t.k)}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={`${t.l} ${t.n}語`}
+                accessibilityState={{ selected: active }}
+                className="flex-row items-center rounded-full"
+                style={{
+                  minHeight: 44,
+                  paddingHorizontal: SP[3],
+                  gap: SP[1],
+                  borderWidth: 1,
+                  borderColor: active ? C.primary : C.border,
+                  backgroundColor: active ? C.primary : 'transparent',
+                }}
+              >
+                <Text className="text-xs font-bold" style={{ color: active ? C.onPrimary : C.muted }}>{t.l}</Text>
+                <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>{t.n}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/*
+          覚え具合の6段階。丸いチップを6つ足すと375px幅で2段に折り返し、
+          そのぶん単語リストが下に押し出される。幅を6等分した1本の帯にして1行に収めた。
+          左が覚えていない側で、右へ行くほど覚えている＝並びそのものが目盛りになる。
+          段階の色（藍の濃淡。要復習だけ朱）は下の罫線で出す。
+
+          実機幅 375px なら「マスター」まで収まる。320px（iPhone SE 初代）だけは
+          「マス…」と切れるが、並びの位置と語数で読めるのでそのままにしてある。
+
+          「全て」はこの帯に入っていないので、選んでいる段をもう一度押すと絞り込みを外す。
+        */}
+        <View>
+          <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>覚え具合</Text>
+          <View
+            className="flex-row bg-sheet border border-rule rounded"
+            style={{ overflow: 'hidden' }}
+          >
+            {levelTabs.map((t, i) => {
+              const active = wordFilter === t.k;
+              return (
+                <TouchableOpacity
+                  key={t.k}
+                  onPress={() => setWordFilter(active ? 'all' : t.k)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.l} ${t.n}語`}
+                  accessibilityState={{ selected: active }}
+                  className="flex-1 items-center justify-center"
+                  style={{
+                    minHeight: 44,
+                    paddingVertical: SP[1],
+                    paddingHorizontal: 2,
+                    backgroundColor: active ? C.primary : 'transparent',
+                    borderLeftWidth: i === 0 ? 0 : 1,
+                    borderLeftColor: C.border,
+                  }}
+                >
+                  <Text
+                    className="text-xs font-bold"
+                    style={{ color: active ? C.onPrimary : C.muted }}
+                    numberOfLines={1}
+                  >
+                    {t.l}
+                  </Text>
+                  <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>
+                    {t.n}
+                  </Text>
+                  {/* 段階の色。選んでいる間は地が藍なので引かない（濃い藍だと見えないため） */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 2,
+                      backgroundColor: active ? 'transparent' : t.dot,
+                    }}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View className="flex-row items-center bg-sheet border border-rule rounded" style={{ minHeight: 44, paddingHorizontal: SP[3], gap: SP[2] }}>
+          <Icon name="search" size={16} color={C.muted} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="単語を検索"
+            placeholderTextColor={C.muted2}
+            className="flex-1 text-sm text-ink"
+            style={{ minWidth: 0, paddingVertical: SP[3] }}
+            autoCapitalize="none"
+          />
+          {search ? (
+            <TouchableOpacity
+              onPress={() => setSearch('')}
+              activeOpacity={0.75}
+              accessibilityLabel="検索をやめる"
+              style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Icon name="close-circle" size={16} color={C.muted2} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </>
+    );
+
     /* 空っぽのときは3通りに出し分ける。
        「単語が見つかりません」の一言だけだと、次に何をすればいいのか分からないため。 */
     const emptyView =
@@ -3075,126 +3205,7 @@ export default function App() {
                 </Sheet>
               )}
 
-              {/*
-                以前はここを横スクロールの ScrollView にしていたが、Web では
-                ScrollView が flex: 1 1 auto を持つため、下の単語リストに押し潰されて
-                高さ 5.6px になりタブが見えなくなっていた。
-                折り返す普通の行にすれば潰れず、幅が足りなければ2段になる。
-              */}
-              <View className="flex-row" style={{ gap: SP[2], flexWrap: 'wrap' }}>
-                {stateTabs.map((t) => {
-                  const active = wordFilter === t.k;
-                  return (
-                    <TouchableOpacity
-                      key={t.k}
-                      onPress={() => setWordFilter(t.k)}
-                      activeOpacity={0.75}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${t.l} ${t.n}語`}
-                      accessibilityState={{ selected: active }}
-                      className="flex-row items-center rounded-full"
-                      style={{
-                        minHeight: 44,
-                        paddingHorizontal: SP[3],
-                        gap: SP[1],
-                        borderWidth: 1,
-                        borderColor: active ? C.primary : C.border,
-                        backgroundColor: active ? C.primary : 'transparent',
-                      }}
-                    >
-                      <Text className="text-xs font-bold" style={{ color: active ? C.onPrimary : C.muted }}>{t.l}</Text>
-                      <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>{t.n}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/*
-                覚え具合の6段階。丸いチップを6つ足すと375px幅で2段に折り返し、
-                そのぶん単語リストが下に押し出される。幅を6等分した1本の帯にして1行に収めた。
-                左が覚えていない側で、右へ行くほど覚えている＝並びそのものが目盛りになる。
-                段階の色（藍の濃淡。要復習だけ朱）は下の罫線で出す。
-
-                実機幅 375px なら「マスター」まで収まる。320px（iPhone SE 初代）だけは
-                「マス…」と切れるが、並びの位置と語数で読めるのでそのままにしてある。
-
-                「全て」はこの帯に入っていないので、選んでいる段をもう一度押すと絞り込みを外す。
-              */}
-              <View>
-                <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>覚え具合</Text>
-                <View
-                  className="flex-row bg-sheet border border-rule rounded"
-                  style={{ overflow: 'hidden' }}
-                >
-                  {levelTabs.map((t, i) => {
-                    const active = wordFilter === t.k;
-                    return (
-                      <TouchableOpacity
-                        key={t.k}
-                        onPress={() => setWordFilter(active ? 'all' : t.k)}
-                        activeOpacity={0.75}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${t.l} ${t.n}語`}
-                        accessibilityState={{ selected: active }}
-                        className="flex-1 items-center justify-center"
-                        style={{
-                          minHeight: 44,
-                          paddingVertical: SP[1],
-                          paddingHorizontal: 2,
-                          backgroundColor: active ? C.primary : 'transparent',
-                          borderLeftWidth: i === 0 ? 0 : 1,
-                          borderLeftColor: C.border,
-                        }}
-                      >
-                        <Text
-                          className="text-xs font-bold"
-                          style={{ color: active ? C.onPrimary : C.muted }}
-                          numberOfLines={1}
-                        >
-                          {t.l}
-                        </Text>
-                        <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>
-                          {t.n}
-                        </Text>
-                        {/* 段階の色。選んでいる間は地が藍なので引かない（濃い藍だと見えないため） */}
-                        <View
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            height: 2,
-                            backgroundColor: active ? 'transparent' : t.dot,
-                          }}
-                        />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View className="flex-row items-center bg-sheet border border-rule rounded" style={{ minHeight: 44, paddingHorizontal: SP[3], gap: SP[2] }}>
-                <Icon name="search" size={16} color={C.muted} />
-                <TextInput
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholder="単語を検索"
-                  placeholderTextColor={C.muted2}
-                  className="flex-1 text-sm text-ink"
-                  style={{ minWidth: 0, paddingVertical: SP[3] }}
-                  autoCapitalize="none"
-                />
-                {search ? (
-                  <TouchableOpacity
-                    onPress={() => setSearch('')}
-                    activeOpacity={0.75}
-                    accessibilityLabel="検索をやめる"
-                    style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Icon name="close-circle" size={16} color={C.muted2} />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
+              {filterBar}
 
               <FlatList
                 data={filtered}
@@ -3208,6 +3219,10 @@ export default function App() {
             </>
           ) : (
             <>
+              {/* 学習シートでも同じ絞り込みを出す。
+                  「何を出すか」を決めてから「どう隠すか」を決める順に並べてある */}
+              {filterBar}
+
               <Sheet className="p-4">
                 <SectionTitle icon="eye-off-outline">かくして覚える</SectionTitle>
                 <View className="flex-row" style={{ gap: SP[2] }}>

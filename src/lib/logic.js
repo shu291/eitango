@@ -116,14 +116,18 @@ export const calcProg = (word, ok, mode = 'quiz', elapsedMs) => {
  *
  * `min` 以上 `max` 未満で1段。いちばん上だけ `max` を Infinity にしてある（progress が 100 まで来るため）。
  *
+ * ⚠️ 名前は6つとも「その単語をどれだけ覚えているか」でそろえる。
+ * 以前は 初級 / 学習中 だったが、初級は級・ランク＝**単語の難易度**に読め、
+ * 学習中は要復習も定着も含む広さで、この2つだけ物差しが違っていた（2026-08-30 に改名）。
+ *
  * 色は段階ごとに色相を変える（赤 → 橙 → 黄 → 青 → 緑 → 紫）。
  * 値は src/theme.js の lv1〜lv6 と同じもの（logic.js は純粋関数だけにしたいので import しない）。
  * ⚠️ 片方だけ直すとバッジの文字色とグラフのバーの色がずれる。必ず両方そろえる。
  */
 export const LEVELS = [
   { k: 'lv_review',   name: '要復習',   min: 0,  max: 20,       c: 'text-rose-600',    bg: 'bg-rose-50',    bar: 'bg-rose-400',    barColor: '#FB7185', i: '' },
-  { k: 'lv_beginner', name: '初級',     min: 20, max: 40,       c: 'text-orange-600',  bg: 'bg-orange-50',  bar: 'bg-orange-400',  barColor: '#FB923C', i: '' },
-  { k: 'lv_learning', name: '学習中',   min: 40, max: 60,       c: 'text-amber-600',   bg: 'bg-amber-50',   bar: 'bg-amber-500',   barColor: '#F59E0B', i: '' },
+  { k: 'lv_vague',    name: 'うろ覚え', min: 20, max: 40,       c: 'text-orange-600',  bg: 'bg-orange-50',  bar: 'bg-orange-400',  barColor: '#FB923C', i: '' },
+  { k: 'lv_almost',   name: 'あと一歩', min: 40, max: 60,       c: 'text-amber-600',   bg: 'bg-amber-50',   bar: 'bg-amber-500',   barColor: '#F59E0B', i: '' },
   { k: 'lv_settled',  name: '定着',     min: 60, max: 80,       c: 'text-blue-600',    bg: 'bg-blue-50',    bar: 'bg-blue-500',    barColor: '#3B82F6', i: '' },
   { k: 'lv_master',   name: 'マスター', min: 80, max: 90,       c: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500', barColor: '#10B981', i: '' },
   { k: 'lv_perfect',  name: '完璧',     min: 90, max: Infinity, c: 'text-purple-600',  bg: 'bg-purple-50',  bar: 'bg-purple-500',  barColor: '#9333EA', i: '' },

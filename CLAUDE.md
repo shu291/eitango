@@ -179,10 +179,11 @@ quality（手ごたえ 2〜5）は答えるまでの速さから `srQuality()` �
 > `LEVELS`（`src/lib/logic.js`）1か所にまとめた。**境目・名前・色を変えるならここだけ直す。**
 
 ```js
-LEVELS  // 低いほうから: 要復習(0) / 初級(20) / 学習中(40) / 定着(60) / マスター(80) / 完璧(90〜)
+LEVELS  // 低いほうから: 要復習(0) / うろ覚え(20) / あと一歩(40) / 定着(60) / マスター(80) / 完璧(90〜)
 LEVEL_NEW  // 未学習。どの段階にも入らない
 getLevel(p, touched)  // 1語 → 段階。touched が false なら LEVEL_NEW
 inLevel(w, 'lv_settled')  // その単語が「定着」か。未学習は必ず false
+// k は 'lv_review' / 'lv_vague' / 'lv_almost' / 'lv_settled' / 'lv_master' / 'lv_perfect'
 ```
 
 ⚠️ **未学習（一度も出していない語）を段階に混ぜないこと。** progress 0 のままなので
