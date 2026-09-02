@@ -310,6 +310,12 @@ export default function App() {
   const [opts, setOpts] = useState([]);
   const [sMode, setSMode] = useState('');
 
+  // フラッシュカードの「1つ前にもどる」用の控え。1枚判定するごとに
+  // { word: 判定する前の単語, timeLog: 積む前の学習時間 } を積む。
+  // 判定を押し間違えたときに、点も復習日も押す前に戻してからやり直せるようにするため。
+  // 出題を始めるたびに空にする（前回の学習まで巻き戻さない）。
+  const [undoStack, setUndoStack] = useState([]);
+
   // マッチング
   const [mWords, setMWords] = useState([]);
   const [mJa, setMJa] = useState([]);
@@ -826,6 +832,7 @@ export default function App() {
     setSWords(sel);
     setSIdx(0);
     setResults([]);
+    setUndoStack([]);
     setFlipped(false);
     setSelAns(null);
     setTyped('');
@@ -863,6 +870,8 @@ export default function App() {
     const elapsed = cardShownAt.current ? Date.now() - cardShownAt.current : undefined;
     const cur = words.find((x) => x.id === w.id) || w;
     const { progress: np } = calcProg(cur, knew, 'flashcard', elapsed);
+    // 「1つ前にもどる」ための控え。updWord より **先に** 取る（後だと更新後の姿になる）
+    setUndoStack((st) => [...st, { word: cur, timeLog }]);
     updWord(w.id, knew, 'flashcard', elapsed);
     // 学習時間として積む。カードを開いたまま放置された分は addStudyTime 側で頭打ちになる
     if (typeof elapsed === 'number') {
@@ -879,6 +888,42 @@ export default function App() {
     } else {
       setScr('results');
     }
+  };
+
+  /**
+   * フラッシュカードで「1つ前にもどる」。判定を押し間違えて次に進んでしまったときの取り消し。
+   *
+   * 控えておいた「判定する前の単語」をそのまま書き戻すので、
+   * 覚え具合の点・連続正解数・正解/不正解の数・最後に学習した日・
+   * 復習日まわり（due / ivl / ef）・学習時間が、すべて押す前の値にそろって戻る。
+   * 結果一覧からもその1行を消す。
+   *
+   * そのうえで同じカードをもう一度出すので、**戻ったあとに押した判定だけ**が
+   * 記録に残る（押し間違えたほうは無かったことになる）。
+   * 何枚でも続けて戻れる。控えが空（＝まだ1枚も判定していない）なら何もしない。
+   *
+   * 連続日数（ストリーク）だけは戻さない。今日この単語帳を開いて学習したことは事実で、
+   * どのみち戻ったカードを答え直せば同じ日が付くため。
+   */
+  const hFlashBack = () => {
+    if (undoStack.length === 0) return;
+    const snap = undoStack[undoStack.length - 1];
+    setUndoStack((st) => st.slice(0, -1));
+    // 学習中に単語が消された場合、id が一致せず何も書き戻らない（それで正しい）
+    setWords((ws) => ws.map((x) => (x.id === snap.word.id ? snap.word : x)));
+    setTimeLog(snap.timeLog);
+    setResults((r) => r.slice(0, -1));
+    // 最後の1枚を押し間違えると結果画面に出てしまうので、そこからも1枚だけ戻れるようにする。
+    // 結果画面のとき sIdx は最後のカードのまま止まっているので、引かずにそのまま使う
+    const onResults = scr === 'results';
+    setSIdx(onResults ? sIdx : Math.max(0, sIdx - 1));
+    // 戻したカードは意味を出した状態で見せる。どのカードに戻ったのかが一目で分かるし、
+    // 押し間違えた本人はもう意味を見ている（ダブルタップモードでも1回で判定できる）
+    setFlipped(true);
+    setDragOff(0);
+    pan.setValue(0);
+    if (onResults) setScr('flashcard');
+    setToast('1つ前にもどりました（さっきの判定は取り消し）');
   };
 
   const hQuiz = (opt) => {
@@ -2129,6 +2174,23 @@ export default function App() {
             </TouchableOpacity>
           </View>
 
+          {/* 押し間違えて次に進んでしまったときの取り消し（→ hFlashBack）。
+              判定の2つより弱い「白地＋灰の罫」にして、幅も内容ぶんに縮めてある。
+              ここが目立つと、答えに迷ったときの逃げ道として押されてしまうため。
+              どのカードに戻るのかが分かるように、戻る先の単語を括弧で添える。 */}
+          {undoStack.length > 0 && (
+            <View className="items-center">
+              <Btn
+                label={`1つ前にもどる（${undoStack[undoStack.length - 1].word.en}）`}
+                onPress={hFlashBack}
+                tone="quiet"
+                icon="arrow-undo-outline"
+                small
+                style={{ minHeight: 44 }}
+              />
+            </View>
+          )}
+
           {/* いま1回目なのか2回目なのかが分かるようにする */}
           {dblTap && (
             <View className="flex-row items-center justify-center" style={{ gap: SP[2] }}>
@@ -2785,6 +2847,23 @@ export default function App() {
                 </View>
               )}
             </>
+          )}
+
+          {/* 最後の1枚を押し間違えたとき用。ここからでも1枚だけ戻ってやり直せる。
+              戻るとフラッシュカード画面に帰り、その1語の記録は押す前に戻る（→ hFlashBack） */}
+          {sMode === 'flashcard' && undoStack.length > 0 && (
+            <View style={{ marginTop: SP[2] }}>
+              <Btn
+                label={`最後の1語をやり直す（${undoStack[undoStack.length - 1].word.en}）`}
+                onPress={hFlashBack}
+                tone="quiet"
+                icon="arrow-undo-outline"
+                small
+              />
+              <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[2], lineHeight: 19 }}>
+                押し間違えたときはここから。判定を取り消してやり直せます
+              </Text>
+            </View>
           )}
 
           {/* ベタ塗りは「もう一度」の1つだけ。戻る側は控えめに。

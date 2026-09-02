@@ -291,7 +291,8 @@ localStorage 側は控えとして消さない。
 |---|---|---|
 | **フラッシュカード本体** | `App.js:1005-1081` `renderFlash()` | ★ 主役。表 `w.en` → タップで裏 `w.en`(小)+`w.ja`(大) |
 | スワイプ判定 | `App.js:658` `panResponder` | 左 = 知らない / 右 = 知ってた。`pan` は `Animated.Value` |
-| 採点ハンドラ | `App.js:396` `hFlash(knew)` | ここから `calcProg()` を呼ぶ |
+| 採点ハンドラ | `App.js:396` `hFlash(knew)` | ここから `calcProg()` を呼ぶ。判定前の単語を `undoStack` に積む |
+| 1つ前にもどる | `hFlashBack()` | `undoStack` の一番上を単語に書き戻して取り消す（点・成績・復習日・学習時間・結果一覧）。連続日数だけは戻さない |
 | レベルバッジ | `App.js:697` `LvBadge({ w })` | `getLevel()` の結果を表示 |
 | 単語リストの 1 行 | `App.js:1369` `renderWordItem({ item: w })` | `renderWords()`（1361）内の `FlatList` 用 |
 | 共通ヘッダ | `App.js:688` `Header({ title, back })` | |
