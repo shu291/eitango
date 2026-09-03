@@ -160,11 +160,58 @@ export const isNew = (w) => ((w.correct || 0) + (w.incorrect || 0)) === 0;
  */
 export const inLevel = (w, k) => !isNew(w) && getLevel(w.progress || 0).k === k;
 
+/**
+ * 最後に答えたのが不正解だった語。
+ * `streak` は正解で +1、不正解で 0 に戻る（calcProg）ので、
+ * 1回でも間違えれば true になり、次に正解すれば false に戻る。
+ */
+export const isJustMissed = (w) => (w.incorrect || 0) >= 1 && (w.streak || 0) === 0;
+
+/**
+ * 「1回間違えたら苦手」を適用する習熟度の上限（isWeak の 1. で使う）。
+ *
+ * ここに達している語は、1回すべっただけでは苦手に入れない。ちゃんと覚えている語まで
+ * 苦手に並べると、本当に手を打つべき語が埋もれてしまう。
+ *
+ * 60 は LEVELS の「定着」の下限。つまり **定着より下の語だけ** が対象になる。
+ * 判定に使う progress は間違えて**減点されたあと**の値なので、
+ * 例えば 88%（マスター）の語を1回落とすと 65% になり、この行では苦手にならない。
+ * 55%（あと一歩）の語なら 43% まで落ちるので苦手に入る。
+ * 覚えていた語も落とし続ければ 60 を割り、そこで苦手に入る。
+ */
+export const WEAK_MISS_MAX_PROGRESS = 60;
+
+/**
+ * 苦手な単語か。単語一覧の「苦手」タブ・ホームの苦手リスト・苦手克服モード・
+ * 出題範囲の「苦手」がすべてこの1つの判定を見ている。ここを直せば全部そろう。
+ *
+ * 2つの見方を or でつないである。
+ *
+ * 1. **直近で間違えた** … 1回でも間違えたら、その場ですぐ苦手に入れる。
+ *    以前は「2回以上出題」を条件にしていたので、初めて出して間違えた語が
+ *    苦手に入らないまま素通りしていた。間違えた直後こそ一番復習したいところ。
+ *    `streak` は正解で +1、不正解で 0 に戻る（calcProg）ので、
+ *    `streak === 0` は「最後の答えが不正解だった」と同じ意味になる。
+ *    そのあと1回でも正解すれば streak が 1 以上になってこの条件から外れ、
+ *    下の 2.（従来どおりの判定）に戻る。
+ *    ただし **よく覚えている語は対象外**（WEAK_MISS_MAX_PROGRESS を参照）。
+ *    しっかり定着している語が1回すべっただけで苦手に並ぶのはやりすぎなため。
+ *
+ * 2. **通算の成績が悪い**（従来の判定）… 2回以上出していて、正答率が5割未満、
+ *    または3回以上間違えていて習熟度が50未満。1. を正解で抜けても、
+ *    通算成績が悪いままの語はここで苦手に残り続ける。
+ */
 export const isWeak = (w) => {
-  const t = (w.correct || 0) + (w.incorrect || 0);
+  const correct = w.correct || 0;
+  const incorrect = w.incorrect || 0;
+  const progress = w.progress || 0;
+  // 1. 最後の答えが不正解 → 次に正解して取り返すまで苦手（覚えている語は除く）
+  if (isJustMissed(w) && progress < WEAK_MISS_MAX_PROGRESS) return true;
+  // 2. 通算成績で見る
+  const t = correct + incorrect;
   if (t < 2) return false;
-  const rate = w.correct / t;
-  return rate < 0.5 || (w.incorrect >= 3 && w.progress < 50);
+  const rate = correct / t;
+  return rate < 0.5 || (incorrect >= 3 && progress < 50);
 };
 
 /**

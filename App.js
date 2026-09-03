@@ -66,6 +66,7 @@ import {
   LEVELS,
   inLevel,
   isWeak,
+  isJustMissed,
   isNew,
   parseLine,
   INIT_WORDS } from './src/lib/logic';
@@ -98,6 +99,15 @@ const NUM_BOLD = { fontFamily: F.numBold, fontVariant: ['tabular-nums'] };
    - 英単語と数字だけ Lora / IBM Plex Mono を当てる。日本語はシステム書体のまま
    - 「いま見てほしい」ブロックは左端に3pxの縦罫（藍＝やること、朱＝赤ペンの印）
    =========================================================================== */
+
+/* ホームと統計に出す「覚え具合の3分割」の境目。
+   6段階（LEVELS）を丸めた要約で、**定着より上**を「覚えた」とする。
+   LEVELS の境目を動かせばここも自動で追随するよう、数字を直に書かず定着の下限を読む。
+   ⚠️ 以前はここが `progress >= 80`（旧マスター）／`20〜79`（旧学習中）という
+   6段階になる前の物差しのまま残っていて、同じ統計画面の中で「マスター」が
+   レベル分布グラフと違う数を指し、さらに 0〜19% の語がどの列にも入らず
+   3つ足しても総語数に届かなかった。名前も6段階と重ならないものに変えてある。 */
+const LEARNED_MIN = LEVELS.find((l) => l.k === 'lv_settled').min;
 
 // Ionicons に無いものだけ MaterialCommunityIcons から借りる
 const MCI_NAMES = new Set(['brain', 'fountain-pen-tip', 'notebook-outline', 'bookshelf', 'cards-outline']);
@@ -516,9 +526,6 @@ export default function App() {
     }
   }, [toast]);
 
-  const mast = useMemo(() => words.filter((w) => w.progress >= 80).length, [words]);
-  const learn = useMemo(() => words.filter((w) => w.progress >= 20 && w.progress < 80).length, [words]);
-
   // 覚え具合の段階ごとの語数。単語帳の絞り込みと統計の分布グラフが同じものを見る。
   // 段階の数だけ filter を回すと 1900 語で6周するので、1語につき1回だけ数える。
   // キーは LEVELS の k（'lv_review' など）と、どの段階にも入らない 'new'（未学習）。
@@ -528,6 +535,18 @@ export default function App() {
     for (const w of words) m[isNew(w) ? 'new' : getLevel(w.progress || 0).k]++;
     return m;
   }, [words]);
+
+  // 上の6段階を3つに丸めたもの（ホームの内訳と統計の「習熟度の内訳」が使う）。
+  // 覚えた＋練習中＋未学習 は必ず全語数に一致する。lvCount を数え直さず足すだけ。
+  const rollup = useMemo(() => {
+    let learned = 0;
+    let practicing = 0;
+    for (const lv of LEVELS) {
+      if (lv.min >= LEARNED_MIN) learned += lvCount[lv.k];
+      else practicing += lvCount[lv.k];
+    }
+    return { learned, practicing };
+  }, [lvCount]);
   const todayN = useMemo(() => {
     const t = getToday();
     return words.filter((w) => w.reviewedDates && w.reviewedDates.includes(t)).length;
@@ -537,7 +556,17 @@ export default function App() {
   const totalCorrect = useMemo(() => words.reduce((s, w) => s + w.correct, 0), [words]);
   const totalIncorrect = useMemo(() => words.reduce((s, w) => s + w.incorrect, 0), [words]);
   const totalAccuracy = totalCorrect + totalIncorrect > 0 ? Math.round((totalCorrect / (totalCorrect + totalIncorrect)) * 100) : 0;
-  const weakWords = useMemo(() => words.filter(isWeak).sort((a, b) => a.progress - b.progress), [words]);
+  // 苦手な単語。ホームと結果画面は先頭の3〜5語しか出せないので、
+  // **直近で間違えた語を先頭**に置き、その中では習熟度の低い順にする。
+  // 習熟度順だけだと、さっき間違えたばかりの語（習熟度が高いことがある）が
+  // 後ろに埋もれて「間違えたのに苦手に出てこない」と見えてしまう。
+  const weakWords = useMemo(
+    () =>
+      words
+        .filter(isWeak)
+        .sort((a, b) => (isJustMissed(a) ? 0 : 1) - (isJustMissed(b) ? 0 : 1) || a.progress - b.progress),
+    [words]
+  );
   const avgP = words.length ? Math.round(words.reduce((s, w) => s + w.progress, 0) / words.length) : 0;
 
   // ===== 間隔反復 =====
@@ -1587,8 +1616,8 @@ export default function App() {
 
               <View className="flex-row" style={{ marginTop: SP[3], gap: SP[4] }}>
                 {[
-                  { c: C.lv5, l: 'マスター', n: mast },
-                  { c: C.lv3, l: '学習中', n: learn },
+                  { c: C.lv4, l: '覚えた', n: rollup.learned },
+                  { c: C.lv3, l: '練習中', n: rollup.practicing },
                   { c: C.lv0, l: '未学習', n: lvCount.new },
                 ].map((g) => (
                   <View key={g.l} className="flex-row items-center" style={{ gap: SP[1] }}>
@@ -3303,109 +3332,151 @@ export default function App() {
             </>
           ) : (
             <>
-              {/* 学習シートでも同じ絞り込みを出す。
-                  「何を出すか」を決めてから「どう隠すか」を決める順に並べてある */}
-              {filterBar}
+              {/* 学習シートは **画面ごと1本のスクロール** にしてある。
+                  絞り込みと「かくして覚える」をリストの見出し（ListHeaderComponent）に入れて
+                  一緒に流すので、下へスクロールすると操作パネルが画面の外へ抜け、
+                  単語だけが画面いっぱいに並ぶ＝一気に見わたせる。
+                  以前はパネルを上に固定していたので、単語の見える窓が数行しかなかった。
 
-              <Sheet className="p-4">
-                <SectionTitle icon="eye-off-outline">かくして覚える</SectionTitle>
-                <View className="flex-row" style={{ gap: SP[2] }}>
-                  <TouchableOpacity
-                    onPress={() => { setListHideEn(!listHideEn); setRevealed(new Set()); }}
-                    activeOpacity={0.75}
-                    className="flex-1 flex-row items-center justify-center rounded"
-                    style={{
-                      minHeight: 44,
-                      gap: SP[2],
-                      borderWidth: 1,
-                      borderColor: listHideEn ? C.primary : C.border,
-                      backgroundColor: listHideEn ? C.primary : C.bg,
-                    }}
-                  >
-                    <Icon name={listHideEn ? 'eye-off' : 'eye'} size={16} color={listHideEn ? C.onPrimary : C.muted} />
-                    <Text className="text-sm font-bold" style={{ color: listHideEn ? C.onPrimary : C.muted }}>英語をかくす</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => { setListHideJa(!listHideJa); setRevealed(new Set()); }}
-                    activeOpacity={0.75}
-                    className="flex-1 flex-row items-center justify-center rounded"
-                    style={{
-                      minHeight: 44,
-                      gap: SP[2],
-                      borderWidth: 1,
-                      borderColor: listHideJa ? C.primary : C.border,
-                      backgroundColor: listHideJa ? C.primary : C.bg,
-                    }}
-                  >
-                    <Icon name={listHideJa ? 'eye-off' : 'eye'} size={16} color={listHideJa ? C.onPrimary : C.muted} />
-                    <Text className="text-sm font-bold" style={{ color: listHideJa ? C.onPrimary : C.muted }}>日本語をかくす</Text>
-                  </TouchableOpacity>
-                </View>
-                <View className="flex-row" style={{ gap: SP[2], marginTop: SP[2] }}>
-                  <Btn label="全て表示" onPress={revealAll} tone="line" small className="flex-1" style={{ minHeight: 44 }} />
-                  <Btn label="全て隠す" onPress={hideAll} tone="quiet" small className="flex-1" style={{ minHeight: 44 }} />
-                </View>
-              </Sheet>
+                  ⚠️ ScrollView の中に FlatList を入れて全体を包まないこと。仮想化が効かなくなり
+                  1900語の単語帳で固まる。スクロールする箱はこの FlatList 1つだけにする。 */}
+              <FlatList
+                style={{ flex: 1 }}
+                data={filtered}
+                keyExtractor={(item) => String(item.id)}
+                initialNumToRender={30}
+                windowSize={10}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 100 }}
+                ListEmptyComponent={emptyView}
+                ListHeaderComponent={
+                  <View style={{ gap: SP[3] }}>
+                    {/* 学習シートでも同じ絞り込みを出す。
+                        「何を出すか」を決めてから「どう隠すか」を決める順に並べてある */}
+                    {filterBar}
 
-              {/* 0件のときは見出し行と一覧の紙片ごと出さない。
-                  <Sheet> の中に EmptyState の白紙カードを入れると枠が二重になるため */}
-              {filtered.length === 0 ? (
-                emptyView
-              ) : (
-                <Sheet style={{ flex: 1 }}>
-                  <View className="flex-row items-center bg-paper" style={{ paddingHorizontal: SP[3], paddingVertical: SP[2] }}>
-                    <Text className="w-8 text-xs text-ink-soft text-center">#</Text>
-                    <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>英語</Text>
-                    <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>日本語</Text>
-                    <Text className="w-10 text-xs text-ink-soft text-center">%</Text>
-                  </View>
-                  <Rule />
-                  <FlatList
-                    data={filtered}
-                    keyExtractor={(item) => String(item.id)}
-                    initialNumToRender={30}
-                    windowSize={10}
-                    contentContainerStyle={{ paddingBottom: 100 }}
-                    renderItem={({ item: w }) => {
-                      const num = words.indexOf(w) + 1;
-                      const enKey = w.id + '-en';
-                      const jaKey = w.id + '-ja';
-                      const enHidden = listHideEn && !revealed.has(enKey);
-                      const jaHidden = listHideJa && !revealed.has(jaKey);
-                      const lv = getLevel(w.progress, !isNew(w));
-                      return (
-                        <View>
-                          <View className="flex-row items-center" style={{ minHeight: 44, paddingHorizontal: SP[3] }}>
-                            <Text className="w-8 text-xs text-ink-soft text-center" style={NUM}>{num}</Text>
-                            <TouchableOpacity
-                              onPress={() => listHideEn && toggleReveal(enKey)}
-                              activeOpacity={0.75}
-                              className="flex-1 rounded-sm justify-center"
-                              style={{ paddingHorizontal: SP[2], paddingVertical: SP[2], minHeight: 44, backgroundColor: enHidden ? C.navyTint : 'transparent' }}
-                            >
-                              <Text className="text-base" style={{ fontFamily: F.enSemi, color: enHidden ? C.navyTint : C.text }} numberOfLines={2}>
-                                {enHidden ? '••••••' : w.en}
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => listHideJa && toggleReveal(jaKey)}
-                              activeOpacity={0.75}
-                              className="flex-1 rounded-sm justify-center"
-                              style={{ paddingHorizontal: SP[2], paddingVertical: SP[2], minHeight: 44, backgroundColor: jaHidden ? C.navyTint : 'transparent' }}
-                            >
-                              <Text className="text-sm" style={{ color: jaHidden ? C.navyTint : C.muted, lineHeight: 21 }} numberOfLines={2}>
-                                {jaHidden ? '••••••' : w.ja}
-                              </Text>
-                            </TouchableOpacity>
-                            <Text className={`w-10 text-sm text-center ${lv.c}`} style={NUM_BOLD}>{w.progress}</Text>
-                          </View>
-                          <Rule />
+                    <Sheet className="p-4">
+                      <SectionTitle icon="eye-off-outline">かくして覚える</SectionTitle>
+                      <View className="flex-row" style={{ gap: SP[2] }}>
+                        <TouchableOpacity
+                          onPress={() => { setListHideEn(!listHideEn); setRevealed(new Set()); }}
+                          activeOpacity={0.75}
+                          className="flex-1 flex-row items-center justify-center rounded"
+                          style={{
+                            minHeight: 44,
+                            gap: SP[2],
+                            borderWidth: 1,
+                            borderColor: listHideEn ? C.primary : C.border,
+                            backgroundColor: listHideEn ? C.primary : C.bg,
+                          }}
+                        >
+                          <Icon name={listHideEn ? 'eye-off' : 'eye'} size={16} color={listHideEn ? C.onPrimary : C.muted} />
+                          <Text className="text-sm font-bold" style={{ color: listHideEn ? C.onPrimary : C.muted }}>英語をかくす</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => { setListHideJa(!listHideJa); setRevealed(new Set()); }}
+                          activeOpacity={0.75}
+                          className="flex-1 flex-row items-center justify-center rounded"
+                          style={{
+                            minHeight: 44,
+                            gap: SP[2],
+                            borderWidth: 1,
+                            borderColor: listHideJa ? C.primary : C.border,
+                            backgroundColor: listHideJa ? C.primary : C.bg,
+                          }}
+                        >
+                          <Icon name={listHideJa ? 'eye-off' : 'eye'} size={16} color={listHideJa ? C.onPrimary : C.muted} />
+                          <Text className="text-sm font-bold" style={{ color: listHideJa ? C.onPrimary : C.muted }}>日本語をかくす</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View className="flex-row" style={{ gap: SP[2], marginTop: SP[2] }}>
+                        <Btn label="全て表示" onPress={revealAll} tone="line" small className="flex-1" style={{ minHeight: 44 }} />
+                        <Btn label="全て隠す" onPress={hideAll} tone="quiet" small className="flex-1" style={{ minHeight: 44 }} />
+                      </View>
+                    </Sheet>
+
+                    {/* ここから下が一覧の紙片。<Sheet> で囲むと中の FlatList が
+                        入れ子スクロールになってしまうので、紙片の枠を
+                        見出し行（上の角丸）・各行（左右）・末尾（下の角丸）の3つに分けて描く。
+                        0件のときは枠ごと出さない＝EmptyState の白紙カードと二重にならない */}
+                    {filtered.length > 0 && (
+                      <View
+                        style={{
+                          borderTopWidth: 1,
+                          borderLeftWidth: 1,
+                          borderRightWidth: 1,
+                          borderColor: C.border,
+                          borderTopLeftRadius: R.lg,
+                          borderTopRightRadius: R.lg,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <View className="flex-row items-center bg-paper" style={{ paddingHorizontal: SP[3], paddingVertical: SP[2] }}>
+                          <Text className="w-8 text-xs text-ink-soft text-center">#</Text>
+                          <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>英語</Text>
+                          <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>日本語</Text>
+                          <Text className="w-10 text-xs text-ink-soft text-center">%</Text>
                         </View>
-                      );
-                    }}
-                  />
-                </Sheet>
-              )}
+                        <Rule />
+                      </View>
+                    )}
+                  </View>
+                }
+                ListFooterComponent={
+                  filtered.length > 0 ? (
+                    <View
+                      className="bg-sheet"
+                      style={{
+                        height: SP[2],
+                        borderLeftWidth: 1,
+                        borderRightWidth: 1,
+                        borderBottomWidth: 1,
+                        borderColor: C.border,
+                        borderBottomLeftRadius: R.lg,
+                        borderBottomRightRadius: R.lg,
+                      }}
+                    />
+                  ) : null
+                }
+                renderItem={({ item: w }) => {
+                  const num = words.indexOf(w) + 1;
+                  const enKey = w.id + '-en';
+                  const jaKey = w.id + '-ja';
+                  const enHidden = listHideEn && !revealed.has(enKey);
+                  const jaHidden = listHideJa && !revealed.has(jaKey);
+                  const lv = getLevel(w.progress, !isNew(w));
+                  return (
+                    // 紙片の左右の枠は1行ずつが受け持つ（上の見出し行と下の末尾が上下の枠）
+                    <View className="bg-sheet" style={{ borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border }}>
+                      <View className="flex-row items-center" style={{ minHeight: 44, paddingHorizontal: SP[3] }}>
+                        <Text className="w-8 text-xs text-ink-soft text-center" style={NUM}>{num}</Text>
+                        <TouchableOpacity
+                          onPress={() => listHideEn && toggleReveal(enKey)}
+                          activeOpacity={0.75}
+                          className="flex-1 rounded-sm justify-center"
+                          style={{ paddingHorizontal: SP[2], paddingVertical: SP[2], minHeight: 44, backgroundColor: enHidden ? C.navyTint : 'transparent' }}
+                        >
+                          <Text className="text-base" style={{ fontFamily: F.enSemi, color: enHidden ? C.navyTint : C.text }} numberOfLines={2}>
+                            {enHidden ? '••••••' : w.en}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => listHideJa && toggleReveal(jaKey)}
+                          activeOpacity={0.75}
+                          className="flex-1 rounded-sm justify-center"
+                          style={{ paddingHorizontal: SP[2], paddingVertical: SP[2], minHeight: 44, backgroundColor: jaHidden ? C.navyTint : 'transparent' }}
+                        >
+                          <Text className="text-sm" style={{ color: jaHidden ? C.navyTint : C.muted, lineHeight: 21 }} numberOfLines={2}>
+                            {jaHidden ? '••••••' : w.ja}
+                          </Text>
+                        </TouchableOpacity>
+                        <Text className={`w-10 text-sm text-center ${lv.c}`} style={NUM_BOLD}>{w.progress}</Text>
+                      </View>
+                      <Rule />
+                    </View>
+                  );
+                }}
+              />
             </>
           )}
         </View>
@@ -3943,8 +4014,8 @@ export default function App() {
               </SectionTitle>
               <View className="flex-row items-center">
                 {[
-                  { c: C.lv5, l: 'マスター', d: '80%以上', n: mast },
-                  { c: C.lv3, l: '学習中', d: '20〜79%', n: learn },
+                  { c: C.lv4, l: '覚えた', d: '60%以上', n: rollup.learned },
+                  { c: C.lv3, l: '練習中', d: '60%未満', n: rollup.practicing },
                   { c: C.lv0, l: '未学習', d: '未着手', n: lvCount.new },
                 ].map((g, i) => (
                   <React.Fragment key={g.l}>
