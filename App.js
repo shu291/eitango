@@ -3209,54 +3209,77 @@ export default function App() {
       );
     };
 
+    /* 画面の見出しと、管理／学習シートの切りかえ。
+       学習シートでは**この2つも一緒にスクロールさせる**ので、置く場所を変えられるよう変数にしてある。
+       （下へ送ると見出しも切りかえも画面の外へ抜け、単語だけが画面いっぱいに残る） */
+    const pageHeader = (
+      <PageTitle
+        title="単語帳"
+        sub={`${activeDeck ? activeDeck.name : '単語帳なし'} ・ ${words.length}語`}
+        right={
+          <View className="flex-row" style={{ gap: SP[2] }}>
+            <TouchableOpacity
+              onPress={() => { setWordsTab('manage'); setShowBulk(true); setShowAdd(false); }}
+              activeOpacity={0.75}
+              accessibilityLabel="まとめて追加"
+              className="bg-sheet border border-rule rounded items-center justify-center"
+              style={{ width: 44, height: 44 }}
+            >
+              <Icon name="document-text-outline" size={18} color={C.primary} />
+            </TouchableOpacity>
+            {/* ベタ塗りは1画面に1つ。入力パネルを開いている間は、パネル側の「追加」が主役になるので枠だけにする */}
+            <Btn
+              label="追加"
+              icon="add"
+              onPress={() => { setWordsTab('manage'); setShowAdd(true); setShowBulk(false); }}
+              tone={showAdd || showBulk ? 'line' : 'navy'}
+            />
+          </View>
+        }
+      />
+    );
+
+    const tabSwitch = (
+      <View className="flex-row bg-sheet border border-rule rounded overflow-hidden">
+        <TouchableOpacity
+          onPress={() => setWordsTab('manage')}
+          activeOpacity={0.75}
+          className="flex-1 flex-row items-center justify-center"
+          style={{ minHeight: 44, gap: SP[2], backgroundColor: wordsTab === 'manage' ? C.primary : 'transparent' }}
+        >
+          <Icon name="create-outline" size={16} color={wordsTab === 'manage' ? C.onPrimary : C.muted} />
+          <Text className="text-sm font-bold" style={{ color: wordsTab === 'manage' ? C.onPrimary : C.muted }}>管理</Text>
+        </TouchableOpacity>
+        <View style={{ width: 1, backgroundColor: C.border }} />
+        <TouchableOpacity
+          onPress={() => { setWordsTab('list'); setRevealed(new Set()); }}
+          activeOpacity={0.75}
+          className="flex-1 flex-row items-center justify-center"
+          style={{ minHeight: 44, gap: SP[2], backgroundColor: wordsTab === 'list' ? C.primary : 'transparent' }}
+        >
+          <Icon name="list-outline" size={16} color={wordsTab === 'list' ? C.onPrimary : C.muted} />
+          <Text className="text-sm font-bold" style={{ color: wordsTab === 'list' ? C.onPrimary : C.muted }}>学習シート</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
+    /* 学習シートだけは、外側の余白も見出しもぜんぶ FlatList の中に入れる。
+       固定して置くものを減らすほどスクロールできる範囲が広がる（390×844 で 602px → 785px）。 */
+    const fixedTop = wordsTab === 'manage';
+
     return (
       <View style={{ flex: 1 }}>
-        <PageTitle
-          title="単語帳"
-          sub={`${activeDeck ? activeDeck.name : '単語帳なし'} ・ ${words.length}語`}
-          right={
-            <View className="flex-row" style={{ gap: SP[2] }}>
-              <TouchableOpacity
-                onPress={() => { setWordsTab('manage'); setShowBulk(true); setShowAdd(false); }}
-                activeOpacity={0.75}
-                accessibilityLabel="まとめて追加"
-                className="bg-sheet border border-rule rounded items-center justify-center"
-                style={{ width: 44, height: 44 }}
-              >
-                <Icon name="document-text-outline" size={18} color={C.primary} />
-              </TouchableOpacity>
-              {/* ベタ塗りは1画面に1つ。入力パネルを開いている間は、パネル側の「追加」が主役になるので枠だけにする */}
-              <Btn
-                label="追加"
-                icon="add"
-                onPress={() => { setWordsTab('manage'); setShowAdd(true); setShowBulk(false); }}
-                tone={showAdd || showBulk ? 'line' : 'navy'}
-              />
-            </View>
-          }
-        />
-        <View style={{ flex: 1, paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
-          <View className="flex-row bg-sheet border border-rule rounded overflow-hidden">
-            <TouchableOpacity
-              onPress={() => setWordsTab('manage')}
-              activeOpacity={0.75}
-              className="flex-1 flex-row items-center justify-center"
-              style={{ minHeight: 44, gap: SP[2], backgroundColor: wordsTab === 'manage' ? C.primary : 'transparent' }}
-            >
-              <Icon name="create-outline" size={16} color={wordsTab === 'manage' ? C.onPrimary : C.muted} />
-              <Text className="text-sm font-bold" style={{ color: wordsTab === 'manage' ? C.onPrimary : C.muted }}>管理</Text>
-            </TouchableOpacity>
-            <View style={{ width: 1, backgroundColor: C.border }} />
-            <TouchableOpacity
-              onPress={() => { setWordsTab('list'); setRevealed(new Set()); }}
-              activeOpacity={0.75}
-              className="flex-1 flex-row items-center justify-center"
-              style={{ minHeight: 44, gap: SP[2], backgroundColor: wordsTab === 'list' ? C.primary : 'transparent' }}
-            >
-              <Icon name="list-outline" size={16} color={wordsTab === 'list' ? C.onPrimary : C.muted} />
-              <Text className="text-sm font-bold" style={{ color: wordsTab === 'list' ? C.onPrimary : C.muted }}>学習シート</Text>
-            </TouchableOpacity>
-          </View>
+        {fixedTop ? pageHeader : null}
+        <View
+          style={{
+            flex: 1,
+            paddingHorizontal: fixedTop ? SP[4] : 0,
+            paddingTop: fixedTop ? SP[4] : 0,
+            paddingBottom: fixedTop ? SP[5] : 0,
+            gap: fixedTop ? SP[3] : 0,
+          }}
+        >
+          {fixedTop ? tabSwitch : null}
 
           {wordsTab === 'manage' ? (
             <>
@@ -3347,79 +3370,84 @@ export default function App() {
                 initialNumToRender={30}
                 windowSize={10}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 100 }}
-                ListEmptyComponent={emptyView}
+                contentContainerStyle={{ paddingBottom: SP[4] }}
+                ListEmptyComponent={<View style={{ paddingHorizontal: SP[4] }}>{emptyView}</View>}
                 ListHeaderComponent={
-                  <View style={{ gap: SP[3] }}>
-                    {/* 学習シートでも同じ絞り込みを出す。
-                        「何を出すか」を決めてから「どう隠すか」を決める順に並べてある */}
-                    {filterBar}
+                  <View>
+                    {pageHeader}
+                    <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], gap: SP[3] }}>
+                      {tabSwitch}
 
-                    <Sheet className="p-4">
-                      <SectionTitle icon="eye-off-outline">かくして覚える</SectionTitle>
-                      <View className="flex-row" style={{ gap: SP[2] }}>
-                        <TouchableOpacity
-                          onPress={() => { setListHideEn(!listHideEn); setRevealed(new Set()); }}
-                          activeOpacity={0.75}
-                          className="flex-1 flex-row items-center justify-center rounded"
-                          style={{
-                            minHeight: 44,
-                            gap: SP[2],
-                            borderWidth: 1,
-                            borderColor: listHideEn ? C.primary : C.border,
-                            backgroundColor: listHideEn ? C.primary : C.bg,
-                          }}
-                        >
-                          <Icon name={listHideEn ? 'eye-off' : 'eye'} size={16} color={listHideEn ? C.onPrimary : C.muted} />
-                          <Text className="text-sm font-bold" style={{ color: listHideEn ? C.onPrimary : C.muted }}>英語をかくす</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => { setListHideJa(!listHideJa); setRevealed(new Set()); }}
-                          activeOpacity={0.75}
-                          className="flex-1 flex-row items-center justify-center rounded"
-                          style={{
-                            minHeight: 44,
-                            gap: SP[2],
-                            borderWidth: 1,
-                            borderColor: listHideJa ? C.primary : C.border,
-                            backgroundColor: listHideJa ? C.primary : C.bg,
-                          }}
-                        >
-                          <Icon name={listHideJa ? 'eye-off' : 'eye'} size={16} color={listHideJa ? C.onPrimary : C.muted} />
-                          <Text className="text-sm font-bold" style={{ color: listHideJa ? C.onPrimary : C.muted }}>日本語をかくす</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View className="flex-row" style={{ gap: SP[2], marginTop: SP[2] }}>
-                        <Btn label="全て表示" onPress={revealAll} tone="line" small className="flex-1" style={{ minHeight: 44 }} />
-                        <Btn label="全て隠す" onPress={hideAll} tone="quiet" small className="flex-1" style={{ minHeight: 44 }} />
-                      </View>
-                    </Sheet>
+                      {/* 学習シートでも同じ絞り込みを出す。
+                          「何を出すか」を決めてから「どう隠すか」を決める順に並べてある */}
+                      {filterBar}
 
-                    {/* ここから下が一覧の紙片。<Sheet> で囲むと中の FlatList が
-                        入れ子スクロールになってしまうので、紙片の枠を
-                        見出し行（上の角丸）・各行（左右）・末尾（下の角丸）の3つに分けて描く。
-                        0件のときは枠ごと出さない＝EmptyState の白紙カードと二重にならない */}
-                    {filtered.length > 0 && (
-                      <View
-                        style={{
-                          borderTopWidth: 1,
-                          borderLeftWidth: 1,
-                          borderRightWidth: 1,
-                          borderColor: C.border,
-                          borderTopLeftRadius: R.lg,
-                          borderTopRightRadius: R.lg,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <View className="flex-row items-center bg-paper" style={{ paddingHorizontal: SP[3], paddingVertical: SP[2] }}>
-                          <Text className="w-8 text-xs text-ink-soft text-center">#</Text>
-                          <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>英語</Text>
-                          <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>日本語</Text>
-                          <Text className="w-10 text-xs text-ink-soft text-center">%</Text>
+                      <Sheet className="p-4">
+                        <SectionTitle icon="eye-off-outline">かくして覚える</SectionTitle>
+                        <View className="flex-row" style={{ gap: SP[2] }}>
+                          <TouchableOpacity
+                            onPress={() => { setListHideEn(!listHideEn); setRevealed(new Set()); }}
+                            activeOpacity={0.75}
+                            className="flex-1 flex-row items-center justify-center rounded"
+                            style={{
+                              minHeight: 44,
+                              gap: SP[2],
+                              borderWidth: 1,
+                              borderColor: listHideEn ? C.primary : C.border,
+                              backgroundColor: listHideEn ? C.primary : C.bg,
+                            }}
+                          >
+                            <Icon name={listHideEn ? 'eye-off' : 'eye'} size={16} color={listHideEn ? C.onPrimary : C.muted} />
+                            <Text className="text-sm font-bold" style={{ color: listHideEn ? C.onPrimary : C.muted }}>英語をかくす</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => { setListHideJa(!listHideJa); setRevealed(new Set()); }}
+                            activeOpacity={0.75}
+                            className="flex-1 flex-row items-center justify-center rounded"
+                            style={{
+                              minHeight: 44,
+                              gap: SP[2],
+                              borderWidth: 1,
+                              borderColor: listHideJa ? C.primary : C.border,
+                              backgroundColor: listHideJa ? C.primary : C.bg,
+                            }}
+                          >
+                            <Icon name={listHideJa ? 'eye-off' : 'eye'} size={16} color={listHideJa ? C.onPrimary : C.muted} />
+                            <Text className="text-sm font-bold" style={{ color: listHideJa ? C.onPrimary : C.muted }}>日本語をかくす</Text>
+                          </TouchableOpacity>
                         </View>
-                        <Rule />
-                      </View>
-                    )}
+                        <View className="flex-row" style={{ gap: SP[2], marginTop: SP[2] }}>
+                          <Btn label="全て表示" onPress={revealAll} tone="line" small className="flex-1" style={{ minHeight: 44 }} />
+                          <Btn label="全て隠す" onPress={hideAll} tone="quiet" small className="flex-1" style={{ minHeight: 44 }} />
+                        </View>
+                      </Sheet>
+
+                      {/* ここから下が一覧の紙片。<Sheet> で囲むと中の FlatList が
+                          入れ子スクロールになってしまうので、紙片の枠を
+                          見出し行（上の角丸）・各行（左右）・末尾（下の角丸）の3つに分けて描く。
+                          0件のときは枠ごと出さない＝EmptyState の白紙カードと二重にならない */}
+                      {filtered.length > 0 && (
+                        <View
+                          style={{
+                            borderTopWidth: 1,
+                            borderLeftWidth: 1,
+                            borderRightWidth: 1,
+                            borderColor: C.border,
+                            borderTopLeftRadius: R.lg,
+                            borderTopRightRadius: R.lg,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <View className="flex-row items-center bg-paper" style={{ paddingHorizontal: SP[3], paddingVertical: SP[2] }}>
+                            <Text className="w-8 text-xs text-ink-soft text-center">#</Text>
+                            <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>英語</Text>
+                            <Text className="flex-1 text-xs text-ink-soft" style={{ paddingHorizontal: SP[2] }}>日本語</Text>
+                            <Text className="w-10 text-xs text-ink-soft text-center">%</Text>
+                          </View>
+                          <Rule />
+                        </View>
+                      )}
+                    </View>
                   </View>
                 }
                 ListFooterComponent={
@@ -3428,6 +3456,7 @@ export default function App() {
                       className="bg-sheet"
                       style={{
                         height: SP[2],
+                        marginHorizontal: SP[4],
                         borderLeftWidth: 1,
                         borderRightWidth: 1,
                         borderBottomWidth: 1,
@@ -3446,8 +3475,12 @@ export default function App() {
                   const jaHidden = listHideJa && !revealed.has(jaKey);
                   const lv = getLevel(w.progress, !isNew(w));
                   return (
-                    // 紙片の左右の枠は1行ずつが受け持つ（上の見出し行と下の末尾が上下の枠）
-                    <View className="bg-sheet" style={{ borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border }}>
+                    // 紙片の左右の枠は1行ずつが受け持つ（上の見出し行と下の末尾が上下の枠）。
+                    // FlatList を画面の端まで広げたぶん、左右の余白も1行ずつが持つ
+                    <View
+                      className="bg-sheet"
+                      style={{ marginHorizontal: SP[4], borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border }}
+                    >
                       <View className="flex-row items-center" style={{ minHeight: 44, paddingHorizontal: SP[3] }}>
                         <Text className="w-8 text-xs text-ink-soft text-center" style={NUM}>{num}</Text>
                         <TouchableOpacity
