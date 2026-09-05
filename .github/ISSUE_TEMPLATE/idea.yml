@@ -1,0 +1,12 @@
+name: 思いつきメモ
+description: 忘れないうちに置いておくだけ。整理はあとでよい。
+title: "[メモ] "
+labels: ["type:idea"]
+body:
+  - type: textarea
+    id: memo
+    attributes:
+      label: 思いついたこと
+      description: 一言でよい。あとで /issue-start する前に中身を詰める。
+    validations:
+      required: true

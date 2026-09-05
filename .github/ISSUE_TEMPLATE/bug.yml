@@ -1,0 +1,42 @@
+name: バグ報告
+description: 動かない・おかしい挙動を記録する
+title: "[バグ] "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 何が起きた
+      description: 見たままを書く。エラーメッセージがあればそのまま貼る。
+      placeholder: 保存ボタンを押すと画面が真っ白になる
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現の手順
+      description: この通りにやれば必ず起きる、という順番
+      placeholder: |
+        1. トップページを開く
+        2. カードを1枚追加する
+        3. 保存ボタンを押す
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 本当はどうなってほしい
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: なぜ直す必要があるか
+      description: ここが AI の判断の質を一番左右する。「使えなくなるから」でもよい。
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 環境
+      placeholder: iPhone Safari / Mac Chrome / など

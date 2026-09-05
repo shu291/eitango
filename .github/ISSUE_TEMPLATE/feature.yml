@@ -1,0 +1,39 @@
+name: やりたいこと（機能）
+description: 追加したい機能・改善を記録する
+title: "[機能] "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: なぜ (Why)
+      description: 今どう困っているか。これが無いと AI は的外れなものを作る。
+      placeholder: 単語を追加するたびに画面を戻る必要があって面倒
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 何を作る (What)
+      description: 具体的に。分からないところは「未定」と書いてよい。
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完了の条件
+      description: どうなったら閉じてよいか。2〜4個の箇条書き。
+      placeholder: |
+        - [ ] 追加後に一覧へ戻らず続けて入力できる
+        - [ ] スマホ幅で崩れない
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度
+      options:
+        - 高（これが無いと困る）
+        - 中（あると嬉しい）
+        - 低（いつか）
+      default: 1
