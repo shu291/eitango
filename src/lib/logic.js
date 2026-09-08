@@ -215,6 +215,75 @@ export const isWeak = (w) => {
 };
 
 /**
+ * その単語の段階のキー。LEVELS の k（'lv_review' など）か、一度も出していなければ 'new'。
+ * 統計の分布グラフ・単語帳の絞り込み・今日の増減がすべてこれで数える。
+ */
+export const levelKey = (w) => (isNew(w) ? 'new' : getLevel(w.progress || 0).k);
+
+/**
+ * 「今日の増減」のために、**その日はじめて答える前の姿**を単語に控える。
+ *
+ * 統計の「レベル分布」に、今日どの段階が何語増えて何語減ったか（苦手 -3 など）を出したい。
+ * 段階の語数は履歴を持っていないので、単語ごとに「今日の最初の回答の直前」の
+ * 習熟度・正解数・不正解数・連続正解数を `sod`（start of day）として残しておき、
+ * 今の値と見比べて差を出す。
+ *
+ * 控えるのは1日1回だけ（`sod.d` が今日なら何もしない）。翌日はじめて答えたときに
+ * 上書きされるので、単語1語あたり持つのは常に最新の1日ぶんだけ。
+ *
+ * ⚠️ updWord で **値を書き換える前の単語** に対して呼ぶこと。書き換えたあとに呼ぶと
+ * 「答える前」ではなく「答えた後」が控えられて、差がいつも 0 になる。
+ *
+ * @param {object} w 単語
+ * @param {string} today 'YYYY-MM-DD'
+ */
+export const markDayStart = (w, today) => {
+  if (w.sod && w.sod.d === today) return w;
+  return {
+    ...w,
+    sod: { d: today, p: w.progress || 0, c: w.correct || 0, i: w.incorrect || 0, s: w.streak || 0 },
+  };
+};
+
+/** `sod` から「その日の最初に答える前の単語」の姿を組み立てる（isNew / isWeak / getLevel に渡す用） */
+const wordAtDayStart = (sod) => ({ progress: sod.p, correct: sod.c, incorrect: sod.i, streak: sod.s });
+
+/**
+ * 今日の段階ごとの増減。統計の「レベル分布」が出す「+2 / -3」の元。
+ *
+ * 今日答えた語（`sod.d` が今日）だけを見て、朝の段階から今の段階へ動いた語を
+ * 「元の段階 -1、今の段階 +1」で数える。段階が変わらなかった語は何も足さない。
+ * 苦手（isWeak）は段階とは別の判定なので、別枠 `weak` で「朝は苦手だった／今は苦手」の差を出す。
+ *
+ * 今日いちども答えていなければ `answered` が 0。画面ではそのときだけ「まだ動きなし」と出す
+ * （答えたけれど段階が動かなかった日は、各行の増減を 0 のまま出す）。
+ *
+ * @param {Array} words
+ * @param {string} today 'YYYY-MM-DD'
+ * @returns {{ counts: Object<string, number>, weak: number, answered: number }}
+ *   counts のキーは levelKey と同じ（LEVELS の k と 'new'）
+ */
+export const levelDeltaToday = (words, today) => {
+  const counts = { new: 0 };
+  for (const lv of LEVELS) counts[lv.k] = 0;
+  let weak = 0;
+  let answered = 0;
+  for (const w of words) {
+    if (!w.sod || w.sod.d !== today) continue;
+    answered++;
+    const before = wordAtDayStart(w.sod);
+    const from = levelKey(before);
+    const to = levelKey(w);
+    if (from !== to) {
+      counts[from]--;
+      counts[to]++;
+    }
+    weak += (isWeak(w) ? 1 : 0) - (isWeak(before) ? 1 : 0);
+  }
+  return { counts, weak, answered };
+};
+
+/**
  * 通常モードで、その単語がどれだけ出題されやすいかの重み。
  * 大きいほど出やすい。返す値はだいたい 0.15〜6 の範囲。
  *
