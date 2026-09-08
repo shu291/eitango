@@ -2137,19 +2137,18 @@ export default function App() {
                       <Text className="text-4xl text-ink text-center" style={{ fontFamily: F.enBold, lineHeight: 46 }}>
                         {w.en}
                       </Text>
-                      <Rule className="w-full mt-3" color={C.border2} />
-                      <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[3] }}>
+                      {/* 単語の下に罫は引かない（縦罫と同じく、読むときに目に入って邪魔だった）。余白だけで区切る */}
+                      <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[4] }}>
                         タップで意味を表示
                       </Text>
                     </>
                   ) : (
                     <>
-                      {/* 単語は消さない。同じ罫の上に残したまま小さくして、意味を一段下に書き足す */}
+                      {/* 単語は消さない。小さくして残したまま、意味を一段下に書き足す（罫は引かない） */}
                       <Text className="text-2xl text-ink text-center" style={{ fontFamily: F.enSemi, lineHeight: 32 }}>
                         {w.en}
                       </Text>
-                      <Rule className="w-full mt-3" color={C.border2} />
-                      <Text className="text-2xl font-bold text-ink text-center" style={{ marginTop: SP[3], lineHeight: 34 }}>
+                      <Text className="text-2xl font-bold text-ink text-center" style={{ marginTop: SP[4], lineHeight: 34 }}>
                         {w.ja}
                       </Text>
                     </>
