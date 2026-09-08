@@ -841,8 +841,11 @@ export default function App() {
 
   const startFromConfig = () => {
     const pool = getPool();
-    // 復習モードは「今日ぶんを終わらせる」のが目的なので、残り1語でも始められる
-    const minWords = wordSel === 'due' ? 1 : 2;
+    // 復習モードは「今日ぶんを終わらせる」のが目的なので、残り1語でも始められる。
+    // フラッシュカードも他の語と比べる必要がない（選択肢を作らない）ので1語で成立する。
+    // ホームの「苦手克服モードで学習」は苦手が1語でも出るボタンなので、
+    // ここを 2 のままにすると押しても「対象単語が不足しています」で行き止まりになる。
+    const minWords = wordSel === 'due' || cfgMode === 'flashcard' ? 1 : 2;
     if (pool.length < minWords) {
       setToast(wordSel === 'due' ? '今日の復習はもうありません' : '対象単語が不足しています');
       return;
@@ -1576,20 +1579,16 @@ export default function App() {
                   ))}
                 </View>
 
+                {/* 苦手はまず「答えを思い出せるか」を鍛えたいので、選択肢から選ぶ4択ではなく
+                    フラッシュカードで開く。4択は正解が並ぶぶん、思い出せなくても消去法で当たってしまい
+                    苦手なままの語が「できた」ことになってしまう。
+                    設定画面のモードは cfgMode で決まるので、ここを 'flashcard' にすれば
+                    そのままフラッシュカードの設定（苦手を選んだ状態）が開く。 */}
                 <Btn
                   label="苦手克服モードで学習"
                   tone="lineRed"
-                  icon="brain"
-                  onPress={() => {
-                    setCfgMode('quiz');
-                    setWordSel('weak');
-                    setRStart(1);
-                    setREnd(words.length);
-                    setRST('1');
-                    setRET(String(words.length));
-                    setNumQ(9999);
-                    setScr('config');
-                  }}
+                  icon="layers-outline"
+                  onPress={() => openConfig('flashcard', 'weak')}
                   style={{ marginTop: SP[3] }}
                 />
               </Sheet>
