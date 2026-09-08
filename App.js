@@ -66,6 +66,8 @@ import {
   LEVELS,
   inLevel,
   isWeak,
+  markDayStart,
+  levelDeltaToday,
   isJustMissed,
   isNew,
   parseLine,
@@ -536,6 +538,9 @@ export default function App() {
     return m;
   }, [words]);
 
+  // 今日の段階ごとの増減（統計の「レベル分布」の +2 / -3）。数え方は levelDeltaToday を参照
+  const lvDelta = useMemo(() => levelDeltaToday(words, getToday()), [words]);
+
   // 上の6段階を3つに丸めたもの（ホームの内訳と統計の「習熟度の内訳」が使う）。
   // 覚えた＋練習中＋未学習 は必ず全語数に一致する。lvCount を数え直さず足すだけ。
   const rollup = useMemo(() => {
@@ -745,8 +750,11 @@ export default function App() {
   const updWord = (id, ok, mode = 'quiz', elapsedMs) => {
     const td = getToday();
     setWords((ws) =>
-      ws.map((w) => {
-        if (w.id !== id) return w;
+      ws.map((w0) => {
+        if (w0.id !== id) return w0;
+        // 今日はじめて答える語なら、書き換える前の姿を控える（統計の「今日の増減」用）。
+        // 値はここから先も w0 と同じなので、以降の計算はどちらを読んでも変わらない
+        const w = markDayStart(w0, td);
         const { progress, streak: ns } = calcProg(w, ok, mode, elapsedMs);
         // 次回復習日は **streak を更新する前の w** から計算する。
         // nextSchedule は w.streak を「これまでの連続正解数」として読むため、
@@ -841,8 +849,11 @@ export default function App() {
 
   const startFromConfig = () => {
     const pool = getPool();
-    // 復習モードは「今日ぶんを終わらせる」のが目的なので、残り1語でも始められる
-    const minWords = wordSel === 'due' ? 1 : 2;
+    // 復習モードは「今日ぶんを終わらせる」のが目的なので、残り1語でも始められる。
+    // フラッシュカードも他の語と比べる必要がない（選択肢を作らない）ので1語で成立する。
+    // ホームの「苦手克服モードで学習」は苦手が1語でも出るボタンなので、
+    // ここを 2 のままにすると押しても「対象単語が不足しています」で行き止まりになる。
+    const minWords = wordSel === 'due' || cfgMode === 'flashcard' ? 1 : 2;
     if (pool.length < minWords) {
       setToast(wordSel === 'due' ? '今日の復習はもうありません' : '対象単語が不足しています');
       return;
@@ -1576,20 +1587,16 @@ export default function App() {
                   ))}
                 </View>
 
+                {/* 苦手はまず「答えを思い出せるか」を鍛えたいので、選択肢から選ぶ4択ではなく
+                    フラッシュカードで開く。4択は正解が並ぶぶん、思い出せなくても消去法で当たってしまい
+                    苦手なままの語が「できた」ことになってしまう。
+                    設定画面のモードは cfgMode で決まるので、ここを 'flashcard' にすれば
+                    そのままフラッシュカードの設定（苦手を選んだ状態）が開く。 */}
                 <Btn
                   label="苦手克服モードで学習"
                   tone="lineRed"
-                  icon="brain"
-                  onPress={() => {
-                    setCfgMode('quiz');
-                    setWordSel('weak');
-                    setRStart(1);
-                    setREnd(words.length);
-                    setRST('1');
-                    setRET(String(words.length));
-                    setNumQ(9999);
-                    setScr('config');
-                  }}
+                  icon="layers-outline"
+                  onPress={() => openConfig('flashcard', 'weak')}
                   style={{ marginTop: SP[3] }}
                 />
               </Sheet>
@@ -2118,11 +2125,9 @@ export default function App() {
                 if (Math.abs(dragOff) < 5) setFlipped(!flipped);
               }}
             >
-              {/* ノートの1ページ。いま見てほしい1枚なので左端に藍の縦罫、その内側に朱のマージン罫 */}
-              {/* この画面の主役。左端の縦罫は朱の「マージン罫」1本だけにする
-                  （藍の mark を足すと縦線が2本並んでノートに見えなくなる） */}
+              {/* この画面の主役。カードの中は単語と意味だけにして、縦罫は引かない。
+                  以前は左端に朱のマージン罫を1本入れていたが、単語を読むときに目に入って邪魔だった */}
               <Sheet className="justify-center" style={{ backgroundColor: bgTint, minHeight: 280 }}>
-                <View style={{ position: 'absolute', left: 22, top: 0, bottom: 0, width: 1, backgroundColor: C.accentTint }} />
                 <View className="items-center" style={{ paddingHorizontal: SP[5], paddingVertical: SP[5] }}>
                   <View style={{ marginBottom: SP[4] }}>
                     <LvBadge w={w} />
@@ -3849,10 +3854,27 @@ export default function App() {
     // 語数は単語帳の絞り込みと同じ lvCount を使う。同じ数を2通りに数えると必ずずれる。
     const bandLabel = (lv) =>
       `${lv.name}(${lv.max === Infinity ? `${lv.min}%↑` : `${lv.min}-${lv.max - 1}%`}${lv.min === 0 ? '触れた' : ''})`;
+    // 今日の増減。`upIsBad` は「増えるとまずい行」（要復習・未学習・苦手）。
+    // 色は 良い方向＝苔（C.success）／悪い方向＝朱（C.accent）。中間の段階は上下どちらとも
+    // 言えない（要復習から上がってきたのか、定着から落ちてきたのか分からない）ので色を付けない。
     const lvDist = [
-      ...[...LEVELS].reverse().map((lv) => ({ name: bandLabel(lv), count: lvCount[lv.k], barColor: lv.barColor })),
-      { name: '未学習(未着手)', count: lvCount.new, barColor: C.lv0 },
+      ...[...LEVELS].reverse().map((lv) => ({
+        name: bandLabel(lv),
+        count: lvCount[lv.k],
+        barColor: lv.barColor,
+        delta: lvDelta.counts[lv.k],
+        upIsBad: lv.k === 'lv_review',
+        upIsGood: lv.min >= LEARNED_MIN,
+      })),
+      { name: '未学習(未着手)', count: lvCount.new, barColor: C.lv0, delta: lvDelta.counts.new, upIsBad: true, upIsGood: false },
     ];
+    const fmtDelta = (d) => (d > 0 ? `+${d}` : d < 0 ? `-${-d}` : '±0');
+    const deltaColor = (d, upIsBad, upIsGood) => {
+      if (d === 0) return C.muted;
+      if (upIsBad) return d > 0 ? C.accent : C.success;
+      if (upIsGood) return d > 0 ? C.success : C.accent;
+      return C.text;
+    };
     return (
       <ScrollView>
         {/* 画面の顔。紫のベタ帯はやめ、紙に見出しを置いて罫線で締める */}
@@ -4212,7 +4234,28 @@ export default function App() {
 
             {/* レベル分布。横棒は藍1色の濃淡（要復習だけ朱）。高さ10px・角丸2px */}
             <Sheet className="p-4">
-              <SectionTitle icon="stats-chart-outline">レベル分布</SectionTitle>
+              {/* 右上に「今日の苦手の増減」。苦手は段階（LEVELS）とは別の判定なので、
+                  行には無く、ここに1つだけ出す。今日まだ答えていなければ増減は出さない */}
+              <SectionTitle
+                icon="stats-chart-outline"
+                right={
+                  lvDelta.answered > 0 ? (
+                    <View className="flex-row items-baseline" style={{ gap: SP[1] }}>
+                      <Text className="text-xs text-ink-soft">今日の苦手</Text>
+                      <Text
+                        className="text-sm"
+                        style={[NUM_BOLD, { color: deltaColor(lvDelta.weak, true, false) }]}
+                      >
+                        {fmtDelta(lvDelta.weak)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className="text-xs text-ink-soft">今日はまだ動きなし</Text>
+                  )
+                }
+              >
+                レベル分布
+              </SectionTitle>
               <View style={{ gap: SP[2] }}>
                 {lvDist.map((lv, i) => {
                   const pct = words.length ? (lv.count / words.length) * 100 : 0;
@@ -4230,6 +4273,15 @@ export default function App() {
                       <Text className="text-xs text-ink text-right" style={[NUM_BOLD, { width: 30 }]}>
                         {lv.count}
                       </Text>
+                      {/* 今日の増減。段階が動いた語だけ数えるので、答えても動かなければ ±0 */}
+                      {lvDelta.answered > 0 && (
+                        <Text
+                          className="text-xs text-right"
+                          style={[NUM_BOLD, { width: 30, color: deltaColor(lv.delta, lv.upIsBad, lv.upIsGood) }]}
+                        >
+                          {fmtDelta(lv.delta)}
+                        </Text>
+                      )}
                     </View>
                   );
                 })}
