@@ -350,6 +350,8 @@ export default function App() {
   const [newJa, setNewJa] = useState('');
   const [search, setSearch] = useState('');
   const [editId, setEditId] = useState(null);
+  // 単語帳（管理シート）で開いている行。タップで意味・例文・訳を省略なしで見せる
+  const [openId, setOpenId] = useState(null);
   const [editEn, setEditEn] = useState('');
   const [editJa, setEditJa] = useState('');
   const [showBulk, setShowBulk] = useState(false);
@@ -3139,6 +3141,7 @@ export default function App() {
       }
       const weak = isWeak(w);
       const dueNow = w.due ? isDue(w, getToday()) : false;
+      const open = openId === w.id;
       // 期限を過ぎたぶんだけ朱（赤ペン）。今日ぶんは藍。ホーム画面の「◯日超過」と同じ決め方に揃える
       const overdue = w.due ? daysBetween(getToday(), w.due) < 0 : false;
       return (
@@ -3153,9 +3156,17 @@ export default function App() {
               {words.indexOf(w) + 1}
             </Text>
 
-            <View className="flex-1">
+            {/* 左側（単語・意味・例文）をタップすると、その行だけ省略なしで開く。
+                一覧では意味2行・例文2行で切っているので、長い意味や例文の訳はここで読む。
+                右側の書き直し／消すボタンは別のタップ先なので巻き込まない */}
+            <Pressable
+              onPress={() => setOpenId(open ? null : w.id)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: open }}
+              className="flex-1"
+            >
               <View className="flex-row items-center" style={{ gap: SP[1] }}>
-                <Text className="text-base text-ink flex-1" style={{ fontFamily: F.enSemi }} numberOfLines={1}>
+                <Text className="text-base text-ink flex-1" style={{ fontFamily: F.enSemi }} numberOfLines={open ? undefined : 1}>
                   {w.en}
                 </Text>
                 <SpeakButton word={w.en} size={16} color={C.primary} hitSlop={10} />
@@ -3166,17 +3177,29 @@ export default function App() {
                   </View>
                 ) : null}
               </View>
-              <Text className="text-sm text-ink-soft" style={{ lineHeight: 21 }} numberOfLines={2}>
+              <Text className="text-sm text-ink-soft" style={{ lineHeight: 21 }} numberOfLines={open ? undefined : 2}>
                 {w.ja}
               </Text>
-              {/* 例文（あれば）。一覧では英文だけを2行まで。訳はフラッシュカードの裏で読める */}
+              {/* 例文（あれば）。閉じているときは英文だけを2行まで。開くと全文と日本語訳 */}
               {(() => {
                 const ex = exampleFor(w);
-                return ex ? (
+                if (!ex) return null;
+                return open ? (
+                  <View style={{ marginTop: SP[2], paddingLeft: SP[2], borderLeftWidth: 2, borderLeftColor: C.border }}>
+                    <Text className="text-sm text-ink" style={{ fontFamily: F.en, lineHeight: 21 }}>
+                      {ex.en}
+                    </Text>
+                    {ex.ja ? (
+                      <Text className="text-xs text-ink-soft" style={{ lineHeight: 18, marginTop: 2 }}>
+                        {ex.ja}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : (
                   <Text className="text-xs text-ink-soft" style={{ fontFamily: F.en, lineHeight: 17, marginTop: 2 }} numberOfLines={2}>
                     {ex.en}
                   </Text>
-                ) : null;
+                );
               })()}
               <View className="flex-row items-center" style={{ gap: SP[2], marginTop: SP[1], flexWrap: 'wrap' }}>
                 <View className="flex-row items-center" style={{ gap: SP[1] }}>
@@ -3203,7 +3226,7 @@ export default function App() {
                   </View>
                 ) : null}
               </View>
-            </View>
+            </Pressable>
 
             <View style={{ alignItems: 'flex-end', gap: SP[1] }}>
               <View className="flex-row items-center" style={{ gap: SP[1] }}>
@@ -3380,6 +3403,7 @@ export default function App() {
                 data={filtered}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={renderWordItem}
+                extraData={openId}
                 ListEmptyComponent={emptyView}
                 initialNumToRender={20}
                 windowSize={10}
