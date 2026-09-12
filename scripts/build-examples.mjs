@@ -2,12 +2,15 @@
 //
 //   npm run build:examples                          組み込みの単語で、例文がまだ無いものを生成
 //   npm run build:examples -- --from 1900.json      アプリから書き出した JSON の単語も対象に加える
+//   npm run build:examples -- --from list.txt       テキストの単語リスト（1行1語・「apple りんご」の形）でも可
 //   npm run build:examples -- --words a,b,c         指定した単語も対象に加える（意味は空でよい）
 //   npm run build:examples -- --model gemma3:12b    使うモデルを変える（既定は下の DEFAULT_MODEL）
 //   npm run build:examples -- --force               既にある例文も作り直す
 //   npm run build:examples -- --limit 50            先頭から N 語だけ（試しに回すとき）
 //
 // --from は、アプリの「保存」で書き出した JSON をそのまま渡せる（v1 / v2 どちらも可）。
+// JSON でなければテキストの単語リストとして読む。区切りはアプリの一括追加と同じ
+// （タブ / 全角スペース / カンマ / 半角スペース。行頭の番号や印は落とす。parseLine を使う）。
 // スマホで単語を追加 → 保存 → その JSON を Mac に持ってきて --from で渡す、
 // という流れで、自分で足した単語にも例文を用意できる。build-audio.mjs と同じ流儀。
 //
@@ -28,6 +31,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseLine } from '../src/lib/logic.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MAP_FILE = join(ROOT, 'src/lib/exampleMap.json');
@@ -82,14 +86,35 @@ function readInitWords() {
   return out;
 }
 
-/** アプリが書き出した JSON（v1: {w:[...]} / v2: {decks:[{words:[...]}]}）から { en, ja } を抜き出す */
+/**
+ * --from のファイルから { en, ja } を抜き出す。
+ * アプリが書き出した JSON（v1: {w:[...]} / v2: {decks:[{words:[...]}]}）か、
+ * JSON でなければテキストの単語リスト（1行1語）として読む。
+ */
 function readExportedWords(path) {
   const abs = resolve(path);
   if (!existsSync(abs)) {
     console.error(`--from のファイルが見つかりません: ${abs}`);
     process.exit(1);
   }
-  const data = JSON.parse(readFileSync(abs, 'utf8'));
+  const raw = readFileSync(abs, 'utf8');
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    // JSON でない → テキストの単語リスト。アプリの一括追加と同じ読み方
+    const out = raw
+      .split(/\r?\n/)
+      .map((l) => parseLine(l))
+      .filter(Boolean)
+      // タブ区切りだと行頭の「1.」が残ることがあるので、番号だけの先頭は落とす
+      .map((w) => ({ ...w, en: w.en.replace(/^\s*\d+[.)]?\s+/, '') }));
+    if (!out.length) {
+      console.error('テキストから単語を読み取れませんでした（「apple りんご」のように1行1語で）。');
+      process.exit(1);
+    }
+    return out;
+  }
   const lists = [];
   if (Array.isArray(data.w)) lists.push(data.w);
   if (Array.isArray(data.decks)) for (const d of data.decks) if (Array.isArray(d.words)) lists.push(d.words);
