@@ -7,9 +7,33 @@
     "en": "His answer was so ambiguous that nobody knew whether he agreed.",
     "ja": "彼の答えはとても曖昧で、賛成しているのかどうか誰にも分からなかった。"
   },
+  "ask": {
+    "en": "Don’t hesitate to ask for assistance if you encounter any difficulties with the assignment.",
+    "ja": "課題で何か困ったことがあれば、遠慮なく助けを求めてください。"
+  },
   "benevolent": {
     "en": "The benevolent old man donated most of his money to the village school.",
     "ja": "その慈悲深い老人は、財産の大半を村の学校に寄付した。"
+  },
+  "build": {
+    "en": "The construction company plans to build a new shopping mall downtown next year.",
+    "ja": "建設会社は来年、市内に新しいショッピングモールを建てる計画です。"
+  },
+  "buy": {
+    "en": "I’m going to buy a new laptop because my old one is very slow.",
+    "ja": "古いパソコンがとても遅いので、新しいパソコンを買うつもりです。"
+  },
+  "change": {
+    "en": "I need to change my clothes because they got dirty playing soccer.",
+    "ja": "サッカーで泥だらけになったので、服を着替える必要があります。"
+  },
+  "close": {
+    "en": "Please close the window; it’s getting cold in here, and I can feel the draft.",
+    "ja": "窓を閉めてください。ここが寒くて、風を感じます。"
+  },
+  "color": {
+    "en": "The vibrant color of the autumn leaves was truly breathtaking.",
+    "ja": "紅葉の鮮やかな色は本当に目を見張るものがありました。"
   },
   "comprehensive": {
     "en": "The report gives a comprehensive overview of the country's energy policy.",
@@ -19,6 +43,14 @@
     "en": "She sat by the window and contemplated what to do after graduation.",
     "ja": "彼女は窓辺に座り、卒業後に何をするか熟考した。"
   },
+  "cook": {
+    "en": "My mom can cook delicious Italian food using fresh ingredients from the market.",
+    "ja": "私の母は、市場から新鮮な材料を使って美味しいイタリア料理を作ることができます。"
+  },
+  "country": {
+    "en": "My dream is to travel around the world and experience each country's traditions.",
+    "ja": "私の夢は世界中を旅して、それぞれの国の伝統を体験することです。"
+  },
   "diligent": {
     "en": "A diligent student reviews the lesson every evening, not just before the exam.",
     "ja": "勤勉な生徒は試験前だけでなく、毎晩その日の授業を復習する。"
@@ -27,6 +59,14 @@
     "en": "The eloquent speaker moved the audience with only a few simple words.",
     "ja": "その雄弁な話し手は、わずかな簡単な言葉で聴衆を感動させた。"
   },
+  "enjoy": {
+    "en": "I really enjoy listening to classical music while I’m studying for exams.",
+    "ja": "試験勉強をしている間はクラシック音楽を聴くのがとても好きです。"
+  },
+  "example": {
+    "en": "For example, many students find studying in a library to be very helpful.",
+    "ja": "例えば、多くの学生にとって図書館で勉強することが非常に役に立つと感じています。"
+  },
   "fluctuate": {
     "en": "Vegetable prices fluctuate greatly depending on the weather each year.",
     "ja": "野菜の価格は毎年の天候によって大きく変動する。"
@@ -34,6 +74,30 @@
   "gregarious": {
     "en": "My brother is so gregarious that he makes friends wherever he goes.",
     "ja": "兄はとても社交的で、どこへ行っても友達を作る。"
+  },
+  "grow": {
+    "en": "The plants in the garden grow quickly with plenty of sunshine and water.",
+    "ja": "庭の植物は、日差しと水がたくさんあればすぐに成長します。"
+  },
+  "happen": {
+    "en": "It's unfortunate that such a terrible accident happened on the busy highway.",
+    "ja": "交通量の多い高速道路でそのようなひどい事故が起こったのは残念です。"
+  },
+  "health": {
+    "en": "Maintaining good health requires a balanced diet and regular exercise.",
+    "ja": "健康を維持するには、バランスの取れた食事と定期的な運動が必要です。"
+  },
+  "help": {
+    "en": "Could you please help me carry these heavy boxes upstairs, if you’re able?",
+    "ja": "もし可能であれば、これらの重い箱を2階まで運ぶのを手伝ってもらえますか？"
+  },
+  "hold": {
+    "en": "Please hold my hand tightly as we cross this busy street together.",
+    "ja": "この交通量の多い道を一緒に渡る時は、私の手をしっかりと握ってください。"
+  },
+  "hope": {
+    "en": "I hope to visit Japan again someday and experience its unique culture.",
+    "ja": "いつかまた日本を訪れて、その独特な文化を体験することを願っています。"
   },
   "hypothesis": {
     "en": "The scientists tested their hypothesis with a series of careful experiments.",
@@ -51,13 +115,61 @@
     "en": "She has a keen interest in astronomy and often stays up to watch the stars.",
     "ja": "彼女は天文学に熱心な関心があり、よく夜更かしして星を眺める。"
   },
+  "language": {
+    "en": "Learning a new language can open doors to different cultures and experiences.",
+    "ja": "新しい言語を学ぶことは、さまざまな文化や経験への扉を開きます。"
+  },
+  "learn": {
+    "en": "She wants to learn French before she travels to Paris next summer.",
+    "ja": "彼女は来年の夏にパリへ旅行する前にフランス語を学びたいと思っています。"
+  },
+  "life": {
+    "en": "She dedicated her life to helping animals and protecting the environment.",
+    "ja": "彼女は生涯を動物たちの救助と環境保護に捧げました。"
+  },
+  "line": {
+    "en": "Please stand in a single line to receive your tickets at the entrance.",
+    "ja": "チケットを受け取るために、入口で一列に並んでください。"
+  },
+  "listen": {
+    "en": "Could you please listen carefully to the instructions before starting the experiment?",
+    "ja": "実験を始める前に、指示を注意深く聞いていただけますか？"
+  },
+  "live": {
+    "en": "My grandparents live in a small cottage near the beautiful countryside.",
+    "ja": "私の祖父母は、美しい田舎の近くにある小さなコテージに住んでいます。"
+  },
+  "lose": {
+    "en": "Don’t lose your passport; it's essential for international travel and identification.",
+    "ja": "パスポートをなくさないでください。国際旅行や身分証明書には必須です。"
+  },
   "lucrative": {
     "en": "Selling used textbooks online turned out to be a surprisingly lucrative business.",
     "ja": "中古の教科書をネットで売るのは、意外なほど利益の多い商売だと分かった。"
   },
+  "mean": {
+    "en": "What does this complicated word mean in the context of this academic paper?",
+    "ja": "この学術論文の文脈で、この難しい言葉は何を意味するのですか？"
+  },
+  "meet": {
+    "en": "Let's meet for coffee next Tuesday at the cafe near your office.",
+    "ja": "来週の火曜日にあなたのオフィス近くのカフェでコーヒーでも飲みに行きましょう。"
+  },
   "meticulous": {
     "en": "The editor was meticulous, checking every comma before the book was printed.",
     "ja": "その編集者は細心で、本が印刷される前にすべてのコンマを確認した。"
+  },
+  "minute": {
+    "en": "Please wait just a minute while I finish this important email.",
+    "ja": "今、この重要なメールを書き終えるので、ほんの一分お待ちください。"
+  },
+  "move": {
+    "en": "The powerful speech moved the audience to tears with its emotional appeal.",
+    "ja": "その感動的なスピーチは聴衆を涙で感動させました。"
+  },
+  "need": {
+    "en": "We need to finish this project by Friday so we can present it to the team.",
+    "ja": "金曜日までにこのプロジェクトを終わらせる必要があります。チームに発表するためです。"
   },
   "notorious": {
     "en": "The road is notorious for its traffic jams during the holiday season.",
@@ -67,17 +179,53 @@
     "en": "Many people think paper maps are obsolete now that everyone has a smartphone.",
     "ja": "誰もがスマートフォンを持つ今、紙の地図は時代遅れだと多くの人が考えている。"
   },
+  "part": {
+    "en": "Playing the guitar is just one part of her passion for music.",
+    "ja": "ギターを弾くことは、彼女の音楽への情熱の一部に過ぎません。"
+  },
   "persevere": {
     "en": "Even after failing twice, he persevered and finally passed the exam.",
     "ja": "2回落ちた後も彼は忍耐強く続け、ついに試験に合格した。"
+  },
+  "place": {
+    "en": "This quiet place offers a peaceful escape from the hustle and bustle of the city.",
+    "ja": "この静かな場所は、都会の喧騒からの穏やかな逃避を提供してくれます。"
+  },
+  "plan": {
+    "en": "We need to plan our itinerary carefully before we embark on this long journey.",
+    "ja": "この長い旅に出かける前に、注意深く旅程を計画する必要があります。"
+  },
+  "point": {
+    "en": "Let's get straight to the point and discuss the main issues at hand.",
+    "ja": "本題に入り、現在抱えている主な問題について話し合いましょう。"
   },
   "pragmatic": {
     "en": "Instead of arguing about theory, the manager took a pragmatic approach to the problem.",
     "ja": "理論について議論する代わりに、その管理者は問題に実用的な方法で取り組んだ。"
   },
+  "problem": {
+    "en": "The biggest problem facing our society is climate change and its consequences.",
+    "ja": "私たちの社会が直面している最大の課題は、気候変動とその結果です。"
+  },
   "profound": {
     "en": "The book had a profound influence on how I think about education.",
     "ja": "その本は、私の教育についての考え方に深い影響を与えた。"
+  },
+  "question": {
+    "en": "Could you please answer this question honestly and provide supporting details?",
+    "ja": "この質問には、正直に答えて、根拠となる詳細を教えてください。"
+  },
+  "rain": {
+    "en": "We decided to postpone the picnic because heavy rain is expected tomorrow.",
+    "ja": "明日大雨が予想されるので、ピクニックの日付を変更することにしました。"
+  },
+  "reason": {
+    "en": "The main reason for the delay was unexpected equipment failure.",
+    "ja": "遅延の主な理由は予期せぬ機器の故障でした。"
+  },
+  "report": {
+    "en": "The team will submit a detailed report on the project's progress next week.",
+    "ja": "チームは来週、プロジェクトの進捗状況に関する詳細な報告書を提出します。"
   },
   "resilient": {
     "en": "Children are often more resilient than adults after a difficult experience.",
@@ -87,9 +235,45 @@
     "en": "The customs officer scrutinized my passport for almost a minute.",
     "ja": "税関職員は私のパスポートを1分近く精査した。"
   },
+  "sound": {
+    "en": "The old radio sounded scratchy, but it still played my favorite songs.",
+    "ja": "古いラジオはノイズが多かったけれど、それでも私の好きな曲を流してくれた。"
+  },
+  "speak": {
+    "en": "I need to speak with my professor about my research project this week.",
+    "ja": "今週は研究プロジェクトについて教授と話す必要があります。"
+  },
+  "stand": {
+    "en": "I can’t stand the smell of burnt toast; it’s absolutely dreadful.",
+    "ja": "焦げたトーストの匂いは我慢できません。本当にひどいです。"
+  },
+  "stay": {
+    "en": "We plan to stay at a cozy bed and breakfast during our vacation next month.",
+    "ja": "来月は休暇中に居心地の良いB&Bに滞在する予定です。"
+  },
+  "talk": {
+    "en": "They began to talk about their childhood memories and shared many funny stories.",
+    "ja": "彼らは子供の頃の思い出について話し始め、たくさんの面白い話を共有しました。"
+  },
+  "teach": {
+    "en": "The experienced professor will teach a challenging course on advanced physics.",
+    "ja": "経験豊富な教授が、高度な物理学に関する難しいコースを担当します。"
+  },
   "tentative": {
     "en": "We made a tentative plan to meet on Friday, but it may change.",
     "ja": "金曜日に会う暫定的な計画を立てたが、変わるかもしれない。"
+  },
+  "thing": {
+    "en": "The most important thing is to remain calm during a crisis situation.",
+    "ja": "最も重要なことは、危機的な状況では冷静さを保つことです。"
+  },
+  "travel": {
+    "en": "Many young people travel abroad after graduating from university to experience different cultures.",
+    "ja": "多くの若者は大学卒業後に海外旅行をして、様々な文化を経験します。"
+  },
+  "trip": {
+    "en": "We are planning a long road trip across the American Southwest next summer.",
+    "ja": "来夏はアメリカ南西部を横断する長距離旅行を計画しています。"
   },
   "trivial": {
     "en": "They argued for an hour over a trivial matter like where to sit.",
@@ -107,9 +291,25 @@
     "en": "I still have a vivid memory of my first day at high school.",
     "ja": "高校の初日のことを今でも鮮明に覚えている。"
   },
+  "wait": {
+    "en": "Please wait patiently; the doctor will see you shortly, as scheduled.",
+    "ja": "お待ちください。予定通り、医師はすぐに診察します。"
+  },
   "whimsical": {
     "en": "The artist is known for her whimsical paintings of cats wearing hats.",
     "ja": "その画家は帽子をかぶった猫の気まぐれな絵で知られている。"
+  },
+  "word": {
+    "en": "I couldn't find the right word to express my feelings about the situation.",
+    "ja": "その状況に対する私の気持ちを表す適切な言葉が見つかりませんでした。"
+  },
+  "worry": {
+    "en": "I worry about my grandmother's health, but she seems to be doing well today.",
+    "ja": "祖母の健康を心配していますが、今日は元気そうに見えます。"
+  },
+  "write": {
+    "en": "I need to write a thank-you letter to my aunt for the lovely gift.",
+    "ja": "贈り物にとても感謝しているので、叔母さんに礼状を書かなければなりません。"
   },
   "yield": {
     "en": "This small farm yields enough rice to feed the whole village.",
