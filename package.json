@@ -8,7 +8,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:audio": "node scripts/build-audio.mjs",
-    "build:examples": "node scripts/build-examples.mjs"
+    "build:examples": "node --no-warnings scripts/build-examples.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/ibm-plex-mono": "^0.4.1",

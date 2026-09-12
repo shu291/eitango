@@ -7,6 +7,7 @@
 //   npm run build:examples -- --model gemma3:12b    使うモデルを変える（既定は下の DEFAULT_MODEL）
 //   npm run build:examples -- --force               既にある例文も作り直す
 //   npm run build:examples -- --limit 50            先頭から N 語だけ（試しに回すとき）
+//   npm run build:examples -- --batch 10            1回の問い合わせで何語まとめて作るか（既定 10。1 で1語ずつ）
 //
 // --from は、アプリの「保存」で書き出した JSON をそのまま渡せる（v1 / v2 どちらも可）。
 // JSON でなければテキストの単語リストとして読む。区切りはアプリの一括追加と同じ
@@ -46,6 +47,13 @@ const DEFAULT_MODEL = 'gemma3:12b';
 const DEFAULT_HOST = 'http://localhost:11434';
 /** 1 語につき何回まで作り直させるか（検査に通らなかったとき） */
 const MAX_TRIES = 4;
+/**
+ * 1回の問い合わせでまとめて作る語数。
+ * 1語ずつだと毎回のやりとりの無駄（プロンプトの読み込み・返事の立ち上がり）が大きく、
+ * 2万語だと 12B モデルで 17 時間近くかかる。10語まとめると 1/3 程度になる。
+ * まとめて作った中で検査に通らなかった語は、あとで1語ずつ作り直す。
+ */
+const DEFAULT_BATCH = 10;
 /** 何語ごとにファイルへ書き出すか（途中で止めても続きから再開できるように） */
 const SAVE_EVERY = 10;
 /** 例文の長さ（語数）の許容範囲。短すぎると用法が分からず、長すぎるとカードに収まらない */
@@ -64,6 +72,7 @@ const argValue = (name) => {
 const model = argValue('--model') || DEFAULT_MODEL;
 const host = (argValue('--host') || DEFAULT_HOST).replace(/\/$/, '');
 const limit = argValue('--limit') ? parseInt(argValue('--limit'), 10) : Infinity;
+const batchSize = Math.max(1, parseInt(argValue('--batch') || DEFAULT_BATCH, 10) || DEFAULT_BATCH);
 
 /** 単語 → 対応表のキー。src/lib/examples.js の keyOf と必ず揃えること。 */
 const keyOf = (word) => String(word ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
@@ -182,7 +191,23 @@ function buildPrompt(en, ja) {
   ].join('\n');
 }
 
-async function askOllama(en, ja) {
+/** まとめて聞くときのプロンプト。単語ごとの要件は buildPrompt と同じ */
+function buildBatchPrompt(words) {
+  const list = words.map((w, i) => `${i + 1}. "${w.en}"${w.ja ? ` — Japanese meaning to use: "${w.ja}"` : ''}`).join('\n');
+  return [
+    `Write ONE natural English example sentence for EACH of the following ${words.length} words.`,
+    list,
+    'Requirements for every sentence:',
+    `- ${MIN_WORDS} to ${MAX_WORDS} words, one sentence, everyday or academic context suitable for Japanese university entrance exams.`,
+    '- The word must appear in its sentence (inflected forms are fine) in exactly the meaning given.',
+    '- Do not explain the word. Do not use quotation marks around the word.',
+    '- Also give a natural Japanese translation of each sentence.',
+    'Answer in JSON only, one item per word, in the same order:',
+    '{"items": [{"word": "<word exactly as listed>", "en": "<sentence>", "ja": "<Japanese translation>"}, ...]}',
+  ].join('\n');
+}
+
+async function chat(userContent) {
   const res = await fetch(`${host}/api/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -193,7 +218,7 @@ async function askOllama(en, ja) {
       options: { temperature: 0.7 },
       messages: [
         { role: 'system', content: 'You are an English teacher writing example sentences for Japanese high school students. Reply with JSON only.' },
-        { role: 'user', content: buildPrompt(en, ja) },
+        { role: 'user', content: userContent },
       ],
     }),
   });
@@ -204,6 +229,35 @@ async function askOllama(en, ja) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error(`JSON が見つかりません: ${text.slice(0, 120)}`);
   return JSON.parse(m[0]);
+}
+
+/**
+ * まとめて作る。返ってきたものを単語ごとに検査し、合格した語だけ { key: {en, ja} } で返す。
+ * 足りない・不合格の語は呼び出し側が1語ずつ作り直す。
+ */
+async function askOllamaBatch(words) {
+  const out = {};
+  let data;
+  try {
+    data = await chat(buildBatchPrompt(words));
+  } catch (e) {
+    console.log(`  （まとめ聞きに失敗: ${e.message.slice(0, 80)}。1語ずつに切り替えます）`);
+    return out;
+  }
+  const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+  items.forEach((it, i) => {
+    // word で突き合わせ、無ければ順番で
+    const byWord = it && typeof it.word === 'string' ? words.find((w) => keyOf(w.en) === keyOf(it.word)) : null;
+    const w = byWord || words[i];
+    if (!w || out[w.key]) return;
+    if (validate(w.en, it)) return;
+    out[w.key] = { en: String(it.en).replace(/\s+/g, ' ').trim(), ja: String(it.ja).replace(/\s+/g, ' ').trim() };
+  });
+  return out;
+}
+
+async function askOllama(en, ja) {
+  return chat(buildPrompt(en, ja));
 }
 
 async function checkOllama() {
@@ -245,12 +299,40 @@ async function main() {
   if (!targets.length) return;
 
   await checkOllama();
-  console.log(`モデル: ${model} / 保存先: ${MAP_FILE}`);
+  console.log(`モデル: ${model} / ${batchSize} 語ずつ / 保存先: ${MAP_FILE}`);
 
   const started = Date.now();
   let done = 0;
   let failed = 0;
-  for (const w of targets) {
+  const report = (w, ex) => {
+    done++;
+    console.log(`[${done}/${targets.length}] ${w.en}: ${ex.en}`);
+    if (done % SAVE_EVERY === 0) {
+      saveMap(map);
+      const per = (Date.now() - started) / done;
+      const left = Math.round(((targets.length - done) * per) / 60000);
+      console.log(`  …保存しました（残り約 ${left} 分）`);
+    }
+  };
+
+  // 1. まとめて作る。合格した語はここで確定
+  const leftovers = [];
+  if (batchSize > 1) {
+    for (let i = 0; i < targets.length; i += batchSize) {
+      const chunk = targets.slice(i, i + batchSize);
+      const got = await askOllamaBatch(chunk);
+      for (const w of chunk) {
+        if (got[w.key]) {
+          map[w.key] = got[w.key];
+          report(w, got[w.key]);
+        } else leftovers.push(w);
+      }
+    }
+    if (leftovers.length) console.log(`\nまとめ聞きで足りなかった ${leftovers.length} 語を1語ずつ作ります`);
+  } else leftovers.push(...targets);
+
+  // 2. 残りは1語ずつ（最大 MAX_TRIES 回まで作り直し）
+  for (const w of leftovers) {
     let ex = null;
     let lastReason = '';
     for (let t = 1; t <= MAX_TRIES && !ex; t++) {
@@ -263,19 +345,13 @@ async function main() {
         lastReason = e.message;
       }
     }
-    done++;
     if (ex) {
       map[w.key] = ex;
-      console.log(`[${done}/${targets.length}] ${w.en}: ${ex.en}`);
+      report(w, ex);
     } else {
       failed++;
+      done++;
       console.log(`[${done}/${targets.length}] ${w.en}: ✗ ${MAX_TRIES}回とも不合格（${lastReason}）`);
-    }
-    if (done % SAVE_EVERY === 0) {
-      saveMap(map);
-      const per = (Date.now() - started) / done;
-      const left = Math.round(((targets.length - done) * per) / 60000);
-      console.log(`  …保存しました（残り約 ${left} 分）`);
     }
   }
   saveMap(map);
