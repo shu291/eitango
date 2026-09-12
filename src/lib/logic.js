@@ -57,12 +57,18 @@ export const MODE_MULT = {
 /** 速さボーナスの境目（ミリ秒）と倍率 */
 const SPEED_FAST_MS = 1500; // これより速ければ最大倍率
 const SPEED_SLOW_MS = 8000; // これより遅ければ最小倍率
-const SPEED_MAX = 1.6;
-const SPEED_MIN = 0.8;
+/**
+ * 【2026-09-12 変更】1.6 → 1.25、0.8 → 0.7。
+ * フラッシュカードは MODE_MULT が 0.8 なので、速答の実効倍率は 0.8 × 1.25 = 1.0。
+ * つまり **一番速く答えても4択と同格まで**。以前は 0.8 × 1.6 = 1.28 で、
+ * 自己申告のフラッシュカードが、実際に答えを選ぶ4択より強い証拠として扱われていた。
+ */
+const SPEED_MAX = 1.25;
+const SPEED_MIN = 0.7;
 
 /**
  * 正解までの速さから、獲得点の倍率を求める。
- * 1.5秒以内なら 1.6倍、8秒以上かかると 0.8倍。その間はなだらかに変化する。
+ * 1.5秒以内なら 1.25倍、8秒以上かかると 0.7倍。その間はなだらかに変化する。
  *
  * すぐ答えられた＝しっかり覚えている、という考え方。時間が渡されない場合や
  * 数値でない場合は 1（＝影響なし）を返すので、時間を測っていないモードは従来どおり。
@@ -78,13 +84,58 @@ export const speedFactor = (ms) => {
   return SPEED_MAX - (SPEED_MAX - SPEED_MIN) * t;
 };
 
+/** 間隔係数: 同じ日に2回目以降の正解に掛ける倍率 */
+export const SPACING_SAME_DAY = 0.4;
+/** 間隔係数の下限（復習日よりだいぶ早く答えたとき） */
+export const SPACING_MIN = 0.5;
+/** 間隔係数の上限（復習日をだいぶ越えてから思い出せたとき） */
+export const SPACING_MAX = 1.5;
+
 /**
- * @param {object} word
+ * 「いつ答えたか」で正解時の獲得点を増減する係数（間隔係数）。
+ *
+ * 【2026-09-12 追加】それまでの習熟度は **同じ日に何度正解しても満額** 上がっていた。
+ * 朝・昼・夜と3セッション回せば初見の語が1日で「完璧」になるが、1日に3回思い出せたことと
+ * 1か月後に思い出せることは別物。間隔反復（`ivl` / `due`）の仕組みはあるのに、
+ * 習熟度の計算はそれを見ていなかった。
+ *
+ * 考え方は「忘れそうな頃に思い出せた」を一番評価する:
+ *   - 初めて答える語（lastReviewed が無い） … 1（影響なし）
+ *   - 今日すでに答えた語                     … SPACING_SAME_DAY（0.4）
+ *   - それ以外 … 前回から経った日数 ÷ 前回決めた間隔（ivl）。
+ *       復習日ぴったりなら 1、早めなら割引（最低 0.5）、越えていれば割増（最大 1.5）
+ *
+ * 不正解の減点には掛けない（早めに答えて間違えたのは、単に覚えていないということ）。
+ *
+ * @param {{lastReviewed?: string, ivl?: number}} w 単語（更新前）
+ * @param {string} [todayStr] 'YYYY-MM-DD'。渡さなければ 1（影響なし）
+ * @returns {number}
+ */
+export const spacingFactor = (w, todayStr) => {
+  if (!todayStr || !w || !w.lastReviewed) return 1;
+  const days = daysBetween(w.lastReviewed, todayStr);
+  if (days === null) return 1;
+  if (days <= 0) return SPACING_SAME_DAY;
+  const ivl = typeof w.ivl === 'number' && w.ivl > 0 ? w.ivl : 1;
+  return clamp(days / ivl, SPACING_MIN, SPACING_MAX);
+};
+
+/**
+ * 習熟度の加減算。
+ *
+ * 【2026-09-12 変更】
+ *   - 正解時の獲得点に間隔係数（spacingFactor）を掛けるようにした。`todayStr` を渡したときだけ効く
+ *   - 不正解の減点を中〜上の帯域で増やした（<60: 12→16、<80: 16→20、それ以上: 20→24）。
+ *     以前は ○○× を繰り返す（正答率67%）語が 52→68 と上がり続けて「定着」に届いていた。
+ *     今は定着の境目あたりで頭打ちになる
+ *
+ * @param {object} word 単語（更新前）
  * @param {boolean} ok
  * @param {string} mode
  * @param {number} [elapsedMs] 答えるまでにかかった時間。渡すと**正解時だけ**速さで増減する
+ * @param {string} [todayStr] 今日。渡すと**正解時だけ**間隔係数で増減する
  */
-export const calcProg = (word, ok, mode = 'quiz', elapsedMs) => {
+export const calcProg = (word, ok, mode = 'quiz', elapsedMs, todayStr) => {
   const p = word.progress || 0;
   const s = word.streak || 0;
   const m = MODE_MULT[mode] || 1;
@@ -92,15 +143,15 @@ export const calcProg = (word, ok, mode = 'quiz', elapsedMs) => {
     const isFirstCorrect = (word.correct || 0) === 0;
     let base = p < 20 ? 15 : p < 40 ? 12 : p < 60 ? 10 : p < 80 ? 7 : 4;
     base += Math.min(s * 2, 6);
-    // 速さボーナスは正解時のみ。間違えたときの減点は速さで変えない
+    // 速さボーナス・間隔係数は正解時のみ。間違えたときの減点は変えない
     // （早とちりで間違えた人の減点が軽くなってしまうため）
-    let gain = Math.round(base * m * speedFactor(elapsedMs));
+    let gain = Math.round(base * m * speedFactor(elapsedMs) * spacingFactor(word, todayStr));
     if (p > 90) gain = Math.max(1, Math.floor(gain / 2));
     let newProgress = Math.min(100, p + gain);
     if (isFirstCorrect) newProgress = Math.max(20, newProgress);
     return { progress: newProgress, streak: s + 1 };
   } else {
-    let base = p < 20 ? 3 : p < 40 ? 8 : p < 60 ? 12 : p < 80 ? 16 : 20;
+    let base = p < 20 ? 3 : p < 40 ? 8 : p < 60 ? 16 : p < 80 ? 20 : 24;
     if (s >= 3) base += 3;
     let loss = Math.round(base * (0.7 + m * 0.3));
     return { progress: Math.max(0, p - loss), streak: 0 };

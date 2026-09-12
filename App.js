@@ -755,7 +755,8 @@ export default function App() {
         // 今日はじめて答える語なら、書き換える前の姿を控える（統計の「今日の増減」用）。
         // 値はここから先も w0 と同じなので、以降の計算はどちらを読んでも変わらない
         const w = markDayStart(w0, td);
-        const { progress, streak: ns } = calcProg(w, ok, mode, elapsedMs);
+        // 第5引数の今日は間隔係数（spacingFactor）用。同じ日の2回目以降や早めの正解は伸びが小さくなる
+        const { progress, streak: ns } = calcProg(w, ok, mode, elapsedMs, td);
         // 次回復習日は **streak を更新する前の w** から計算する。
         // nextSchedule は w.streak を「これまでの連続正解数」として読むため、
         // 更新後の値を渡すと間隔が1段階ぶん先走る
@@ -909,7 +910,7 @@ export default function App() {
     // カードが出てから答えるまでの時間。速いほど獲得点が増える（正解時のみ）
     const elapsed = cardShownAt.current ? Date.now() - cardShownAt.current : undefined;
     const cur = words.find((x) => x.id === w.id) || w;
-    const { progress: np } = calcProg(cur, knew, 'flashcard', elapsed);
+    const { progress: np } = calcProg(cur, knew, 'flashcard', elapsed, getToday());
     // 「1つ前にもどる」ための控え。updWord より **先に** 取る（後だと更新後の姿になる）
     setUndoStack((st) => [...st, { word: cur, timeLog }]);
     updWord(w.id, knew, 'flashcard', elapsed);
@@ -971,7 +972,7 @@ export default function App() {
     const w = sWords[sIdx];
     const ok = opt.id === w.id;
     const cur = words.find((x) => x.id === w.id) || w;
-    const { progress: np } = calcProg(cur, ok, 'quiz');
+    const { progress: np } = calcProg(cur, ok, 'quiz', undefined, getToday());
     setSelAns(opt.id);
     setAnswered(true);
     updWord(w.id, ok, 'quiz');
@@ -994,7 +995,7 @@ export default function App() {
     const w = sWords[sIdx];
     const ok = typed.trim().toLowerCase() === w.en.toLowerCase();
     const cur = words.find((x) => x.id === w.id) || w;
-    const { progress: np } = calcProg(cur, ok, 'typing');
+    const { progress: np } = calcProg(cur, ok, 'typing', undefined, getToday());
     setAnswered(true);
     updWord(w.id, ok, 'typing');
     setResults((r) => [...r, { word: w, correct: ok, delta: np - cur.progress }]);
@@ -1005,7 +1006,7 @@ export default function App() {
     const w = sWords[sIdx];
     const ok = typed.trim().length > 0 && w.ja.includes(typed.trim());
     const cur = words.find((x) => x.id === w.id) || w;
-    const { progress: np } = calcProg(cur, ok, 'reverse');
+    const { progress: np } = calcProg(cur, ok, 'reverse', undefined, getToday());
     setAnswered(true);
     updWord(w.id, ok, 'reverse');
     setResults((r) => [...r, { word: w, correct: ok, delta: np - cur.progress }]);
@@ -1051,7 +1052,7 @@ export default function App() {
         if (wasClean) updWord(en, true, 'matching');
         setResults((r) => [
           ...r,
-          { word: mw, correct: wasClean, delta: wasClean ? calcProg(cur, true, 'matching').progress - cur.progress : 0 },
+          { word: mw, correct: wasClean, delta: wasClean ? calcProg(cur, true, 'matching', undefined, getToday()).progress - cur.progress : 0 },
         ]);
         if (nm.size === mWords.length) setTimeout(() => setScr('results'), 500);
       } else {

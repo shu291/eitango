@@ -139,27 +139,37 @@ quality（手ごたえ 2〜5）は答えるまでの速さから `srQuality()` �
 （`normalizeState` → `makeDeck` → `normalizeWord(w, id, resetSchedule)`）。
 習熟度・正解数・`reviewedDates` には触らない。外した語数は `countScheduled()` で数えてトーストで知らせる。
 
-以下は習熟度（`progress`）側の計算。こちらは独自のポイント加減算方式で、変更していない。
+以下は習熟度（`progress`）側の計算。こちらは独自のポイント加減算方式。
 
-**`calcProg(word, ok, mode)` — `src/lib/logic.js:38`**
+**`calcProg(word, ok, mode, elapsedMs?, todayStr?)` — `src/lib/logic.js`**
 
 ```
 正解時:
   base = progress 帯域で決まる基礎点   (<20:15  <40:12  <60:10  <80:7  それ以上:4)
   base += min(streak * 2, 6)
-  gain  = round(base * MODE_MULT[mode])
+  gain  = round(base * MODE_MULT[mode] * speedFactor(elapsedMs) * spacingFactor(word, todayStr))
   progress > 90 なら gain は半減（最低 1）
   progress = min(100, progress + gain)
   初めての正解なら progress は最低 20 に底上げ
   streak += 1
 
 不正解時:
-  base = progress 帯域で決まる減点     (<20:3   <40:8   <60:12  <80:16 それ以上:20)
+  base = progress 帯域で決まる減点     (<20:3   <40:8   <60:16  <80:20 それ以上:24)
   streak >= 3 なら base += 3
   loss = round(base * (0.7 + MODE_MULT[mode] * 0.3))
   progress = max(0, progress - loss)
   streak = 0
 ```
+
+> 【2026-09-12 更新】**「いつ答えたか」を見るようにした。** それまでは同じ日に何度正解しても
+> 満額上がり、初見の語が1日で「完璧」になれた。
+> - `spacingFactor(word, todayStr)`（間隔係数）: 初めての語は 1。今日すでに答えた語は 0.4。
+>   それ以外は「前回から経った日数 ÷ `ivl`」を 0.5〜1.5 に収める（復習日どおりなら 1）。
+>   `todayStr` を渡さなければ 1（純粋関数のまま）。**updWord は必ず今日を渡す。**
+> - 速さボーナスの上限を 1.6 → 1.25 に。フラッシュカード（MODE_MULT 0.8）の速答が
+>   実効 1.0 ＝ 4択と同格になる（以前は 1.28 で自己申告が4択より強かった）。
+> - 減点を <60: 12→16、<80: 16→20、80+: 20→24 に。○○×（正答率67%）が定着まで上がり続けていた。
+> 数字はすべて `logic.js` 上部の定数（`SPACING_*` / `SPEED_*`）と `calcProg` 内の帯域表にある。
 
 **モード係数 `MODE_MULT`（`logic.js:29`）**
 
