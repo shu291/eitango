@@ -72,6 +72,7 @@ import {
   isNew,
   parseLine,
   INIT_WORDS } from './src/lib/logic';
+import { exampleFor } from './src/lib/examples';
 
 const STORAGE_KEY = '@eitango_state_v1';
 
@@ -2152,6 +2153,24 @@ export default function App() {
                       <Text className="text-2xl font-bold text-ink text-center" style={{ marginTop: SP[4], lineHeight: 34 }}>
                         {w.ja}
                       </Text>
+                      {/* 例文。意味の下に一段小さく。表面（単語だけ）には出さない＝答えのヒントになるため。
+                          例文の実体は scripts/build-examples.mjs が事前生成した exampleMap.json。無い語は何も出ない */}
+                      {(() => {
+                        const ex = exampleFor(w);
+                        if (!ex) return null;
+                        return (
+                          <View style={{ marginTop: SP[4], paddingTop: SP[3], borderTopWidth: 1, borderTopColor: C.border, alignSelf: 'stretch' }}>
+                            <Text className="text-base text-ink text-center" style={{ fontFamily: F.en, lineHeight: 24 }}>
+                              {ex.en}
+                            </Text>
+                            {ex.ja ? (
+                              <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[1], lineHeight: 18 }}>
+                                {ex.ja}
+                              </Text>
+                            ) : null}
+                          </View>
+                        );
+                      })()}
                     </>
                   )}
                 </View>
@@ -3150,6 +3169,15 @@ export default function App() {
               <Text className="text-sm text-ink-soft" style={{ lineHeight: 21 }} numberOfLines={2}>
                 {w.ja}
               </Text>
+              {/* 例文（あれば）。一覧では英文だけを2行まで。訳はフラッシュカードの裏で読める */}
+              {(() => {
+                const ex = exampleFor(w);
+                return ex ? (
+                  <Text className="text-xs text-ink-soft" style={{ fontFamily: F.en, lineHeight: 17, marginTop: 2 }} numberOfLines={2}>
+                    {ex.en}
+                  </Text>
+                ) : null;
+              })()}
               <View className="flex-row items-center" style={{ gap: SP[2], marginTop: SP[1], flexWrap: 'wrap' }}>
                 <View className="flex-row items-center" style={{ gap: SP[1] }}>
                   <Icon name="checkmark" size={12} color={C.muted2} />

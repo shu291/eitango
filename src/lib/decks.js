@@ -53,6 +53,8 @@ export const normalizeWord = (w, fallbackId, resetSchedule = false) => {
     due: w.due ?? null,
     ivl: typeof w.ivl === 'number' ? w.ivl : 0,
     ef: typeof w.ef === 'number' ? w.ef : SR_DEFAULT_EF,
+    // 例文の手直し用。取り込み JSON に ex: { en, ja } があれば同梱の例文より優先する（src/lib/examples.js）
+    ...(w.ex && typeof w.ex === 'object' && w.ex.en ? { ex: { en: String(w.ex.en), ja: String(w.ex.ja ?? '') } } : {}),
   });
   return resetSchedule ? clearSchedule(base) : base;
 };
