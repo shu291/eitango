@@ -178,7 +178,9 @@ function validate(word, ex) {
 }
 
 function buildPrompt(en, ja) {
-  const meaning = ja ? `Japanese meaning to use: "${ja}"` : 'Use the most common meaning.';
+  const meaning = ja
+    ? `Japanese meaning(s) as listed in the vocabulary book: "${ja}". Use the most common one.`
+    : 'Use the most common meaning.';
   return [
     `Write ONE natural English example sentence using the word "${en}".`,
     meaning,
@@ -193,7 +195,7 @@ function buildPrompt(en, ja) {
 
 /** まとめて聞くときのプロンプト。単語ごとの要件は buildPrompt と同じ */
 function buildBatchPrompt(words) {
-  const list = words.map((w, i) => `${i + 1}. "${w.en}"${w.ja ? ` — Japanese meaning to use: "${w.ja}"` : ''}`).join('\n');
+  const list = words.map((w, i) => `${i + 1}. "${w.en}"${w.ja ? ` — Japanese meaning(s): "${w.ja}" (use the most common one)` : ''}`).join('\n');
   return [
     `Write ONE natural English example sentence for EACH of the following ${words.length} words.`,
     list,
@@ -279,12 +281,20 @@ async function checkOllama() {
 }
 
 async function main() {
-  // 対象の単語を集める。同じ単語（キーが同じ）は最初の1件だけ
+  // 対象の単語を集める。同じ単語（キーが同じ）は1件にまとめる。
+  // 単語帳ごとに意味の書き方が違うことが多い（change: 変える／つり銭；変化）ので、
+  // 意味は捨てずに「；」でつないで全部渡す。LLM は一番ふつうの意味で文を作る
   const seen = new Map();
   const add = (w) => {
     if (!isEnglish(w.en)) return;
     const k = keyOf(w.en);
-    if (!seen.has(k)) seen.set(k, { key: k, en: w.en.trim(), ja: (w.ja || '').trim() });
+    const ja = (w.ja || '').trim();
+    if (!seen.has(k)) {
+      seen.set(k, { key: k, en: w.en.trim(), ja });
+      return;
+    }
+    const cur = seen.get(k);
+    if (ja && !cur.ja.includes(ja) && cur.ja.length < 120) cur.ja = cur.ja ? `${cur.ja}；${ja}` : ja;
   };
   readInitWords().forEach(add);
   const from = argValue('--from');
