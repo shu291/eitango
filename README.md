@@ -737,7 +737,8 @@ ollama pull gemma3:12b   # 初回はモデルの取得に数分。Apple シリ�
 
 ```bash
 npm run build:examples                          # 組み込み単語で、例文が無いものだけ生成
-npm run build:examples -- --from ~/Downloads/target1900.json   # アプリで「保存」した JSON の単語も対象に
+npm run build:examples -- --from ~/Downloads/1200.json   # アプリで「保存」した JSON の単語も対象に
+npm run build:examples -- --from list.txt                # テキストの単語リスト（1行1語・「apple りんご」）でも可
 npm run build:examples -- --limit 20            # まず 20 語だけ試す
 npm run build:examples -- --model qwen3:8b      # モデルを変える
 npm run build:examples -- --force               # 既にある例文も作り直す
