@@ -89,6 +89,13 @@ eitango/
 - **`example`（例文）に相当するフィールドは存在しない。** `App.js` / `logic.js` を全文検索しても
   `example` / `sentence` / `例文` のいずれもヒットしない。追加するなら新規フィールドになる。
 - 発音・品詞・タグ・レベルなどのフィールドも無い。
+
+> 【2026-09-12 更新】**例文は単語データには持たせず、同梱の対応表で引く。**
+> `src/lib/exampleMap.json`（単語キー → `{ en, ja }`）を `scripts/build-examples.mjs` が
+> Mac 上の Ollama で事前生成する（音声の `build-audio.mjs` と同じ流儀。実行時に AI は動かない）。
+> 画面側は `exampleFor(w)`（`src/lib/examples.js`）だけを呼ぶ。単語が `ex: { en, ja }` を持って
+> いればそちらを優先（取り込み JSON での手直し用。`normalizeWord` が通す）。
+> キーの作り方 `keyOf` は examples.js と build-examples.mjs で必ず揃える（speech.js の keyOf と同じ式）。
 - テキスト取り込みのパーサは `parseLine()`（`src/lib/logic.js`）。
   返すのは **`{ en, ja }` の 2 フィールドのみ**。区切り判定の優先順は
   **タブ → 全角スペース → カンマ** →「行頭の連番を除去して最初の日本語文字の位置で分割」
