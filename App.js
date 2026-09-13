@@ -72,7 +72,7 @@ import {
   isNew,
   parseLine,
   INIT_WORDS } from './src/lib/logic';
-import { exampleFor } from './src/lib/examples';
+import { exampleFor, splitByHeadword, hasHeadword } from './src/lib/examples';
 
 const STORAGE_KEY = '@eitango_state_v1';
 
@@ -357,7 +357,8 @@ export default function App() {
   // level: どの単語（all / weak / new / LEVELS の k）、order: 並び、count: 語数、
   // dir: 英→日か日→英か、example: 例文を流すか、loop: 終わったら最初から
   // speed: 再生速度の倍率。単語の音声・意味・例文の読み上げすべてに掛かる
-  const [listenCfg, setListenCfg] = useState({ level: 'all', order: 'low', count: 20, dir: 'enja', example: true, loop: false, speed: 1 });
+  // from / to: 単語帳の番号で絞る（文字列のまま持つ。空なら全部）
+  const [listenCfg, setListenCfg] = useState({ level: 'all', order: 'low', count: 20, dir: 'enja', example: true, loop: false, speed: 1, from: '', to: '' });
   const [listenState, setListenState] = useState('idle'); // idle / playing / paused / done
   const [listenList, setListenList] = useState([]);
   const [listenIdx, setListenIdx] = useState(0);
@@ -654,7 +655,7 @@ export default function App() {
   const aTab = useMemo(() => {
     if (scr === 'shelf') return 'shelf';
     if (scr === 'dashboard') return 'home';
-    if (['study', 'config', 'flashcard', 'quiz', 'matching', 'speed', 'results', 'listen'].includes(scr)) return 'study';
+    if (['study', 'config', 'flashcard', 'quiz', 'cloze', 'matching', 'speed', 'results', 'listen'].includes(scr)) return 'study';
     if (scr === 'words') return 'words';
     return 'stats';
   }, [scr]);
@@ -686,11 +687,19 @@ export default function App() {
     return d;
   }, []);
 
+  // poolInfo（useMemo）より前に置くこと。後ろだと描画中に「初期化前」のエラーで落ちる
+  /** 例文クイズに出せる語か（例文があり、その中に見出し語が見つかる） */
+  const clozeOk = (w) => {
+    const ex = exampleFor(w);
+    return !!ex && hasHeadword(ex.en, w.en);
+  };
+
   const poolInfo = useMemo(() => {
     const td = getToday();
     const s = clamp(rStart, 1, words.length);
     const e = clamp(rEnd, s, words.length);
-    const range = words.slice(s - 1, e);
+    const range0 = words.slice(s - 1, e);
+    const range = cfgMode === 'cloze' ? range0.filter(clozeOk) : range0;
     const nw = range.filter(isNew);
     const wk = range.filter(isWeak);
     const du = range.filter((w) => isDue(w, td));
@@ -701,7 +710,7 @@ export default function App() {
     // 「今日の復習は0語」と出したのに全部出題されては意味が逆になる
     else if (wordSel === 'due') pool = du;
     return { total: range.length, pool: pool.length, nw: nw.length, wk: wk.length, du: du.length };
-  }, [words, rStart, rEnd, wordSel]);
+  }, [words, rStart, rEnd, wordSel, cfgMode]);
 
   const actualNumQ = Math.min(numQ, poolInfo.pool);
 
@@ -837,6 +846,8 @@ export default function App() {
     const s = clamp(rStart, 1, words.length);
     const e = clamp(rEnd, s, words.length);
     let pool = words.slice(s - 1, e);
+    // 例文クイズは例文のある語だけ。無い語は出しようがないので範囲全体へのフォールバックもしない
+    if (cfgMode === 'cloze') pool = pool.filter(clozeOk);
     if (wordSel === 'new') {
       const f = pool.filter(isNew);
       if (f.length > 0) pool = f;
@@ -871,10 +882,10 @@ export default function App() {
     // ここを 2 のままにすると押しても「対象単語が不足しています」で行き止まりになる。
     const minWords = wordSel === 'due' || cfgMode === 'flashcard' ? 1 : 2;
     if (pool.length < minWords) {
-      setToast(wordSel === 'due' ? '今日の復習はもうありません' : '対象単語が不足しています');
+      setToast(cfgMode === 'cloze' && pool.length === 0 ? '例文のある単語がありません' : wordSel === 'due' ? '今日の復習はもうありません' : '対象単語が不足しています');
       return;
     }
-    if (['quiz', 'speed'].includes(cfgMode) && words.length < 4) {
+    if (['quiz', 'speed', 'cloze'].includes(cfgMode) && words.length < 4) {
       setToast('4択には全体で4語以上必要です');
       return;
     }
@@ -911,9 +922,9 @@ export default function App() {
       setScr('speed');
       if (tRef.current) clearInterval(tRef.current);
       tRef.current = setInterval(() => setTimer((t) => (t <= 1 ? 0 : t - 1)), 1000);
-    } else if (cfgMode === 'quiz') {
+    } else if (cfgMode === 'quiz' || cfgMode === 'cloze') {
       setOpts(genOpts(sel[0]));
-      setScr('quiz');
+      setScr(cfgMode);
     } else {
       setScr(cfgMode);
     }
@@ -1002,6 +1013,30 @@ export default function App() {
         setScr('results');
       }
     }, 900);
+  };
+
+  // 例文クイズ。空欄に入る単語を4択で選ぶ。答え合わせの流れは4択と同じ（0.9秒後に次へ）
+  const hCloze = (opt) => {
+    if (answered) return;
+    const w = sWords[sIdx];
+    const ok = opt.id === w.id;
+    const cur = words.find((x) => x.id === w.id) || w;
+    const { progress: np } = calcProg(cur, ok, 'cloze', undefined, getToday());
+    setSelAns(opt.id);
+    setAnswered(true);
+    updWord(w.id, ok, 'cloze');
+    setResults((r) => [...r, { word: w, correct: ok, delta: np - cur.progress }]);
+    setTimeout(() => {
+      if (sIdx + 1 < sWords.length) {
+        const ni = sIdx + 1;
+        setSIdx(ni);
+        setSelAns(null);
+        setAnswered(false);
+        setOpts(genOpts(sWords[ni]));
+      } else {
+        setScr('results');
+      }
+    }, 1200);
   };
 
   const hMatch = (type, item) => {
@@ -1352,12 +1387,31 @@ export default function App() {
       .replace(/\s+/g, ' ')
       .trim();
 
+  /** 番号の範囲（from〜to）で絞った単語。空なら全部 */
+  const listenRange = (cfg) => {
+    const a = parseInt(String(cfg.from || '').replace(/[^0-9]/g, ''), 10);
+    const b = parseInt(String(cfg.to || '').replace(/[^0-9]/g, ''), 10);
+    if (isNaN(a) && isNaN(b)) return words;
+    const st = clamp(isNaN(a) ? 1 : a, 1, words.length);
+    const en = clamp(isNaN(b) ? words.length : b, st, words.length);
+    return words.slice(st - 1, en);
+  };
+
+  /** 覚え具合などで絞る（level: all / weak / new / due / LEVELS の k） */
+  const listenLevelFilter = (pool, level) => {
+    if (level === 'weak') return pool.filter(isWeak);
+    if (level === 'new') return pool.filter(isNew);
+    if (level === 'due') {
+      const td = getToday();
+      return pool.filter((w) => isDue(w, td));
+    }
+    if (level !== 'all') return pool.filter((w) => inLevel(w, level));
+    return pool;
+  };
+
   /** 聞き流しの対象を、設定どおりに絞って並べる */
   const buildListenList = (cfg) => {
-    let pool = words;
-    if (cfg.level === 'weak') pool = words.filter(isWeak);
-    else if (cfg.level === 'new') pool = words.filter(isNew);
-    else if (cfg.level !== 'all') pool = words.filter((w) => inLevel(w, cfg.level));
+    const pool = listenLevelFilter(listenRange(cfg), cfg.level);
     let list = [...pool];
     if (cfg.order === 'low') list.sort((a, b) => (a.progress || 0) - (b.progress || 0));
     else if (cfg.order === 'high') list.sort((a, b) => (b.progress || 0) - (a.progress || 0));
@@ -1365,12 +1419,7 @@ export default function App() {
     return list.slice(0, cfg.count);
   };
 
-  const listenCount = (level) => {
-    if (level === 'all') return words.length;
-    if (level === 'weak') return words.filter(isWeak).length;
-    if (level === 'new') return words.filter(isNew).length;
-    return words.filter((w) => inLevel(w, level)).length;
-  };
+  const listenCount = (level) => listenLevelFilter(listenRange(listenCfg), level).length;
 
   /**
    * list の startIdx 語目から順に流す。tok が listenTok.current と違ったら（止められたら）即やめる。
@@ -1452,6 +1501,24 @@ export default function App() {
     if (scr !== 'listen' && listenState !== 'idle') stopListen();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scr]);
+
+  /**
+   * 例文。見出し語（活用形も）を太字にする。blank を渡すと、その部分を空欄「______」にする（例文クイズ）。
+   * 文字の大きさ・色は className / style で外から決め、太字部分は書体だけ Lora Bold に差し替える。
+   */
+  const ExText = ({ sentence, headword, blank = false, className = '', style, hitColor, numberOfLines }) => (
+    <Text className={className} style={style} numberOfLines={numberOfLines}>
+      {splitByHeadword(sentence, headword).map((seg, i) =>
+        seg.hit ? (
+          <Text key={i} style={{ fontFamily: F.enBold, color: hitColor || C.primary }}>
+            {blank ? '______' : seg.text}
+          </Text>
+        ) : (
+          seg.text
+        )
+      )}
+    </Text>
+  );
 
   const SpeakButton = ({ word, size = 20, color = C.primary, hitSlop = 10 }) => (
     <TouchableOpacity
@@ -1881,6 +1948,7 @@ export default function App() {
     const modes = [
       { m: 'flashcard', icon: 'layers-outline', t: 'フラッシュカード', d: 'スワイプで直感的に暗記' },
       { m: 'quiz', icon: 'brain', t: '4択クイズ', d: '4つの選択肢から正解を選ぶ' },
+      { m: 'cloze', icon: 'document-text-outline', t: '例文クイズ', d: '例文の空欄に入る単語を4択で選ぶ。例文のある語だけ' },
       { m: 'matching', icon: 'shuffle-outline', t: 'マッチング', d: '英語と日本語をペアにする' },
       { m: 'speed', icon: 'flash-outline', t: 'スピードチャレンジ', d: '60秒で何問解けるか挑戦' },
       { m: 'listen', icon: 'headset-outline', t: '聞き流し', d: '単語→意味→例文を音声で連続再生。画面を触らずに' },
@@ -1987,8 +2055,9 @@ export default function App() {
 
     if (listenState === 'idle') {
       const levelOpts = [
-        { k: 'all', l: '全て', d: words.length },
+        { k: 'all', l: '全て', d: listenCount('all') },
         { k: 'weak', l: '苦手', d: listenCount('weak') },
+        { k: 'due', l: '今日の復習', d: listenCount('due') },
         { k: 'new', l: '未学習', d: listenCount('new') },
         ...LEVELS.map((lv) => ({ k: lv.k, l: lv.name, d: listenCount(lv.k) })),
       ];
@@ -2000,6 +2069,36 @@ export default function App() {
             <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
               画面を触らずに、単語 → 意味 → 例文の順で音声が流れます。覚え具合は変わりません。
             </Text>
+            <View>
+              <SectionTitle>番号で絞る</SectionTitle>
+              {/* 単語帳の何番から何番まで。空なら全部。数字は「全 N 語」に合わせて等幅 */}
+              <View className="flex-row items-center" style={{ gap: SP[2] }}>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={listenCfg.from}
+                  onChangeText={(t) => set('from', t.replace(/[^0-9]/g, ''))}
+                  placeholder="1"
+                  placeholderTextColor={C.muted2}
+                  className="flex-1 bg-sheet border border-rule rounded px-3 py-3 text-base text-center"
+                  style={[NUM_BOLD, { color: C.text, minHeight: 44 }]}
+                  accessibilityLabel="何番から"
+                />
+                <Text className="text-sm text-ink-soft">〜</Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={listenCfg.to}
+                  onChangeText={(t) => set('to', t.replace(/[^0-9]/g, ''))}
+                  placeholder={String(words.length)}
+                  placeholderTextColor={C.muted2}
+                  className="flex-1 bg-sheet border border-rule rounded px-3 py-3 text-base text-center"
+                  style={[NUM_BOLD, { color: C.text, minHeight: 44 }]}
+                  accessibilityLabel="何番まで"
+                />
+              </View>
+              <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2] }}>
+                空なら全部。いまの範囲は {listenRange(listenCfg).length} 語
+              </Text>
+            </View>
             <View>
               <SectionTitle>どの単語</SectionTitle>
               {chips(levelOpts, listenCfg.level, (v) => set('level', v), true)}
@@ -2108,9 +2207,7 @@ export default function App() {
                 </Text>
                 {ex ? (
                   <View style={{ marginTop: SP[2], paddingTop: SP[3], borderTopWidth: 1, borderTopColor: C.border, alignSelf: 'stretch' }}>
-                    <Text className="text-base text-center" style={{ fontFamily: F.en, lineHeight: 24, color: hi('ex') }}>
-                      {ex.en}
-                    </Text>
+                    <ExText sentence={ex.en} headword={w.en} className="text-base text-center" style={{ fontFamily: F.en, lineHeight: 24, color: hi('ex') }} />
                     {ex.ja ? (
                       <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[1], lineHeight: 18 }}>
                         {ex.ja}
@@ -2149,7 +2246,7 @@ export default function App() {
 
   // ===================== Config =====================
   const renderConfig = () => {
-    const mn = { flashcard: 'フラッシュカード', quiz: '4択クイズ', matching: 'マッチング', speed: 'スピード' };
+    const mn = { flashcard: 'フラッシュカード', quiz: '4択クイズ', cloze: '例文クイズ', matching: 'マッチング', speed: 'スピード' };
     const isMat = cfgMode === 'matching';
     const dNQ = isMat ? Math.min(6, poolInfo.pool) : actualNumQ;
     return (
@@ -2462,9 +2559,7 @@ export default function App() {
                         if (!ex) return null;
                         return (
                           <View style={{ marginTop: SP[4], paddingTop: SP[3], borderTopWidth: 1, borderTopColor: C.border, alignSelf: 'stretch' }}>
-                            <Text className="text-base text-ink text-center" style={{ fontFamily: F.en, lineHeight: 24 }}>
-                              {ex.en}
-                            </Text>
+                            <ExText sentence={ex.en} headword={w.en} className="text-base text-ink text-center" style={{ fontFamily: F.en, lineHeight: 24 }} />
                             {ex.ja ? (
                               <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[1], lineHeight: 18 }}>
                                 {ex.ja}
@@ -2648,6 +2743,107 @@ export default function App() {
           </View>
         </View>
       </View>
+    );
+  };
+
+  // ===================== 例文クイズ =====================
+  const renderCloze = () => {
+    const w = sWords[sIdx];
+    const ex = w ? exampleFor(w) : null;
+    if (!w || !ex)
+      return (
+        <View>
+          <Header title="例文クイズ" />
+          <EmptyState
+            title="出題できる単語がありません"
+            body="例文のある単語が、いまの条件に見つかりませんでした。学習メニューに戻って条件を選び直してください。"
+            actionLabel="学習メニューへ"
+            onAction={() => setScr('study')}
+            icon="document-text-outline"
+          />
+        </View>
+      );
+    return (
+      <ScrollView>
+        <Header title="例文クイズ" />
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
+          <View>
+            <Text className="text-xs text-ink-soft" style={NUM}>
+              {sIdx + 1} / {sWords.length}
+            </Text>
+            <View className="rounded-sm overflow-hidden" style={{ height: 4, marginTop: SP[2], backgroundColor: C.border }}>
+              <View style={{ height: 4, width: `${((sIdx + 1) / sWords.length) * 100}%`, backgroundColor: C.primary }} />
+            </View>
+          </View>
+
+          {/* 問題。例文の見出し語を空欄にして出す。答えたら空欄が埋まり、単語が太字で見える */}
+          <Sheet mark={C.primary} className="p-5">
+            <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[3] }}>
+              空欄に入る単語は？
+            </Text>
+            <ExText
+              sentence={ex.en}
+              headword={w.en}
+              blank={!answered}
+              className="text-lg text-ink"
+              style={{ fontFamily: F.en, lineHeight: 28 }}
+              hitColor={answered ? C.success : C.primary}
+            />
+            {ex.ja ? (
+              <Text className="text-sm text-ink-soft" style={{ marginTop: SP[3], lineHeight: 21 }}>
+                {ex.ja}
+              </Text>
+            ) : null}
+            {answered ? (
+              <Text className="text-sm text-ink" style={{ marginTop: SP[3], lineHeight: 21 }}>
+                <Text style={{ fontFamily: F.enBold }}>{w.en}</Text>
+                <Text className="text-ink-soft">　{w.ja}</Text>
+              </Text>
+            ) : null}
+          </Sheet>
+
+          <View style={{ gap: SP[2] }}>
+            {opts.map((o) => {
+              let face = 'bg-sheet border-navy';
+              let txtClr = 'text-ink';
+              let markClr = null;
+              let tailIcon = null;
+              if (answered) {
+                if (o.id === w.id) {
+                  face = 'bg-moss-soft border-moss';
+                  txtClr = 'text-moss';
+                  markClr = C.success;
+                  tailIcon = 'checkmark';
+                } else if (o.id === selAns) {
+                  face = 'bg-vermilion-soft border-vermilion';
+                  txtClr = 'text-vermilion';
+                  markClr = C.accent;
+                  tailIcon = 'close';
+                }
+              }
+              return (
+                <TouchableOpacity
+                  key={o.id}
+                  onPress={() => hCloze(o)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={o.en}
+                  className={`flex-row items-center overflow-hidden rounded border py-4 px-4 ${face}`}
+                  style={{ minHeight: 52, gap: SP[3] }}
+                >
+                  {markClr ? (
+                    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: markClr }} />
+                  ) : null}
+                  <Text className={`flex-1 text-base ${txtClr}`} style={{ fontFamily: F.enSemi, lineHeight: 24 }}>
+                    {o.en}
+                  </Text>
+                  {tailIcon ? <Icon name={tailIcon} size={18} color={markClr} /> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
     );
   };
 
@@ -2949,6 +3145,7 @@ export default function App() {
     const MODE_LABEL = {
       flashcard: 'フラッシュカード',
       quiz: '4択クイズ',
+      cloze: '例文クイズ',
       matching: 'マッチング',
       speed: 'スピード',
     };
@@ -3357,9 +3554,7 @@ export default function App() {
                 return open ? (
                   <View style={{ marginTop: SP[2], paddingLeft: SP[2], borderLeftWidth: 2, borderLeftColor: C.border }}>
                     <View className="flex-row items-start" style={{ gap: SP[1] }}>
-                      <Text className="text-sm text-ink flex-1" style={{ fontFamily: F.en, lineHeight: 21 }}>
-                        {ex.en}
-                      </Text>
+                      <ExText sentence={ex.en} headword={w.en} className="text-sm text-ink flex-1" style={{ fontFamily: F.en, lineHeight: 21 }} />
                       {/* 例文の読み上げ。単語と違って事前生成の音声は無いので、端末の読み上げで英語を読む */}
                       <TouchableOpacity
                         onPress={() => sayText(ex.en, 'en-US', 0.9)}
@@ -3377,9 +3572,7 @@ export default function App() {
                     ) : null}
                   </View>
                 ) : (
-                  <Text className="text-xs text-ink-soft" style={{ fontFamily: F.en, lineHeight: 17, marginTop: 2 }} numberOfLines={2}>
-                    {ex.en}
-                  </Text>
+                  <ExText sentence={ex.en} headword={w.en} className="text-xs text-ink-soft" style={{ fontFamily: F.en, lineHeight: 17, marginTop: 2 }} numberOfLines={2} />
                 );
               })()}
               <View className="flex-row items-center" style={{ gap: SP[2], marginTop: SP[1], flexWrap: 'wrap' }}>
@@ -4565,6 +4758,7 @@ export default function App() {
           {scr === 'config' && renderConfig()}
           {scr === 'flashcard' && renderFlash()}
           {scr === 'quiz' && renderQuiz()}
+          {scr === 'cloze' && renderCloze()}
           {scr === 'matching' && renderMatch()}
           {scr === 'speed' && renderSpeed()}
           {scr === 'results' && renderResults()}
