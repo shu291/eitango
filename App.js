@@ -318,7 +318,6 @@ export default function App() {
   const [results, setResults] = useState([]);
   const [flipped, setFlipped] = useState(false);
   const [selAns, setSelAns] = useState(null);
-  const [typed, setTyped] = useState('');
   const [answered, setAnswered] = useState(false);
   const [opts, setOpts] = useState([]);
   const [sMode, setSMode] = useState('');
@@ -509,7 +508,7 @@ export default function App() {
 
   // フラッシュカードで単語が出たら、その単語を発音する。
   // 依存に flipped を入れていないので、カードをめくり直しても鳴り直さない。
-  // 他のモード（クイズ・タイピング等）では鳴らさない。
+  // 他のモード（クイズ等）では鳴らさない。
   // あわせて、答えるまでの時間を測るためにカードが出た時刻を控える。
   useEffect(() => {
     if (scr !== 'flashcard') return;
@@ -655,7 +654,7 @@ export default function App() {
   const aTab = useMemo(() => {
     if (scr === 'shelf') return 'shelf';
     if (scr === 'dashboard') return 'home';
-    if (['study', 'config', 'flashcard', 'quiz', 'typing', 'reverse', 'matching', 'speed', 'results', 'listen'].includes(scr)) return 'study';
+    if (['study', 'config', 'flashcard', 'quiz', 'matching', 'speed', 'results', 'listen'].includes(scr)) return 'study';
     if (scr === 'words') return 'words';
     return 'stats';
   }, [scr]);
@@ -892,7 +891,6 @@ export default function App() {
     setUndoStack([]);
     setFlipped(false);
     setSelAns(null);
-    setTyped('');
     setAnswered(false);
     setDragOff(0);
     pan.setValue(0);
@@ -1004,38 +1002,6 @@ export default function App() {
         setScr('results');
       }
     }, 900);
-  };
-
-  const hType = () => {
-    if (answered) return;
-    const w = sWords[sIdx];
-    const ok = typed.trim().toLowerCase() === w.en.toLowerCase();
-    const cur = words.find((x) => x.id === w.id) || w;
-    const { progress: np } = calcProg(cur, ok, 'typing', undefined, getToday());
-    setAnswered(true);
-    updWord(w.id, ok, 'typing');
-    setResults((r) => [...r, { word: w, correct: ok, delta: np - cur.progress }]);
-  };
-
-  const hReverse = () => {
-    if (answered) return;
-    const w = sWords[sIdx];
-    const ok = typed.trim().length > 0 && w.ja.includes(typed.trim());
-    const cur = words.find((x) => x.id === w.id) || w;
-    const { progress: np } = calcProg(cur, ok, 'reverse', undefined, getToday());
-    setAnswered(true);
-    updWord(w.id, ok, 'reverse');
-    setResults((r) => [...r, { word: w, correct: ok, delta: np - cur.progress }]);
-  };
-
-  const hTypeNext = () => {
-    if (sIdx + 1 < sWords.length) {
-      setSIdx(sIdx + 1);
-      setTyped('');
-      setAnswered(false);
-    } else {
-      setScr('results');
-    }
   };
 
   const hMatch = (type, item) => {
@@ -1915,8 +1881,6 @@ export default function App() {
     const modes = [
       { m: 'flashcard', icon: 'layers-outline', t: 'フラッシュカード', d: 'スワイプで直感的に暗記' },
       { m: 'quiz', icon: 'brain', t: '4択クイズ', d: '4つの選択肢から正解を選ぶ' },
-      { m: 'typing', icon: 'create-outline', t: 'タイピング（日→英）', d: '日本語を見て英語を入力' },
-      { m: 'reverse', icon: 'swap-horizontal-outline', t: '逆引き（英→日）', d: '英語を見て日本語を入力' },
       { m: 'matching', icon: 'shuffle-outline', t: 'マッチング', d: '英語と日本語をペアにする' },
       { m: 'speed', icon: 'flash-outline', t: 'スピードチャレンジ', d: '60秒で何問解けるか挑戦' },
       { m: 'listen', icon: 'headset-outline', t: '聞き流し', d: '単語→意味→例文を音声で連続再生。画面を触らずに' },
@@ -2185,7 +2149,7 @@ export default function App() {
 
   // ===================== Config =====================
   const renderConfig = () => {
-    const mn = { flashcard: 'フラッシュカード', quiz: '4択クイズ', typing: 'タイピング', reverse: '逆引き', matching: 'マッチング', speed: 'スピード' };
+    const mn = { flashcard: 'フラッシュカード', quiz: '4択クイズ', matching: 'マッチング', speed: 'スピード' };
     const isMat = cfgMode === 'matching';
     const dNQ = isMat ? Math.min(6, poolInfo.pool) : actualNumQ;
     return (
@@ -2436,7 +2400,7 @@ export default function App() {
         <Header title="フラッシュカード" />
         <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
           {/* 何枚目か。数字は等幅にして桁が動いてもガタつかせない。
-              進み具合は藍1色の細い罫で言う（クイズ・タイピングと同じ形にそろえてある） */}
+              進み具合は藍1色の細い罫で言う（クイズと同じ形にそろえてある） */}
           <View>
             <Text className="text-xs text-ink-soft" style={NUM}>
               {sIdx + 1} / {sWords.length}
@@ -2684,134 +2648,6 @@ export default function App() {
           </View>
         </View>
       </View>
-    );
-  };
-
-  // ===================== Typing / Reverse =====================
-  const renderTyping = (isRev) => {
-    const w = sWords[sIdx];
-    // 出題できる語が0のとき return null にすると真っ白になって戻れない（DESIGN.md「空っぽの画面」）
-    if (!w)
-      return (
-        <View>
-          <Header title={isRev ? '逆引き（英→日）' : 'タイピング（日→英）'} />
-          <EmptyState
-            title="出題できる単語がありません"
-            body="いまの条件に合う単語が見つかりませんでした。学習メニューに戻って条件を選び直すか、単語を書き足してください。"
-            actionLabel="学習メニューへ"
-            onAction={() => setScr('study')}
-            icon="create-outline"
-          />
-        </View>
-      );
-    const ok = isRev ? typed.trim().length > 0 && w.ja.includes(typed.trim()) : typed.trim().toLowerCase() === w.en.toLowerCase();
-    const title = isRev ? '逆引き（英→日）' : 'タイピング（日→英）';
-    const display = isRev ? w.en : w.ja;
-    const answer = isRev ? w.ja : w.en;
-    const hSub = isRev ? hReverse : hType;
-    return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <Header title={title} />
-        <ScrollView className="bg-paper" keyboardShouldPersistTaps="handled">
-          <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[3] }}>
-            {/* 何問目か。数字は等幅にして桁が動いてもガタつかせない。進み具合は藍1色の細い罫で言う */}
-            <View>
-              <Text className="text-xs text-ink-soft" style={NUM}>
-                {sIdx + 1} / {sWords.length}
-              </Text>
-              <View className="rounded-sm overflow-hidden" style={{ height: 4, marginTop: SP[2], backgroundColor: C.border }}>
-                <View style={{ height: 4, width: `${((sIdx + 1) / sWords.length) * 100}%`, backgroundColor: C.primary }} />
-              </View>
-            </View>
-
-            {/* 問題。いま一番見てほしいので左端に藍の縦罫を入れる */}
-            <Sheet mark={C.primary} className="p-6 items-center">
-              <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>
-                {isRev ? '日本語の意味を入力' : '英語で入力'}
-              </Text>
-              {/* 出す語が英語のときだけ Lora。日本語の意味には書体を当てない（偽の太字になる） */}
-              {isRev ? (
-                <Text className="text-3xl text-ink text-center" style={{ fontFamily: F.enBold, lineHeight: 38 }}>
-                  {display}
-                </Text>
-              ) : (
-                <Text className="text-2xl font-bold text-ink text-center" style={{ lineHeight: 32 }}>
-                  {display}
-                </Text>
-              )}
-              <View style={{ marginTop: SP[3] }}>
-                <LvBadge w={w} />
-              </View>
-            </Sheet>
-
-            {/* 答えを書く欄。書けるあいだは枠が藍（＝ここを操作する）、答え合わせ後は罫線の色に落とす */}
-            <TextInput
-              value={typed}
-              onChangeText={setTyped}
-              onSubmitEditing={() => !answered && hSub()}
-              editable={!answered}
-              placeholder={isRev ? '日本語を入力...' : '英語を入力...'}
-              placeholderTextColor={C.muted2}
-              className="text-lg text-ink"
-              style={[
-                {
-                  height: 52,
-                  paddingHorizontal: SP[4],
-                  paddingVertical: 0,
-                  borderRadius: R.md,
-                  borderWidth: 1,
-                  borderColor: answered ? C.border : C.primary,
-                  backgroundColor: answered ? C.bg2 : C.surface,
-                },
-                isRev ? null : { fontFamily: F.en },
-              ]}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            {/* 判定。色だけに頼らないよう、左端の縦罫とアイコンと言葉の3つで伝える */}
-            {answered &&
-              (ok ? (
-                <View className="overflow-hidden rounded border bg-moss-soft border-moss" style={{ padding: SP[4] }}>
-                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: C.success }} />
-                  <View className="flex-row items-center" style={{ gap: SP[2] }}>
-                    <Icon name="checkmark-circle" size={18} color={C.success} />
-                    <Text className="text-sm font-bold text-moss">正解</Text>
-                  </View>
-                </View>
-              ) : (
-                <View className="overflow-hidden rounded border bg-vermilion-soft border-vermilion" style={{ padding: SP[4] }}>
-                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: C.accent }} />
-                  <View className="flex-row items-center" style={{ gap: SP[2] }}>
-                    <Icon name="close-circle" size={18} color={C.accent} />
-                    <Text className="text-sm font-bold text-vermilion">不正解</Text>
-                  </View>
-                  <Text className="text-xs text-vermilion" style={{ marginTop: SP[2] }}>
-                    正しい答え
-                  </Text>
-                  <Text
-                    className="text-base text-vermilion"
-                    style={[{ marginTop: SP[1], lineHeight: 24 }, isRev ? null : { fontFamily: F.enSemi }]}
-                  >
-                    {answer}
-                  </Text>
-                </View>
-              ))}
-
-            {/* ベタ塗りの藍は画面に1つだけ＝「次にやること」 */}
-            {!answered ? (
-              <Btn label="回答する" onPress={hSub} tone="navy" icon="checkmark-outline" />
-            ) : (
-              <Btn
-                label={sIdx + 1 < sWords.length ? '次へ' : '結果を見る'}
-                onPress={hTypeNext}
-                tone="navy"
-                icon={sIdx + 1 < sWords.length ? 'arrow-forward-outline' : 'flag-outline'}
-              />
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
     );
   };
 
@@ -3113,8 +2949,6 @@ export default function App() {
     const MODE_LABEL = {
       flashcard: 'フラッシュカード',
       quiz: '4択クイズ',
-      typing: 'タイピング',
-      reverse: '逆引き',
       matching: 'マッチング',
       speed: 'スピード',
     };
@@ -4731,8 +4565,6 @@ export default function App() {
           {scr === 'config' && renderConfig()}
           {scr === 'flashcard' && renderFlash()}
           {scr === 'quiz' && renderQuiz()}
-          {scr === 'typing' && renderTyping(false)}
-          {scr === 'reverse' && renderTyping(true)}
           {scr === 'matching' && renderMatch()}
           {scr === 'speed' && renderSpeed()}
           {scr === 'results' && renderResults()}
