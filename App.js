@@ -357,7 +357,8 @@ export default function App() {
   // 画面を触らずに「単語 → 意味 → 例文」を順に流す。習熟度は動かさない（テストではないため）。
   // level: どの単語（all / weak / new / LEVELS の k）、order: 並び、count: 語数、
   // dir: 英→日か日→英か、example: 例文を流すか、loop: 終わったら最初から
-  const [listenCfg, setListenCfg] = useState({ level: 'all', order: 'low', count: 20, dir: 'enja', example: true, loop: false });
+  // speed: 再生速度の倍率。単語の音声・意味・例文の読み上げすべてに掛かる
+  const [listenCfg, setListenCfg] = useState({ level: 'all', order: 'low', count: 20, dir: 'enja', example: true, loop: false, speed: 1 });
   const [listenState, setListenState] = useState('idle'); // idle / playing / paused / done
   const [listenList, setListenList] = useState([]);
   const [listenIdx, setListenIdx] = useState(0);
@@ -1420,13 +1421,15 @@ export default function App() {
       for (const [kind, text] of steps) {
         if (listenTok.current !== tok) return;
         setListenStep(kind);
-        if (kind === 'en') await sayWord(text);
-        else if (kind === 'ja') await sayText(jaForSpeech(text), 'ja-JP', 1.0);
-        else await sayText(text, 'en-US', 0.9);
+        const sp = cfg.speed || 1;
+        if (kind === 'en') await sayWord(text, sp);
+        else if (kind === 'ja') await sayText(jaForSpeech(text), 'ja-JP', 1.0 * sp);
+        else await sayText(text, 'en-US', 0.9 * sp);
         if (listenTok.current !== tok) return;
-        await sleep(kind === 'ex' ? 500 : 350);
+        // 間も速度に合わせて少し詰める／延ばす
+        await sleep(Math.round((kind === 'ex' ? 500 : 350) / sp));
       }
-      await sleep(700);
+      await sleep(Math.round(700 / (cfg.speed || 1)));
     }
     if (listenTok.current !== tok) return;
     if (cfg.loop) return runListen(list, 0, tok, cfg);
@@ -1434,11 +1437,18 @@ export default function App() {
     setListenState('done');
   };
 
-  const listenPlayFrom = (list, idx) => {
+  const listenPlayFrom = (list, idx, cfg = listenCfg) => {
     stopSpeaking();
     const tok = ++listenTok.current;
     setListenState('playing');
-    runListen(list, idx, tok, listenCfg);
+    runListen(list, idx, tok, cfg);
+  };
+
+  /** 再生中に速度を変える。いまの語からその速度でやり直す（止まっていれば設定だけ変える） */
+  const setListenSpeed = (speed) => {
+    const next = { ...listenCfg, speed };
+    setListenCfg(next);
+    if (listenState === 'playing') listenPlayFrom(listenList, listenIdx, next);
   };
 
   const startListen = () => {
@@ -2003,6 +2013,13 @@ export default function App() {
       </View>
     );
     const set = (k, v) => setListenCfg((c) => ({ ...c, [k]: v }));
+    const SPEED_OPTS = [
+      { k: 0.7, l: '0.7×' },
+      { k: 0.85, l: '0.85×' },
+      { k: 1, l: '1×' },
+      { k: 1.2, l: '1.2×' },
+      { k: 1.5, l: '1.5×' },
+    ];
 
     if (listenState === 'idle') {
       const levelOpts = [
@@ -2065,6 +2082,10 @@ export default function App() {
                 listenCfg.example,
                 (v) => set('example', v)
               )}
+            </View>
+            <View>
+              <SectionTitle>再生速度</SectionTitle>
+              {chips(SPEED_OPTS, listenCfg.speed, (v) => set('speed', v))}
             </View>
             <View>
               <SectionTitle>終わったら</SectionTitle>
@@ -2147,6 +2168,11 @@ export default function App() {
               <Btn label="再開" icon="play" onPress={() => listenPlayFrom(listenList, listenIdx)} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
             )}
             <Btn label="次へ" tone="line" icon="play-skip-forward-outline" onPress={() => listenSeek(1)} disabled={listenIdx >= listenList.length - 1} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
+          </View>
+          {/* 再生中でも速度を変えられる。変えるといまの語からその速度でやり直す */}
+          <View>
+            <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[2] }}>再生速度</Text>
+            {chips(SPEED_OPTS, listenCfg.speed, setListenSpeed)}
           </View>
           <Btn label="終了して設定に戻る" tone="quiet" icon="close-outline" onPress={stopListen} />
           <Text className="text-xs text-ink-soft text-center" style={{ lineHeight: 18 }}>
