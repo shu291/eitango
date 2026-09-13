@@ -130,12 +130,13 @@ export const sayText = (text, lang = 'en-US', rate = 0.9) => {
 /**
  * 単語を発音して、鳴り終わるまで待つ。事前生成の音声があればそれを使う。
  * @param {string} word
+ * @param {number} [speed] 再生速度の倍率（1 がふつう。聞き流しの速度設定）
  */
-export const sayWord = async (word) => {
+export const sayWord = async (word, speed = 1) => {
   const text = String(word ?? '').trim();
   if (!text || volume === 0) return;
   const asset = AUDIO[keyOf(text)];
-  if (!asset) return sayText(text, 'en-US');
+  if (!asset) return sayText(text, 'en-US', 0.9 * speed);
   stopCurrent();
   try {
     Speech.stop();
@@ -146,6 +147,13 @@ export const sayWord = async (word) => {
     await ensureAudioMode();
     const player = createAudioPlayer(asset);
     player.volume = volume;
+    if (speed !== 1) {
+      try {
+        player.setPlaybackRate(speed);
+      } catch {
+        // 速度変更に対応しない場合は等速で鳴らす
+      }
+    }
     current = player;
     await new Promise((resolve) => {
       let done = false;
@@ -164,8 +172,8 @@ export const sayWord = async (word) => {
       const sub = player.addListener('playbackStatusUpdate', (st) => {
         if (st && st.didJustFinish) finish();
       });
-      // 状態通知が来ない端末向けの保険。単語1語の音声は長くても数秒
-      setTimeout(finish, 4000);
+      // 状態通知が来ない端末向けの保険。単語1語の音声は長くても数秒（遅くしたぶんは延ばす）
+      setTimeout(finish, Math.round(4000 / Math.max(0.5, speed)));
       player.play();
     });
   } catch {

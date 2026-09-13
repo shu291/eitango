@@ -131,6 +131,7 @@ export const speakWord = async (word) => {
       a.src = Asset.fromModule(mod).uri;
       a.currentTime = 0;
       a.volume = volume;
+      a.playbackRate = 1; // 聞き流しで変えた速度を引きずらない（要素を使い回しているため）
       await a.play();
       return;
     } catch {
@@ -198,19 +199,21 @@ export const sayText = (text, lang = 'en-US', rate = 0.9) => {
 /**
  * 単語を発音して、鳴り終わるまで待つ。事前生成の音声があればそれを使う。
  * @param {string} word
+ * @param {number} [speed] 再生速度の倍率（1 がふつう。聞き流しの速度設定）
  */
-export const sayWord = async (word) => {
+export const sayWord = async (word, speed = 1) => {
   const text = String(word ?? '').trim();
   if (!text || !hasDom || volume === 0) return;
   const mod = AUDIO[keyOf(text)];
   const a = getPlayer();
-  if (!mod || !a) return sayText(text, 'en-US');
+  if (!mod || !a) return sayText(text, 'en-US', 0.9 * speed);
   cancelSynth();
   try {
     a.pause();
     a.src = Asset.fromModule(mod).uri;
     a.currentTime = 0;
     a.volume = volume;
+    a.playbackRate = speed;
     await new Promise((resolve, reject) => {
       let done = false;
       let timer = null;
@@ -224,7 +227,7 @@ export const sayWord = async (word) => {
       };
       pending.add(finish);
       a.addEventListener('ended', finish);
-      timer = setTimeout(finish, 4000);
+      timer = setTimeout(finish, Math.round(4000 / Math.max(0.5, speed)));
       a.play().catch((e) => {
         finish();
         reject(e);
