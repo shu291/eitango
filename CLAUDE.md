@@ -322,14 +322,14 @@ localStorage 側は控えとして消さない。
 `scr` という state の文字列で条件レンダリング（`App.js:1786-1797`）。ルーターライブラリは使っていない。
 
 ```
-dashboard → study → config → flashcard / quiz / typing / reverse / matching / speed
+dashboard → study → config → flashcard / quiz / matching / speed（typing / reverse は 2026-09-13 に削除。listen は study から直接）
                                         ↓
                                      results
 その他: words（単語一覧） / stats（統計）
 ```
 
 対応する render 関数: `renderDash`(709) / `renderStudy`(829) / `renderConfig`(868) /
-`renderFlash`(1005) / `renderQuiz`(1082) / `renderTyping`(1123, 引数 `isRev` で reverse と共用) /
+`renderFlash`(1005) / `renderQuiz`(1082) / 
 `renderMatch`(1192) / `renderSpeed`(1243) / `renderResults`(1301) / `renderWords`(1361) / `renderStats`(1615)
 
 ---
