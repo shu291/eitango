@@ -26,7 +26,7 @@ import * as Storage from './src/lib/storage';
 // ファイル入出力・確認ダイアログ・発音はネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
 import { saveBackup, pickBackup } from './src/lib/backup';
 import { confirmDestructive } from './src/lib/confirm';
-import { speakWord, stopSpeaking, setSpeechVolume } from './src/lib/speech';
+import { speakWord, stopSpeaking, setSpeechVolume, sayText, sayWord } from './src/lib/speech';
 import { pickPhoto } from './src/lib/photo';
 import {
   STORAGE_KEY_V1,
@@ -352,6 +352,18 @@ export default function App() {
   const [editId, setEditId] = useState(null);
   // 単語帳（管理シート）で開いている行。タップで意味・例文・訳を省略なしで見せる
   const [openId, setOpenId] = useState(null);
+
+  // ===== 聞き流しモード =====
+  // 画面を触らずに「単語 → 意味 → 例文」を順に流す。習熟度は動かさない（テストではないため）。
+  // level: どの単語（all / weak / new / LEVELS の k）、order: 並び、count: 語数、
+  // dir: 英→日か日→英か、example: 例文を流すか、loop: 終わったら最初から
+  const [listenCfg, setListenCfg] = useState({ level: 'all', order: 'low', count: 20, dir: 'enja', example: true, loop: false });
+  const [listenState, setListenState] = useState('idle'); // idle / playing / paused / done
+  const [listenList, setListenList] = useState([]);
+  const [listenIdx, setListenIdx] = useState(0);
+  const [listenStep, setListenStep] = useState(''); // en / ja / ex
+  // 再生ループの世代。止めるときは +1 して、走っているループに「もう続けるな」と伝える
+  const listenTok = useRef(0);
   const [editEn, setEditEn] = useState('');
   const [editJa, setEditJa] = useState('');
   const [showBulk, setShowBulk] = useState(false);
@@ -642,7 +654,7 @@ export default function App() {
   const aTab = useMemo(() => {
     if (scr === 'shelf') return 'shelf';
     if (scr === 'dashboard') return 'home';
-    if (['study', 'config', 'flashcard', 'quiz', 'typing', 'reverse', 'matching', 'speed', 'results'].includes(scr)) return 'study';
+    if (['study', 'config', 'flashcard', 'quiz', 'typing', 'reverse', 'matching', 'speed', 'results', 'listen'].includes(scr)) return 'study';
     if (scr === 'words') return 'words';
     return 'stats';
   }, [scr]);
@@ -1361,6 +1373,110 @@ export default function App() {
   };
 
   // 発音ボタン。押した単語を読み上げる（事前生成の音声があればそれを鳴らす）
+  // ===================== 聞き流し（ロジック） =====================
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /** 読み上げ用に意味の記号をならす。「～を変える； 変化」→「を変える、変化」 */
+  const jaForSpeech = (ja) =>
+    String(ja ?? '')
+      .replace(/[～〜]/g, '')
+      .replace(/[；;／|]/g, '、')
+      .replace(/[〔〕\[\]（）()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  /** 聞き流しの対象を、設定どおりに絞って並べる */
+  const buildListenList = (cfg) => {
+    let pool = words;
+    if (cfg.level === 'weak') pool = words.filter(isWeak);
+    else if (cfg.level === 'new') pool = words.filter(isNew);
+    else if (cfg.level !== 'all') pool = words.filter((w) => inLevel(w, cfg.level));
+    let list = [...pool];
+    if (cfg.order === 'low') list.sort((a, b) => (a.progress || 0) - (b.progress || 0));
+    else if (cfg.order === 'high') list.sort((a, b) => (b.progress || 0) - (a.progress || 0));
+    else if (cfg.order === 'random') list = shuffleArr(list);
+    return list.slice(0, cfg.count);
+  };
+
+  const listenCount = (level) => {
+    if (level === 'all') return words.length;
+    if (level === 'weak') return words.filter(isWeak).length;
+    if (level === 'new') return words.filter(isNew).length;
+    return words.filter((w) => inLevel(w, level)).length;
+  };
+
+  /**
+   * list の startIdx 語目から順に流す。tok が listenTok.current と違ったら（止められたら）即やめる。
+   * cfg は開始時点のものを固定で使う（途中で設定が変わっても、流れている回には影響させない）
+   */
+  const runListen = async (list, startIdx, tok, cfg) => {
+    for (let i = startIdx; i < list.length; i++) {
+      if (listenTok.current !== tok) return;
+      setListenIdx(i);
+      const w = list[i];
+      const ex = cfg.example ? exampleFor(w) : null;
+      const steps = cfg.dir === 'jaen' ? [['ja', w.ja], ['en', w.en]] : [['en', w.en], ['ja', w.ja]];
+      if (ex) steps.push(['ex', ex.en]);
+      for (const [kind, text] of steps) {
+        if (listenTok.current !== tok) return;
+        setListenStep(kind);
+        if (kind === 'en') await sayWord(text);
+        else if (kind === 'ja') await sayText(jaForSpeech(text), 'ja-JP', 1.0);
+        else await sayText(text, 'en-US', 0.9);
+        if (listenTok.current !== tok) return;
+        await sleep(kind === 'ex' ? 500 : 350);
+      }
+      await sleep(700);
+    }
+    if (listenTok.current !== tok) return;
+    if (cfg.loop) return runListen(list, 0, tok, cfg);
+    setListenStep('');
+    setListenState('done');
+  };
+
+  const listenPlayFrom = (list, idx) => {
+    stopSpeaking();
+    const tok = ++listenTok.current;
+    setListenState('playing');
+    runListen(list, idx, tok, listenCfg);
+  };
+
+  const startListen = () => {
+    const list = buildListenList(listenCfg);
+    if (list.length === 0) {
+      setToast('該当する単語がありません');
+      return;
+    }
+    setListenList(list);
+    setListenIdx(0);
+    listenPlayFrom(list, 0);
+  };
+
+  const pauseListen = () => {
+    listenTok.current++;
+    stopSpeaking();
+    setListenState('paused');
+  };
+
+  const stopListen = () => {
+    listenTok.current++;
+    stopSpeaking();
+    setListenState('idle');
+    setListenStep('');
+  };
+
+  const listenSeek = (delta) => {
+    const next = Math.max(0, Math.min(listenList.length - 1, listenIdx + delta));
+    setListenIdx(next);
+    listenPlayFrom(listenList, next);
+  };
+
+  // 画面を離れたら必ず止める（タブを切り替えても声だけ流れ続けないように）
+  useEffect(() => {
+    if (scr !== 'listen' && listenState !== 'idle') stopListen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scr]);
+
   const SpeakButton = ({ word, size = 20, color = C.primary, hitSlop = 10 }) => (
     <TouchableOpacity
       onPress={() => speakWord(word)}
@@ -1793,6 +1909,7 @@ export default function App() {
       { m: 'reverse', icon: 'swap-horizontal-outline', t: '逆引き（英→日）', d: '英語を見て日本語を入力' },
       { m: 'matching', icon: 'shuffle-outline', t: 'マッチング', d: '英語と日本語をペアにする' },
       { m: 'speed', icon: 'flash-outline', t: 'スピードチャレンジ', d: '60秒で何問解けるか挑戦' },
+      { m: 'listen', icon: 'headset-outline', t: '聞き流し', d: '単語→意味→例文を音声で連続再生。画面を触らずに' },
     ];
     return (
       <ScrollView>
@@ -1813,7 +1930,7 @@ export default function App() {
               {modes.map(({ m, icon, t, d }, i) => (
                 <View key={m}>
                   <TouchableOpacity
-                    onPress={() => openConfig(m)}
+                    onPress={() => (m === 'listen' ? setScr('listen') : openConfig(m))}
                     activeOpacity={0.75}
                     accessibilityRole="button"
                     // モード名だけだと説明文が読み上げられない。1行ぜんぶを1つの読み上げにする
@@ -1844,6 +1961,199 @@ export default function App() {
           </View>
         )}
       </ScrollView>
+    );
+  };
+
+  // ===================== 聞き流し（画面） =====================
+  const renderListen = () => {
+    // 設定画面と同じ「帯から1つ選ぶ」書き方。選択中だけ藍のベタ塗り
+    const chips = (opts, val, onPick, wrap = false) => (
+      <View className="flex-row" style={{ gap: SP[2], flexWrap: wrap ? 'wrap' : 'nowrap' }}>
+        {opts.map((o) => {
+          const active = val === o.k;
+          return (
+            <TouchableOpacity
+              key={String(o.k)}
+              onPress={() => onPick(o.k)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              className={`${wrap ? '' : 'flex-1'} items-center justify-center rounded`}
+              style={{
+                backgroundColor: active ? C.primary : C.surface,
+                borderWidth: 1,
+                borderColor: active ? C.primary : C.border,
+                paddingVertical: SP[2],
+                paddingHorizontal: wrap ? SP[3] : SP[1],
+                minHeight: 44,
+                minWidth: wrap ? 72 : undefined,
+              }}
+            >
+              <Text className="text-xs font-bold text-center" style={{ color: active ? C.onPrimary : C.text }}>
+                {o.l}
+              </Text>
+              {o.d !== undefined ? (
+                <Text className="text-xs" style={[NUM, { color: active ? C.onPrimary : C.muted, marginTop: 1 }]}>
+                  {o.d}
+                </Text>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+    const set = (k, v) => setListenCfg((c) => ({ ...c, [k]: v }));
+
+    if (listenState === 'idle') {
+      const levelOpts = [
+        { k: 'all', l: '全て', d: words.length },
+        { k: 'weak', l: '苦手', d: listenCount('weak') },
+        { k: 'new', l: '未学習', d: listenCount('new') },
+        ...LEVELS.map((lv) => ({ k: lv.k, l: lv.name, d: listenCount(lv.k) })),
+      ];
+      const target = buildListenList(listenCfg).length;
+      return (
+        <ScrollView>
+          <Header title="聞き流しの設定" back="study" />
+          <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[4] }}>
+            <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
+              画面を触らずに、単語 → 意味 → 例文の順で音声が流れます。覚え具合は変わりません。
+            </Text>
+            <View>
+              <SectionTitle>どの単語</SectionTitle>
+              {chips(levelOpts, listenCfg.level, (v) => set('level', v), true)}
+            </View>
+            <View>
+              <SectionTitle>並び順</SectionTitle>
+              {chips(
+                [
+                  { k: 'low', l: '覚えていない順' },
+                  { k: 'high', l: '覚えている順' },
+                  { k: 'deck', l: '単語帳の順' },
+                  { k: 'random', l: 'ランダム' },
+                ],
+                listenCfg.order,
+                (v) => set('order', v)
+              )}
+            </View>
+            <View>
+              <SectionTitle>語数</SectionTitle>
+              {chips(
+                [9999, 10, 20, 50, 100].map((n) => ({ k: n, l: n === 9999 ? '全' : String(n) })),
+                listenCfg.count,
+                (v) => set('count', v)
+              )}
+            </View>
+            <View>
+              <SectionTitle>流す順</SectionTitle>
+              {chips(
+                [
+                  { k: 'enja', l: '英語 → 日本語' },
+                  { k: 'jaen', l: '日本語 → 英語' },
+                ],
+                listenCfg.dir,
+                (v) => set('dir', v)
+              )}
+            </View>
+            <View>
+              <SectionTitle>例文</SectionTitle>
+              {chips(
+                [
+                  { k: true, l: '流す' },
+                  { k: false, l: '流さない' },
+                ],
+                listenCfg.example,
+                (v) => set('example', v)
+              )}
+            </View>
+            <View>
+              <SectionTitle>終わったら</SectionTitle>
+              {chips(
+                [
+                  { k: false, l: '止まる' },
+                  { k: true, l: '最初から繰り返す' },
+                ],
+                listenCfg.loop,
+                (v) => set('loop', v)
+              )}
+            </View>
+            <Btn label={`聞き流しを開始（${target} 語）`} icon="headset-outline" onPress={startListen} disabled={target === 0} />
+            <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
+              音量はホームの「発音の音量」で変えられます。意味と例文は端末の読み上げを使います。
+            </Text>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    // 再生中／一時停止／終了
+    const w = listenList[listenIdx];
+    const ex = w && listenCfg.example ? exampleFor(w) : null;
+    const done = listenState === 'done';
+    const playing = listenState === 'playing';
+    const hi = (kind) => (listenStep === kind && playing ? C.primary : C.text);
+    return (
+      <View style={{ flex: 1 }}>
+        <Header
+          title="聞き流し"
+          back="study"
+          right={
+            <Text className="text-sm" style={[NUM, { color: C.muted }]}>
+              {Math.min(listenIdx + 1, listenList.length)} / {listenList.length}
+            </Text>
+          }
+        />
+        <ScrollView contentContainerStyle={{ paddingHorizontal: SP[4], paddingTop: SP[5], paddingBottom: SP[5], gap: SP[4] }}>
+          {done ? (
+            <Sheet className="p-4 items-center">
+              <Icon name="checkmark-circle" size={36} color={C.success} />
+              <Text className="text-base font-bold text-ink" style={{ marginTop: SP[2] }}>
+                {listenList.length} 語ぶん流し終わりました
+              </Text>
+            </Sheet>
+          ) : w ? (
+            <Sheet className="p-4" style={{ minHeight: 260, justifyContent: 'center' }}>
+              <View className="items-center" style={{ gap: SP[3] }}>
+                <LvBadge w={w} />
+                <Text className="text-3xl text-center" style={{ fontFamily: F.enBold, lineHeight: 40, color: hi('en') }}>
+                  {w.en}
+                </Text>
+                <Text className="text-xl font-bold text-center" style={{ lineHeight: 30, color: hi('ja') }}>
+                  {w.ja}
+                </Text>
+                {ex ? (
+                  <View style={{ marginTop: SP[2], paddingTop: SP[3], borderTopWidth: 1, borderTopColor: C.border, alignSelf: 'stretch' }}>
+                    <Text className="text-base text-center" style={{ fontFamily: F.en, lineHeight: 24, color: hi('ex') }}>
+                      {ex.en}
+                    </Text>
+                    {ex.ja ? (
+                      <Text className="text-xs text-ink-soft text-center" style={{ marginTop: SP[1], lineHeight: 18 }}>
+                        {ex.ja}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            </Sheet>
+          ) : null}
+
+          <View className="flex-row" style={{ gap: SP[2] }}>
+            <Btn label="前へ" tone="line" icon="play-skip-back-outline" onPress={() => listenSeek(-1)} disabled={listenIdx === 0 && !done} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
+            {done ? (
+              <Btn label="もう一度" icon="refresh-outline" onPress={() => listenPlayFrom(listenList, 0)} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
+            ) : playing ? (
+              <Btn label="一時停止" icon="pause" onPress={pauseListen} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
+            ) : (
+              <Btn label="再開" icon="play" onPress={() => listenPlayFrom(listenList, listenIdx)} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
+            )}
+            <Btn label="次へ" tone="line" icon="play-skip-forward-outline" onPress={() => listenSeek(1)} disabled={listenIdx >= listenList.length - 1} className="flex-1" style={{ paddingHorizontal: SP[2] }} />
+          </View>
+          <Btn label="終了して設定に戻る" tone="quiet" icon="close-outline" onPress={stopListen} />
+          <Text className="text-xs text-ink-soft text-center" style={{ lineHeight: 18 }}>
+            画面が消えると止まることがあります。長く聞くときは画面を点けたままにしてください。
+          </Text>
+        </ScrollView>
+      </View>
     );
   };
 
@@ -3186,9 +3496,20 @@ export default function App() {
                 if (!ex) return null;
                 return open ? (
                   <View style={{ marginTop: SP[2], paddingLeft: SP[2], borderLeftWidth: 2, borderLeftColor: C.border }}>
-                    <Text className="text-sm text-ink" style={{ fontFamily: F.en, lineHeight: 21 }}>
-                      {ex.en}
-                    </Text>
+                    <View className="flex-row items-start" style={{ gap: SP[1] }}>
+                      <Text className="text-sm text-ink flex-1" style={{ fontFamily: F.en, lineHeight: 21 }}>
+                        {ex.en}
+                      </Text>
+                      {/* 例文の読み上げ。単語と違って事前生成の音声は無いので、端末の読み上げで英語を読む */}
+                      <TouchableOpacity
+                        onPress={() => sayText(ex.en, 'en-US', 0.9)}
+                        hitSlop={10}
+                        accessibilityLabel="例文を読み上げる"
+                        className="p-1"
+                      >
+                        <Icon name="volume-high" size={16} color={C.primary} />
+                      </TouchableOpacity>
+                    </View>
                     {ex.ja ? (
                       <Text className="text-xs text-ink-soft" style={{ lineHeight: 18, marginTop: 2 }}>
                         {ex.ja}
@@ -4389,6 +4710,7 @@ export default function App() {
           {scr === 'matching' && renderMatch()}
           {scr === 'speed' && renderSpeed()}
           {scr === 'results' && renderResults()}
+          {scr === 'listen' && renderListen()}
           {scr === 'words' && renderWords()}
           {scr === 'shelf' && renderShelf()}
           {scr === 'stats' && renderStats()}

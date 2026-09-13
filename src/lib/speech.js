@@ -90,6 +90,90 @@ export const speakWord = async (word) => {
   }
 };
 
+// ===== 読み終わりまで待てる再生（聞き流しモード用） =====
+//
+// speakWord は「鳴らして即戻る」ので、単語 → 意味 → 例文と順に流すには
+// 終わりを待つ版が要る。stopSpeaking() で止めたときは待っている側をすぐ解放する。
+const pending = new Set();
+const settlePending = () => {
+  for (const r of pending) r();
+  pending.clear();
+};
+
+/**
+ * 文を読み上げて、読み終わるまで待つ。英語・日本語どちらも端末の読み上げを使う。
+ * @param {string} text
+ * @param {'en-US'|'ja-JP'} [lang]
+ * @param {number} [rate] 0.9 くらいがふつう。1 で標準速度
+ */
+export const sayText = (text, lang = 'en-US', rate = 0.9) => {
+  const t = String(text ?? '').trim();
+  if (!t || volume === 0) return Promise.resolve();
+  stopCurrent();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      pending.delete(finish);
+      resolve();
+    };
+    pending.add(finish);
+    try {
+      Speech.speak(t, { language: lang, rate, volume, onDone: finish, onStopped: finish, onError: finish });
+    } catch {
+      finish();
+    }
+  });
+};
+
+/**
+ * 単語を発音して、鳴り終わるまで待つ。事前生成の音声があればそれを使う。
+ * @param {string} word
+ */
+export const sayWord = async (word) => {
+  const text = String(word ?? '').trim();
+  if (!text || volume === 0) return;
+  const asset = AUDIO[keyOf(text)];
+  if (!asset) return sayText(text, 'en-US');
+  stopCurrent();
+  try {
+    Speech.stop();
+  } catch {
+    // 未再生でも構わない
+  }
+  try {
+    await ensureAudioMode();
+    const player = createAudioPlayer(asset);
+    player.volume = volume;
+    current = player;
+    await new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        pending.delete(finish);
+        try {
+          sub.remove();
+        } catch {
+          // 解除済みなら無視
+        }
+        resolve();
+      };
+      pending.add(finish);
+      const sub = player.addListener('playbackStatusUpdate', (st) => {
+        if (st && st.didJustFinish) finish();
+      });
+      // 状態通知が来ない端末向けの保険。単語1語の音声は長くても数秒
+      setTimeout(finish, 4000);
+      player.play();
+    });
+  } catch {
+    stopCurrent();
+    await sayText(text, 'en-US');
+  }
+};
+
 /** 再生中の音を止める（画面を離れるときなど） */
 export const stopSpeaking = () => {
   stopCurrent();
@@ -98,4 +182,5 @@ export const stopSpeaking = () => {
   } catch {
     // 未再生時に呼ばれても問題ない
   }
+  settlePending();
 };

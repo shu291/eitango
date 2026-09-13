@@ -18,6 +18,7 @@
 | スタイリング | NativeWind v4 + Tailwind v3（`className` を使う） |
 | 言語 | **JavaScript のみ**。TypeScript の型定義ファイルは無い |
 | ルーティング | ライブラリ未使用。`scr` という state による条件レンダリング |
+| 聞き流し | `scr === 'listen'`。`runListen`（App.js）が `sayWord` / `sayText`（speech.js）を await で順に流す。`listenTok`（世代番号）で停止。習熟度は触らない |
 | ストレージ | キーは `@eitango_state_v2` の 1 つだけ。ネイティブは AsyncStorage、**Web は IndexedDB**（`src/lib/storage.web.js`。localStorage は iPhone で 5MB 上限のため使わない） |
 | 復習アルゴリズム | **SM-2 ではない**（独自ポイント制。詳細は §3） |
 | git | **リポジトリが存在しない**（`.git` なし、`.gitignore` なし） |

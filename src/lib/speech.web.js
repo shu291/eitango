@@ -141,6 +141,100 @@ export const speakWord = async (word) => {
   speakWithSynth(text);
 };
 
+// ===== 読み終わりまで待てる再生（聞き流しモード用） =====
+//
+// speakWord は「鳴らして即戻る」ので、単語 → 意味 → 例文と順に流すには
+// 終わりを待つ版が要る。stopSpeaking() で止めたときは待っている側をすぐ解放する。
+//
+// iOS Safari の注意: 読み上げの onend が来ないことがある（画面を伏せた・別タブへ行った等）ので、
+// 文の長さから見積もった上限時間でも必ず解放する。次の発話の前に cancel するので重なりはしない。
+const pending = new Set();
+const settlePending = () => {
+  for (const r of pending) r();
+  pending.clear();
+};
+
+/**
+ * 文を読み上げて、読み終わるまで待つ。英語・日本語どちらもブラウザの読み上げを使う。
+ * @param {string} text
+ * @param {'en-US'|'ja-JP'} [lang]
+ * @param {number} [rate]
+ */
+export const sayText = (text, lang = 'en-US', rate = 0.9) => {
+  const t = String(text ?? '').trim();
+  if (!t || !hasDom || !window.speechSynthesis || volume === 0) return Promise.resolve();
+  if (player) player.pause();
+  cancelSynth();
+  return new Promise((resolve) => {
+    let done = false;
+    let timer = null;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      pending.delete(finish);
+      if (timer) clearTimeout(timer);
+      resolve();
+    };
+    pending.add(finish);
+    try {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = lang;
+      u.rate = rate;
+      u.volume = volume;
+      const want = lang.slice(0, 2);
+      const voice = window.speechSynthesis.getVoices().find((v) => v.lang?.startsWith(want));
+      if (voice) u.voice = voice;
+      u.onend = finish;
+      u.onerror = finish;
+      // 保険: 1文字 0.25 秒 + 4 秒。日本語の長い訳でも十分足りる長さ
+      timer = setTimeout(finish, 4000 + t.length * 250);
+      window.speechSynthesis.speak(u);
+    } catch {
+      finish();
+    }
+  });
+};
+
+/**
+ * 単語を発音して、鳴り終わるまで待つ。事前生成の音声があればそれを使う。
+ * @param {string} word
+ */
+export const sayWord = async (word) => {
+  const text = String(word ?? '').trim();
+  if (!text || !hasDom || volume === 0) return;
+  const mod = AUDIO[keyOf(text)];
+  const a = getPlayer();
+  if (!mod || !a) return sayText(text, 'en-US');
+  cancelSynth();
+  try {
+    a.pause();
+    a.src = Asset.fromModule(mod).uri;
+    a.currentTime = 0;
+    a.volume = volume;
+    await new Promise((resolve, reject) => {
+      let done = false;
+      let timer = null;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        pending.delete(finish);
+        if (timer) clearTimeout(timer);
+        a.removeEventListener('ended', finish);
+        resolve();
+      };
+      pending.add(finish);
+      a.addEventListener('ended', finish);
+      timer = setTimeout(finish, 4000);
+      a.play().catch((e) => {
+        finish();
+        reject(e);
+      });
+    });
+  } catch {
+    await sayText(text, 'en-US');
+  }
+};
+
 /** 再生中の音を止める */
 export const stopSpeaking = () => {
   if (player) {
@@ -152,4 +246,5 @@ export const stopSpeaking = () => {
     }
   }
   cancelSynth();
+  settlePending();
 };
