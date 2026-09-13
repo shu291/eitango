@@ -52,6 +52,8 @@ export const MODE_MULT = {
   reverse: 1.2,
   speed: 0.9,
   matching: 1.0,
+  // 例文クイズ: 文脈から選ぶので4択より少しだけ強い証拠として扱う
+  cloze: 1.1,
 };
 
 /** 速さボーナスの境目（ミリ秒）と倍率 */
