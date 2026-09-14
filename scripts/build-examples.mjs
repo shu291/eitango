@@ -33,6 +33,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseLine } from '../src/lib/logic.js';
+import { headwordCoverage } from '../src/lib/headword.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MAP_FILE = join(ROOT, 'src/lib/exampleMap.json');
@@ -167,12 +168,13 @@ function validate(word, ex) {
   const n = en.split(' ').length;
   if (n < MIN_WORDS) return `英文が短すぎる（${n}語）`;
   if (n > MAX_WORDS) return `英文が長すぎる（${n}語）`;
-  // 見出し語が使われているか。活用形（-s / -ed / -ing / -ies など）は語幹で許す
-  const sentence = en.toLowerCase();
-  for (const tok of word.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)) {
-    const stem = tok.length >= 5 ? tok.slice(0, tok.length - 2) : tok;
-    const re = new RegExp(`\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[a-z]*\\b`);
-    if (!re.test(sentence)) return `英文に「${tok}」が使われていない`;
+  // 見出し語が使われているか。判定はアプリの太字表示と同じ headword.js に1つだけ置いてある
+  // （活用形・不規則動詞・熟語の型の記号 A / B / one's の扱いもそちら）。
+  // 1語の見出しはその語が必要。熟語は中身の語の6割以上（of/about のような「どちらか」を吸収）
+  const { content, found, missing } = headwordCoverage(en, word);
+  if (content.length === 1 && !found.length) return `英文に「${content[0]}」が使われていない`;
+  if (content.length > 1 && found.length < Math.max(1, Math.ceil(content.length * 0.6))) {
+    return `英文に熟語の中身（${missing.join(', ')}）が使われていない`;
   }
   return null;
 }
@@ -187,6 +189,7 @@ function buildPrompt(en, ja) {
     'Requirements:',
     `- ${MIN_WORDS} to ${MAX_WORDS} words, one sentence, everyday or academic context suitable for Japanese university entrance exams.`,
     `- The word "${en}" must appear in the sentence (inflected forms are fine) in exactly the meaning given above.`,
+    '- If it is a phrase pattern, A / B / one\'s / do / sth are placeholders: fill them with real words (e.g. "accuse A of B" -> "accused him of lying").',
     '- Do not explain the word. Do not use quotation marks around the word.',
     '- Also give a natural Japanese translation of the whole sentence.',
     'Answer in JSON only: {"en": "<sentence>", "ja": "<Japanese translation>"}',
@@ -202,6 +205,7 @@ function buildBatchPrompt(words) {
     'Requirements for every sentence:',
     `- ${MIN_WORDS} to ${MAX_WORDS} words, one sentence, everyday or academic context suitable for Japanese university entrance exams.`,
     '- The word must appear in its sentence (inflected forms are fine) in exactly the meaning given.',
+    '- For phrase patterns, A / B / one\'s / do / sth are placeholders: fill them with real words (e.g. "accuse A of B" -> "accused him of lying").',
     '- Do not explain the word. Do not use quotation marks around the word.',
     '- Also give a natural Japanese translation of each sentence.',
     'Answer in JSON only, one item per word, in the same order:',
