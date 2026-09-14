@@ -19,6 +19,10 @@
     "en": "We had a great time exploring the ancient ruins and learning about their history.",
     "ja": "私たちは古代遺跡を探検し、その歴史について学ぶことにはとても楽しい時間を過ごしました。"
   },
+  "a_great_good_deal_of": {
+    "en": "There was a great deal of excitement surrounding the release of the new album.",
+    "ja": "新しいアルバムのリリースには、たくさんの期待が集まりました。"
+  },
   "a_handful_of": {
     "en": "A handful of students raised their hands in response to the teacher's question.",
     "ja": "少数の学生が先生の質問に対して手を挙げた。"
@@ -38,6 +42,10 @@
   "a_is_one_thing_and_b_is_another": {
     "en": "Following the recipe precisely is one thing, and actually baking a cake is another.",
     "ja": "レシピを厳密に守ることは別で、実際にケーキを焼くのは別の話だ。"
+  },
+  "a_is_to_b_what_c_is_to_d": {
+    "en": "Joy is to sorrow what laughter is to tears.",
+    "ja": "喜びは悲しみに対して笑いが涙に対してである。"
   },
   "a_kind_of": {
     "en": "This dish is a kind of traditional comfort food often served during the holidays.",
@@ -130,6 +138,10 @@
   "abound": {
     "en": "The forest abounds with wildlife, including deer, foxes, and various bird species.",
     "ja": "その森にはシカ、キツネ、様々な鳥類など、野生動物が豊富に生息している。"
+  },
+  "abound_in_with": {
+    "en": "The local market abound with fresh fruits and vegetables, especially during harvest season.",
+    "ja": "その地元の市場は、特に収穫期には新鮮な果物や野菜が豊富にある。"
   },
   "above": {
     "en": "The temperature is expected to rise above thirty degrees Celsius tomorrow afternoon.",
@@ -226,6 +238,10 @@
   "accept": {
     "en": "Please accept our sincere apologies for any inconvenience this may have caused you.",
     "ja": "この件でご迷惑をおかけし大変申し訳ございません、どうかお受け取りください。"
+  },
+  "accept_a_as_b": {
+    "en": "We must accept climate change as a serious threat to our planet’s future.",
+    "ja": "私たちは気候変動を地球の未来に対する深刻な脅威として受け入れなければなりません。"
   },
   "acceptable": {
     "en": "The company's revised policy is now considered an acceptable compromise for all parties involved.",
@@ -331,6 +347,10 @@
     "en": "The police will accuse him of theft if they find evidence linking him to the crime.",
     "ja": "警察は彼を結びつける証拠が見つかれば、窃盗で彼を訴えるでしょう。"
   },
+  "accuse_a_of_b": {
+    "en": "The police accused the suspect of stealing valuable artifacts from the museum.",
+    "ja": "警察は、容疑者を博物館から貴重な美術品を盗んだとして告発した。"
+  },
   "accustom": {
     "en": "Living abroad will help you accustom yourself to different cultures and perspectives.",
     "ja": "海外生活はあなたに異なる文化や視点への慣れを手助けするだろう。"
@@ -406,6 +426,10 @@
   "act_on": {
     "en": "She decided to act on her instincts and quit her unfulfilling job.",
     "ja": "彼女は自分の直感に従って、不満のあった仕事を辞めることにした。"
+  },
+  "act_on_upon": {
+    "en": "The company decided to act upon the customer feedback and improve its services.",
+    "ja": "会社は顧客からのフィードバックに基づいて行動し、サービスを改善することに決定した。"
   },
   "act_out": {
     "en": "The shy student felt awkward as he had to act out a scene from the play.",
@@ -558,6 +582,10 @@
   "adjust": {
     "en": "Please adjust your microphone volume so everyone can hear you clearly during the presentation.",
     "ja": "発表中、皆さんがあなたをはっきりと聞こえるように、マイクの音量を調整してください。"
+  },
+  "adjust_a_to_b": {
+    "en": "The new students need time to adjust to the different learning environment at university.",
+    "ja": "新しい学生は大学の異なる学習環境に慣れるのに時間がかかるでしょう。"
   },
   "administer": {
     "en": "The nurse will administer the medication to the patient at precisely 8:00 AM tomorrow morning.",
@@ -975,6 +1003,10 @@
     "en": "All in all, the conference was a success despite some minor technical difficulties.",
     "ja": "全体的に見て、いくつかの小さな技術的な問題はあったものの、会議は成功だった。"
   },
+  "all_just_the_same": {
+    "en": "Despite the rain, we’re going on a picnic; the same as always.",
+    "ja": "雨が降っているにもかかわらず、いつも通りピクニックに行きます。"
+  },
   "all_manner_of": {
     "en": "The antique shop contained all manner of fascinating and unusual artifacts.",
     "ja": "その骨董店には、魅力的で珍しい様々な遺物が収められていた。"
@@ -982,6 +1014,10 @@
   "all_of_a_sudden": {
     "en": "All of a sudden, the music stopped, plunging the concert hall into silence.",
     "ja": "突然、音楽が止まり、コンサートホールは静寂に包まれました。"
+  },
+  "all_on_one_s_own": {
+    "en": "She managed to complete the project entirely on her own, without any assistance.",
+    "ja": "彼女は誰の助けもなく、完全に自分1人でプロジェクトを完了させました。"
   },
   "all_one_has_to_do_is_to_do": {
     "en": "All one has to do is submit the application form before the deadline.",
@@ -1883,6 +1919,14 @@
     "en": "The new policy emphasizes collaboration as opposed to individual competition.",
     "ja": "新しいポリシーは、個人の競争ではなく、協調を重視している。"
   },
+  "as_so_far_as": {
+    "en": "As far as I’m concerned, recycling is a responsibility we all share.",
+    "ja": "私個人としては、リサイクルは私たち全員が共有する責任だと思います。"
+  },
+  "as_so_long_as": {
+    "en": "You can borrow my car as long as you return it by tomorrow evening.",
+    "ja": "明日夜までに車を返してくれる限り、私の車を借りることができます。"
+  },
   "as_soon_as": {
     "en": "As soon as I finish this report, I'll send it over to the manager for review.",
     "ja": "私がこのレポートを終えるやいなや、マネージャーにレビューを送ります。"
@@ -1927,6 +1971,10 @@
     "en": "Historians ascribe the painting’s creation to Leonardo da Vinci's workshop.",
     "ja": "歴史家は絵画の制作をレオナルド・ダ・ヴィンチの工房によるものと見ています。"
   },
+  "ascribe_a_to_b": {
+    "en": "Many people ascribe his success to years of hard work and dedication.",
+    "ja": "多くの人が彼の成功を長年の努力と献身に帰属させます。"
+  },
   "ascription": {
     "en": "The ascription of divine powers to the ruler fueled his authority and influence.",
     "ja": "支配者に神のような力があるとすることによって、彼の権威と影響力を高めました。"
@@ -1954,6 +2002,10 @@
   "ask_a_favor_of": {
     "en": "I wouldn’t ask a favor of you unless it was truly important to me.",
     "ja": "本当に私にとって重要でない限り、あなたにお願いすることはありません。"
+  },
+  "ask_a_for_b": {
+    "en": "I need to ask my professor for an extension on the deadline.",
+    "ja": "締め切りを延ばしてもらうために、教授に頼む必要がある。"
   },
   "ask_for": {
     "en": "If you need help, don’t hesitate to ask for it from your colleagues.",
@@ -2127,6 +2179,14 @@
     "en": "I didn’t realize I had made a mistake at all until my teacher pointed it out.",
     "ja": "先生に指摘されるまで、ミスをしたことに全く気づきませんでした。"
   },
+  "at_all_cost_s_any_cost": {
+    "en": "We must protect endangered species at all costs to preserve biodiversity.",
+    "ja": "私たちは生物多様性を維持するために、どんな犠牲を払ってでも絶滅危惧種の保護を守らなければなりません。"
+  },
+  "at_all_cost_s_at_any_cost": {
+    "en": "We must protect endangered species at all costs, even if it’s expensive.",
+    "ja": "どんなにお金がかかっても、絶滅危惧種の保護は優先しなければならない。"
+  },
   "at_any_rate": {
     "en": "At any rate, we need to finalize the plans for the conference next week.",
     "ja": "とにかく、来週までに会議の計画を最終決定する必要があります。"
@@ -2163,6 +2223,10 @@
     "en": "She prefers to relax and read a book at home on rainy afternoons.",
     "ja": "彼女は雨上がりの午後、家でくつろいで本を読むのが好きです。"
   },
+  "at_home_with_in_on": {
+    "en": "She felt most comfortable and relaxed at home with a good book.",
+    "ja": "彼女は本を読んで家でくつろいでいる時が一番心地よかった。"
+  },
   "at_intervals": {
     "en": "The old lighthouse beam flashed at intervals, guiding ships safely through the foggy night.",
     "ja": "古い灯台の光は間隔をおいて点滅し、霧深い夜を安全に航海する船を誘導しました。"
@@ -2198,6 +2262,10 @@
   "at_once": {
     "en": "Please write down these instructions at once so you don't forget them later.",
     "ja": "後で忘れないように、これらの指示をすぐに書き留めてください。"
+  },
+  "at_one_s_disposal": {
+    "en": "The entire library collection is now at your disposal for research purposes.",
+    "ja": "図書館の全コレクションが、あなたの研究のためにいつでも使えるようにしました。"
   },
   "at_one_s_ease": {
     "en": "After a long day, she finally felt at one's ease, curled up with a good book.",
@@ -2454,6 +2522,10 @@
   "avail": {
     "en": "This new software will avail us of greater efficiency in our workflow.",
     "ja": "この新しいソフトウェアは、ワークフローの効率化に役立ちます。"
+  },
+  "avail_oneself_of": {
+    "en": "Students should avail themselves of the university’s career counseling services.",
+    "ja": "学生は大学のキャリアカウンセリングサービスを利用すべきだ。"
   },
   "availability": {
     "en": "The limited availability of tickets made it difficult to attend the concert.",
@@ -2771,13 +2843,33 @@
     "en": "He has really begun to be keen on collecting vintage stamps from around the world.",
     "ja": "彼は世界中のヴィンテージ切手を集めることに熱中するようになりました。"
   },
+  "be_about_to": {
+    "en": "The train is about to leave, so please hurry and find your seat quickly.",
+    "ja": "電車が出発しようとしていますので、急いで席を見つけてください。"
+  },
+  "be_about_to_do": {
+    "en": "The rain is about to start, so you should grab an umbrella before heading out.",
+    "ja": "雨が降りそうだから、傘を持ってから出かけるべきだ。"
+  },
   "be_absent_from": {
     "en": "She was absent from class yesterday because she had a doctor's appointment.",
     "ja": "彼女は昨日、医者の予約があったため、授業を欠席していました。"
   },
+  "be_absorbed_in": {
+    "en": "He was completely absorbed in the novel, oblivious to the noise around him.",
+    "ja": "彼は小説にすっかり没頭していて、周りの騒音には気づいていませんでした。"
+  },
+  "be_abundant_in": {
+    "en": "The region is abundant in natural resources, including timber and minerals.",
+    "ja": "この地域は木材や鉱物など、豊富な天然資源があります。"
+  },
   "be_accustomed_to": {
     "en": "After living abroad for so long, she’s become accustomed to different customs.",
     "ja": "海外で長い間暮らしたため、彼女は異なる習慣に慣れています。"
+  },
+  "be_acquainted_with": {
+    "en": "I'm not very familiar with modern art, but I’m slowly getting acquainted with several artists.",
+    "ja": "私は現代アートについてはあまり詳しくないが、徐々にいくつかの芸術家に親しんでいっている。"
   },
   "be_addicted_to": {
     "en": "Many teenagers are increasingly being addicted to social media and its constant notifications.",
@@ -2786,6 +2878,10 @@
   "be_afraid_of": {
     "en": "Many students be afraid of public speaking, even if they are well-prepared.",
     "ja": "多くの学生は、準備万端であっても、人前で話すことを恐れている。"
+  },
+  "be_afraid_to_do": {
+    "en": "He was too nervous to be afraid to speak in public, even with preparation.",
+    "ja": "彼は準備万端でも、人前で話すのが怖くてできなかった。"
   },
   "be_all_ears": {
     "en": "I’m be all ears; please tell me what happened during your trip abroad.",
@@ -2799,9 +2895,21 @@
     "en": "Sustainable fashion is really being all the rage among young consumers these days.",
     "ja": "サステナブルなファッションは、最近若い消費者たちの間でとても人気になっています。"
   },
+  "be_anxious_about": {
+    "en": "She was anxious about her upcoming job interview and couldn’t sleep well.",
+    "ja": "彼女は次の面接を心配していて、よく眠れませんでした。"
+  },
   "be_anxious_for": {
     "en": "After months of training, she was anxious for the competition to finally begin.",
     "ja": "数ヶ月の訓練の後、彼女はついに競技が始まることを切望していました。"
+  },
+  "be_anxious_to_do": {
+    "en": "He was anxious to start his new project after the holiday break.",
+    "ja": "彼はバカンス明けに新しいプロジェクトを始めくたびただっていました。"
+  },
+  "be_apt_to_do": {
+    "en": "Students who don't prepare are apt to struggle with the difficult exam questions.",
+    "ja": "準備をしていない学生は、難しい試験の問題で苦労する傾向があります。"
   },
   "be_at_odds_with": {
     "en": "The company's new policy is at odds with the employees’ long-held beliefs.",
@@ -2815,9 +2923,17 @@
     "en": "The company's new marketing strategy will be based on recent customer feedback.",
     "ja": "同社の新しいマーケティング戦略は、最近の顧客からのフィードバックに基づいているでしょう。"
   },
+  "be_based_on_upon": {
+    "en": "The film’s plot is based upon a true story from the 1920s.",
+    "ja": "この映画のプロットは、1920年代の真実の物語に基づいています。"
+  },
   "be_being": {
     "en": "The old house is being renovated with modern appliances and sustainable materials.",
     "ja": "古い家は、最新の家電製品と持続可能な素材を使って改築されている。"
+  },
+  "be_beside_oneself_with": {
+    "en": "She was beside herself with worry when her son didn't come home on time.",
+    "ja": "息子が遅刻したとき、彼女は心配で我を忘れていました。"
   },
   "be_better_off": {
     "en": "If you save more money now, you will be better off in your retirement years.",
@@ -2835,6 +2951,14 @@
     "en": "She felt immense pressure because she was born into a wealthy and influential family.",
     "ja": "彼女は裕福で影響力のある家庭に生まれたため、大きなプレッシャーを感じていた。"
   },
+  "be_bound_for": {
+    "en": "The train is bound for Kyoto and should arrive in two hours.",
+    "ja": "この電車は京都行きで、2時間後には到着する予定です。"
+  },
+  "be_bound_to_do": {
+    "en": "If you don't study, you are bound to fail the exam next week.",
+    "ja": "もし勉強しなければ、来週の試験に必ず失敗するでしょう。"
+  },
   "be_busy_with": {
     "en": "I've been incredibly busy with preparing for the upcoming exam next week.",
     "ja": "私は来週の試験対策で非常に忙しくしています。"
@@ -2847,9 +2971,45 @@
     "en": "Please be certain to double-check all your calculations before submitting the assignment.",
     "ja": "提出する前に、計算をすべて再確認するようにしてください。"
   },
+  "be_characteristic_of": {
+    "en": "A dry sense of humor is characteristic of many British comedians.",
+    "ja": "乾いたユーモアは多くのイギリスのコメディアンに共通してみられる。"
+  },
+  "be_committed_to": {
+    "en": "She is deeply committed to protecting endangered species and their habitats.",
+    "ja": "彼女は絶滅危惧種とその生息地を守ることに深く献身している。"
+  },
+  "be_compelled_to_do": {
+    "en": "Due to the severe weather, we were compelled to close the school early.",
+    "ja": "ひどい天候のため、学校を早めに閉鎖せざるを得なかった。"
+  },
   "be_composed_of": {
     "en": "The orchestra is be composed of talented musicians from all over the world.",
     "ja": "オーケストラは世界中の才能ある音楽家から構成されています。"
+  },
+  "be_concerned_about": {
+    "en": "Parents are understandably concerned about their children's online safety.",
+    "ja": "親は子供のオンライン安全について当然懸念している。"
+  },
+  "be_concerned_about_for": {
+    "en": "My parents are very concerned about my upcoming job interview.",
+    "ja": "両親は私の今後の面接をとても心配しています。"
+  },
+  "be_concerned_with_in": {
+    "en": "The company is primarily concerned with increasing its market share in Asia.",
+    "ja": "その会社は主にアジアでの市場シェアの拡大に関係しています。"
+  },
+  "be_confident_of_about": {
+    "en": "She was confident about her ability to pass the difficult exam with flying colors.",
+    "ja": "彼女は、難しい試験を優秀な成績で合格できると確信していた。"
+  },
+  "be_confronted_with_by": {
+    "en": "The company will be confronted with significant challenges if it doesn’t adapt to changing consumer preferences.",
+    "ja": "その会社は、消費者の嗜好の変化に対応しなければ、重大な課題に直面することになるでしょう。"
+  },
+  "be_connected_with": {
+    "en": "His research has been shown to be connected with the broader field of neuroscience.",
+    "ja": "彼の研究は神経科学のより広い分野と関係があることが示されている。"
   },
   "be_conscious_of": {
     "en": "We need to be conscious of our impact on the environment and make sustainable choices.",
@@ -2867,9 +3027,21 @@
     "en": "After years of searching, she finally learned to be content with a quiet life and simple pleasures.",
     "ja": "長年の探求の末、彼女はついに静かな生活とささやかな楽しみで満足することに気づいた。"
   },
+  "be_contrary_to": {
+    "en": "Her actions were contrary to what she had previously promised her colleagues.",
+    "ja": "彼女の行動は、以前に同僚たちに約束したことと矛盾していました。"
+  },
   "be_convinced_of": {
     "en": "After seeing the evidence, she became completely convinced of his innocence.",
     "ja": "証拠を見た後、彼女は彼の無罪を完全に確信した。"
+  },
+  "be_convinced_that": {
+    "en": "I am convinced that studying abroad will broaden my perspective on the world.",
+    "ja": "海外留学が世界の視野を広げるだろうと確信しています。"
+  },
+  "be_curious_about": {
+    "en": "The children were very curious about how the magician performed his tricks.",
+    "ja": "子供たちはマジシャンがどのようにトリックを披露したのかとても興味を持っていました。"
   },
   "be_cut_out_for": {
     "en": "She's clearly been cut out for a career in medicine, given her empathy and intelligence.",
@@ -2882,6 +3054,14 @@
   "be_dedicated_to": {
     "en": "She has always been dedicated to improving the lives of underprivileged children.",
     "ja": "彼女は常に恵まれない子供たちの生活を改善することに打ち込んでいます。"
+  },
+  "be_dependent_on_upon": {
+    "en": "The survival of many plant species is highly dependent upon pollination by insects.",
+    "ja": "多くの植物種の生存は昆虫による受粉に大きく依存しています。"
+  },
+  "be_destined_to_do": {
+    "en": "According to legend, he was destined to become a great leader of his people.",
+    "ja": "伝説によれば、彼は民を導く偉大な指導者になる運命だった。"
   },
   "be_devoid_of": {
     "en": "The minimalist apartment was beautifully designed, almost completely devoid of clutter.",
@@ -2902,6 +3082,14 @@
   "be_eligible_for": {
     "en": "To be eligible for the scholarship, students must maintain a high GPA and demonstrate financial need.",
     "ja": "奨学金の資格を得るには、学生は高い成績を維持し、経済的必要性を証明しなければならない。"
+  },
+  "be_engaged_in": {
+    "en": "She is currently engaged in researching climate change for her master's thesis.",
+    "ja": "彼女は現在、修士論文のために気候変動に関する研究に従事しています。"
+  },
+  "be_entitled_to": {
+    "en": "As a citizen, you are entitled to free healthcare services.",
+    "ja": "市民として、あなたは無料の医療サービスを受ける資格があります。"
   },
   "be_equal_to": {
     "en": "The final exam score must be equal to at least seventy percent to pass the course.",
@@ -2931,13 +3119,29 @@
     "en": "The classic novel will be familiar to many students who have studied British literature.",
     "ja": "その古典小説は、イギリス文学を学んだ多くの学生にとってなじみがあるでしょう。"
   },
+  "be_familiar_with": {
+    "en": "As a seasoned traveler, she’s quite familiar with navigating public transportation in Tokyo.",
+    "ja": "熟練した旅行者として、彼女は東京の公共交通機関での移動に慣れています。"
+  },
   "be_famous_for": {
     "en": "Italy is famous for its delicious cuisine and beautiful art.",
     "ja": "イタリアは美味しい料理と美しい芸術で有名です。"
   },
+  "be_fed_up_with": {
+    "en": "I’m really fed up with all the rain we've been having this summer.",
+    "ja": "私は今年の夏の雨にうんざりしている。"
+  },
   "be_filled_with": {
     "en": "The concert hall was filled with excited chatter before the band took the stage.",
     "ja": "バンドがステージに上がる前に、コンサートホールは興奮した話し声でいっぱいだった。"
+  },
+  "be_forced_to_do": {
+    "en": "Due to the storm, we were forced to cancel our hiking trip.",
+    "ja": "嵐のため、私たちはハイキング旅行を中止せざるを得ませんでした。"
+  },
+  "be_free_from_of": {
+    "en": "The new regulations aim to be free from unnecessary bureaucracy and streamline the application process.",
+    "ja": "新しい規制は、不必要な官僚主義がなく、申請プロセスを合理化することを目的としています。"
   },
   "be_free_of": {
     "en": "This new model of car is advertised as being free of harmful emissions.",
@@ -2951,6 +3155,10 @@
     "en": "The concert hall was full of excited chatter before the orchestra began to play.",
     "ja": "オーケストラが演奏を始める前、コンサートホールは興奮した話し声でいっぱいだった。"
   },
+  "be_good_at": {
+    "en": "She's really good at playing the piano; she’s been practicing for years.",
+    "ja": "彼女はピアノを弾くのがとても上手です。長年練習しています。"
+  },
   "be_grateful_to_a_for_b": {
     "en": "I'll always be grateful to my teachers for their unwavering support throughout my studies.",
     "ja": "勉強を通して、先生方の揺るぎないサポートにいつも感謝しています。"
@@ -2962,6 +3170,10 @@
   "be_here_to_stay": {
     "en": "Remote work, once a temporary solution, is proving to be here to stay for many companies.",
     "ja": "リモートワークは一時的な解決策でしたが、多くの企業にとって定着していることがわかっています。"
+  },
+  "be_identical_to_with": {
+    "en": "The fingerprints recovered from the scene were identical with those on file.",
+    "ja": "現場で発見された指紋は、ファイルにあるものと完全に一致した。"
   },
   "be_ignorant_of": {
     "en": "Many young people are ignorant of the historical context behind current political debates.",
@@ -2975,6 +3187,10 @@
     "en": "The struggling charity is currently be in need of volunteers to help with their annual fundraising drive.",
     "ja": "苦労している慈善団体は、現在ボランティアを必要としており、毎年恒例のチャリティ活動を手伝ってほしい。"
   },
+  "be_inclined_to_do": {
+    "en": "He is inclined to agree with her proposal, as it aligns perfectly with his own views.",
+    "ja": "彼の提案は彼自身の見解と完全に一致するため、彼はそれに同意する気がします。"
+  },
   "be_independent_of": {
     "en": "The research findings should be independent of the researcher’s personal biases.",
     "ja": "研究結果は研究者の個人的な偏見から独立しているべきです。"
@@ -2987,9 +3203,21 @@
     "en": "A strong work ethic will be indispensable to your success in the challenging field of engineering.",
     "ja": "強い仕事への姿勢は、厳しい工学の分野で成功するために不可欠です。"
   },
+  "be_indispensable_to_for": {
+    "en": "Reliable transportation is indispensable for the success of any modern business venture.",
+    "ja": "信頼できる輸送手段は、現代のビジネスベンチャーの成功には不可欠です。"
+  },
   "be_inferior_to": {
     "en": "The local craft beer is generally considered inferior to imported brands in terms of consistency.",
     "ja": "地元のクラフトビールは、一般的に一貫性の点で輸入ブランドより劣ると考えられている。"
+  },
+  "be_intent_on_upon": {
+    "en": "She was completely intent upon finishing the project before the deadline.",
+    "ja": "彼女は締め切りまでにプロジェクトを終わらせることに熱心でした。"
+  },
+  "be_involved_in": {
+    "en": "She's deeply involved in several community volunteer programs and enjoys helping others.",
+    "ja": "彼女はいくつかの地域ボランティア活動に深く携わっており、他の人を助けることを楽しんでいます。"
   },
   "be_known_for": {
     "en": "Japan is widely be known for its beautiful cherry blossoms and traditional culture.",
@@ -3007,9 +3235,25 @@
     "en": "I was worried when I heard you might be late for your important job interview.",
     "ja": "あなたが重要な面接に遅れるかもしれないと聞いて、心配になりました。"
   },
+  "be_liable_to_do_to": {
+    "en": "He is liable to make mistakes when he’s working under pressure.",
+    "ja": "彼はプレッシャーの中で働くとき、ミスをしがちです。"
+  },
+  "be_likely_to_do": {
+    "en": "If it rains, we are likely to cancel our picnic plans for Sunday.",
+    "ja": "もし雨が降れば、日曜日のピクニックの計画を取りやめる可能性が高いです。"
+  },
   "be_made_of": {
     "en": "This beautiful vase is carefully crafted and appears to be made of delicate porcelain.",
     "ja": "この美しい花瓶は丁寧に作られており、繊細な磁器でできているようです。"
+  },
+  "be_made_of_from": {
+    "en": "This beautiful vase is made from delicate, hand-blown glass.",
+    "ja": "この美しい花瓶は繊細な手作りのガラスからできています。"
+  },
+  "be_married_to": {
+    "en": "My older sister is happily married to a kind and supportive architect.",
+    "ja": "私の姉は親切で心の広い建築家と幸せな結婚生活を送っています。"
   },
   "be_native_to": {
     "en": "The iconic koala is be native to the eucalyptus forests of eastern Australia.",
@@ -3035,6 +3279,14 @@
     "en": "Having a good dictionary will be of use when you're studying for the exams.",
     "ja": "良い辞書を持っていると、試験勉強をする時に役に立つでしょう。"
   },
+  "be_on_the_verge": {
+    "en": "The company is on the verge of bankruptcy due to poor management and declining sales.",
+    "ja": "会社は不適切な経営と売上の減少により、倒産の危機に瀕しています。"
+  },
+  "be_opposed_to": {
+    "en": "Many environmental groups are opposed to the construction of a new oil pipeline.",
+    "ja": "多くの環境保護団体が新しい石油パイプラインの建設に反対しています。"
+  },
   "be_out_to_do": {
     "en": "Several board members seemed to be out to do everything they could to block the merger.",
     "ja": "いくつかの取締役は、合併を阻止するためにできる限りのことをしようとしていたように見えた。"
@@ -3043,13 +3295,25 @@
     "en": "She’s quite particular about her coffee, preferring it to be exactly one hundred degrees Celsius.",
     "ja": "彼女はコーヒーに関してとてもこだわりがあり、正確に100℃で淹れてほしいと思っています。"
   },
+  "be_particular_about_over": {
+    "en": "He is quite particular about the way his coffee is brewed, preferring a specific grind.",
+    "ja": "彼はコーヒーの淹れ方について非常に気難しいところがあり、特定の挽き具合を好む。"
+  },
   "be_peculiar_to": {
     "en": "The distinctive aroma of roasted coffee beans is peculiar to certain regions known for their cultivation.",
     "ja": "ローストしたコーヒー豆の独特な香りは、特定の栽培地域に特有のものである。"
   },
+  "be_popular_with_among": {
+    "en": "This new cafe is particularly popular among students looking for a study spot.",
+    "ja": "この新しいカフェは、勉強場所を探している学生の間で特に人気です。"
+  },
   "be_preferable_to": {
     "en": "Taking the train be preferable to driving, especially during rush hour.",
     "ja": "ラッシュアワーの時は、電車に乗る方が運転するよりは良いです。"
+  },
+  "be_prone_to": {
+    "en": "Young children are often prone to accidents if they aren't supervised closely.",
+    "ja": "子供たちは注意深く見守らないと、事故になりやすいものです。"
   },
   "be_proud_of": {
     "en": "My parents are always being proud of my efforts to learn English, even when I make mistakes.",
@@ -3059,9 +3323,17 @@
     "en": "Students should be ready for challenging exams that test their critical thinking skills.",
     "ja": "学生は、批判的思考力を試す挑戦的な試験に備えておく必要があります。"
   },
+  "be_ready_to_do": {
+    "en": "The rescue team was ready to deploy immediately after receiving the distress signal.",
+    "ja": "救助隊は緊急信号を受信後、すぐに展開する準備ができていました。"
+  },
   "be_related_to": {
     "en": "According to recent studies, sleep quality is closely related to overall health and well-being.",
     "ja": "最近の研究によると、睡眠の質は全体的な健康状態と幸福に密接に関連しています。"
+  },
+  "be_reluctant_to_do": {
+    "en": "He was reluctant to accept the promotion because of the added responsibility.",
+    "ja": "彼は追加の責任があるため、昇進を受けることに気が進みませんでした。"
   },
   "be_responsible_for": {
     "en": "The project manager will be responsible for ensuring all deadlines are met.",
@@ -3075,6 +3347,10 @@
     "en": "The ancient ruins are said to have been built by a long-lost civilization.",
     "ja": "その古代遺跡は、失われた文明によって建てられたと言われています。"
   },
+  "be_satisfied_with": {
+    "en": "Although the salary isn't high, he seems quite satisfied with his new job.",
+    "ja": "給料は高くありませんが、彼は新しい仕事にはかなり満足しているようです。"
+  },
   "be_senior_to": {
     "en": "Having worked here for fifteen years, she would be senior to most of the new employees.",
     "ja": "15年間ここで働いているので、彼女は多くの新入社員より年上です。"
@@ -3083,25 +3359,65 @@
     "en": "The artist was known to be very sensitive to criticism of her work.",
     "ja": "その芸術家は自分の作品に対する批判に非常に敏感であることが知られていました。"
   },
+  "be_short_of": {
+    "en": "The company is currently short of staff and needs to hire more employees.",
+    "ja": "会社は現在人員が不足しており、さらに従業員を雇用する必要があります。"
+  },
   "be_similar_to": {
     "en": "The painting's color palette is similar to Monet’s, evoking a sense of serene beauty.",
     "ja": "その絵の色彩はモネのものと似ており、穏やかな美しさを喚起します。"
+  },
+  "be_subject_to": {
+    "en": "Coastal regions are often subject to unpredictable and severe weather patterns.",
+    "ja": "沿岸地域はしばしば予測不可能で激しい気象パターンに影響を受けやすい。"
   },
   "be_suitable_for_to": {
     "en": "This online course would be suitable for anyone wanting to improve their business English skills.",
     "ja": "このオンラインコースは、ビジネス英語のスキルを向上させたい人に適しています。"
   },
+  "be_suitable_unsuitable_for_to": {
+    "en": "This type of music is unsuitable for a formal occasion like a wedding reception.",
+    "ja": "この種の音楽は結婚披露宴のようなフォーマルな場には適していません。"
+  },
+  "be_suited_to": {
+    "en": "His calm demeanor is particularly well-suited to the role of mediator.",
+    "ja": "彼の穏やかな態度が、仲裁者の役割に特に適しています。"
+  },
   "be_superior_to": {
     "en": "The new engine design is expected to be superior to the previous one in terms of fuel efficiency.",
     "ja": "新しいエンジンの設計は、燃費において以前のものより優れていると予想されています。"
+  },
+  "be_supposed_to_do": {
+    "en": "She was supposed to finish the report by Friday but she’s behind schedule.",
+    "ja": "彼女は金曜日までにレポートを終えることになっていたが、遅れをとっている。"
   },
   "be_sure": {
     "en": "Be sure to double-check your answers before submitting the exam paper.",
     "ja": "試験問題を提出する前に、必ず解答を2度チェックしてください。"
   },
+  "be_sure_of_about": {
+    "en": "I'm absolutely sure about my decision to study abroad next year.",
+    "ja": "私は来年留学するという私の決意に完全に確信しています。"
+  },
+  "be_susceptible_to": {
+    "en": "Young children are particularly susceptible to the flu this time of year.",
+    "ja": "子供たちはこの時期にインフルエンザにかかりやすいです。"
+  },
+  "be_tired_from_with": {
+    "en": "After hiking all day, I am completely exhausted and tired from the long journey.",
+    "ja": "一日中ハイキングした後、私は完全に疲れていて、長い道のりから疲れ切っています。"
+  },
+  "be_tired_of": {
+    "en": "I'm so tired of eating pizza; I need something different tonight.",
+    "ja": "もうピザばかり食べるのはうんざりだ。今夜は何か違うものが食べたい。"
+  },
   "be_to_blame_for": {
     "en": "The driver was found to be to blame for the accident, as he ran a red light.",
     "ja": "運転手は信号を無視したため、事故の責任を負うべきだと判明した。"
+  },
+  "be_to_do": {
+    "en": "We are to meet him at the station tomorrow morning.",
+    "ja": "私たちは明日朝に駅で彼と会うことになっている。"
   },
   "be_tolerant_of": {
     "en": "A good society must be tolerant of different opinions and beliefs.",
@@ -3119,13 +3435,29 @@
     "en": "Due to the heavy rain, we were unable to finish hiking before nightfall.",
     "ja": "大雨のため、私たちは夜になる前にハイキングを終えることができませんでした。"
   },
+  "be_unique_to": {
+    "en": "The vibrant colors of this species are unique to this isolated island ecosystem.",
+    "ja": "この種の鮮やかな色彩は、この孤立した島のエコシステムにのみ特有です。"
+  },
+  "be_unwilling_to_do": {
+    "en": "I’m not feeling motivated; I'm really be unwilling to start that difficult project today.",
+    "ja": "やる気が起きない、今日あの難しいプロジェクトを始める気にはなれない。"
+  },
   "be_up_to": {
     "en": "Whether we go to the concert be up to how much money we can save this month.",
     "ja": "コンサートに行くかどうかは、今月いくら貯金できるかによります。"
   },
+  "be_used_to_doing": {
+    "en": "She is accustomed to being used to waking up early for her morning runs.",
+    "ja": "彼女は毎朝のランニングのために早く起きることが習慣になっています。"
+  },
   "be_versed_in": {
     "en": "The successful lawyer was clearly be versed in complex international trade law.",
     "ja": "その弁護士は、複雑な国際貿易法に精通していることが明らかだった。"
+  },
+  "be_vulnerable_to": {
+    "en": "Coastal communities are increasingly vulnerable to rising sea levels and storms.",
+    "ja": "沿岸地域社会は、海面上昇や嵐に対してますます脆弱になっています。"
   },
   "be_wary_of": {
     "en": "You should be wary of strangers offering help in unfamiliar places.",
@@ -3143,6 +3475,10 @@
     "en": "I'm willing to do whatever it takes to finish this project before the deadline.",
     "ja": "締め切りまでにこのプロジェクトを終わらせるために、何でもするつもりです。"
   },
+  "be_worried_about": {
+    "en": "I’m a little worried about my grandmother's health; she hasn't been well lately.",
+    "ja": "私は祖母の健康状態を少し心配しています。最近元気がないからです。"
+  },
   "be_worth_doing": {
     "en": "Learning a new language can be challenging, but it’s definitely worth doing for the cultural benefits.",
     "ja": "新しい言語を学ぶのは難しいかもしれないが、文化的な利点のためならする価値がある。"
@@ -3150,6 +3486,10 @@
   "be_worthy_of": {
     "en": "Her dedication and talent be worthy of recognition from the entire academic community.",
     "ja": "彼女の献身と才能は、学術コミュニティ全体からの評価に値するだろう。"
+  },
+  "be_worthy_to_do": {
+    "en": "Her dedication and hard work make her be worthy to receive the prestigious award.",
+    "ja": "彼女の献身と努力は、彼女がその権威ある賞を受けるに値することを証明している。"
   },
   "bear": {
     "en": "She had to bear the emotional burden of caring for her sick mother alone.",
@@ -3707,6 +4047,10 @@
     "en": "I don't want to bother you with my problems, but I need some advice.",
     "ja": "あなたの邪魔をしたくありませんが、いくつかアドバイスが必要です。"
   },
+  "bother_to_do": {
+    "en": "I wouldn't bother to call him; he never answers his phone anyway.",
+    "ja": "わざわざ彼に電話する必要はないだろう；彼はどうせ電話に出ないのだから。"
+  },
   "bottom": {
     "en": "Please make sure to clean the bottom of the fish tank during your regular maintenance.",
     "ja": "定期的なメンテナンスの際は、魚のタンクの底をきれいにすることを確認してください。"
@@ -3803,6 +4147,10 @@
     "en": "Many young artists are trying to break away from traditional painting techniques.",
     "ja": "多くの若いアーティストたちは、伝統的な絵画技法から脱却しようとしています。"
   },
+  "break_down": {
+    "en": "Unfortunately, her old car broke down on the highway during rush hour.",
+    "ja": "残念ながら、彼女の古い車はラッシュアワー中に高速道路で故障した。"
+  },
   "break_in": {
     "en": "A loud dog barked, breaking in during the quiet lecture by the professor.",
     "ja": "静かな教授の講義中、突然大きな犬が吠え始めた。"
@@ -3818,6 +4166,14 @@
   "break_off": {
     "en": "She decided to break off the engagement just days before the wedding.",
     "ja": "彼女は結婚式の数日前になるまで、婚約を解消することに決めました。"
+  },
+  "break_one_s_promise": {
+    "en": "He felt terrible after he break his promise to take her out for dinner.",
+    "ja": "彼は彼女を夕食に連れて行くという約束を破って、ひどく落ち込んだ。"
+  },
+  "break_out": {
+    "en": "A sudden argument broke out between the two teams during the game.",
+    "ja": "試合中、2つのチームの間で突然口論が勃発した。"
   },
   "break_up": {
     "en": "After five years together, they decided to break up and move on with their lives.",
@@ -3891,6 +4247,10 @@
     "en": "Don't forget to bring your umbrella; it looks like rain later this afternoon.",
     "ja": "傘を持って忘れないでください。今日の午後は雨に見えます。"
   },
+  "bring_a_home_to_b": {
+    "en": "The documentary really brought the suffering of refugees home to many viewers.",
+    "ja": "そのドキュメンタリーは、多くの視聴者に難民の苦しみを痛感させた。"
+  },
   "bring_about": {
     "en": "The new policies are expected to bring about significant changes in the company's structure.",
     "ja": "新しい方針は会社の組織構造に大きな変化をもたらすと予想されています。"
@@ -3910,6 +4270,10 @@
   "bring_on": {
     "en": "The sudden drop in temperature is expected to bring on rain later this afternoon.",
     "ja": "急激な気温の低下は、午後のうちに雨をもたらすと予想されています。"
+  },
+  "bring_oneself_to_do": {
+    "en": "It took her a long time, but she finally brought herself to apologize for her mistake.",
+    "ja": "時間がかかったが、彼女はついに自分の間違いについて謝罪する気になった。"
   },
   "bring_out": {
     "en": "A supportive teacher can bring out students' potential and encourage them to excel academically.",
@@ -4195,6 +4559,10 @@
     "en": "By now, everyone should have received the email about the upcoming conference.",
     "ja": "今頃には、皆既来週の会議に関するメールを受け取っているはずです。"
   },
+  "by_oneself": {
+    "en": "She prefers to study by herself in the quiet library.",
+    "ja": "彼女は静かな図書館で、ひとりで勉強することを好む。"
+  },
   "by_the_time": {
     "en": "By the time we arrived, the concert had already begun and the crowd was enormous.",
     "ja": "私たちが到着したときには、コンサートはすでにはじまっており、大勢の人が集まっていました。"
@@ -4267,6 +4635,10 @@
     "en": "The professor will call on students randomly to answer questions during the lecture.",
     "ja": "教授は講義中、学生にランダムに質問をさせるでしょう。"
   },
+  "call_on_upon": {
+    "en": "During the speech, the president called upon everyone to support the new initiative.",
+    "ja": "演説中、大統領は全員に対し、新しいイニシアチブを支持するよう呼びかけました。"
+  },
   "call_up": {
     "en": "I need to call up my doctor’s office to schedule a routine check-up appointment.",
     "ja": "定期健診の予約をするために、病院に電話をかけなければならない。"
@@ -4303,6 +4675,10 @@
     "en": "The university campus buzzed with activity as students hurried to their classes.",
     "ja": "キャンパスは学生たちが授業に急ぐ中、活気に満ちていた。"
   },
+  "can_afford_to_do": {
+    "en": "Now that he’s earned a promotion, they can afford to buy a bigger house.",
+    "ja": "昇進したおかげで、彼らはもっと大きな家を買う余裕ができました。"
+  },
   "canal": {
     "en": "The city relies on the canal for irrigation and as a vital transportation route.",
     "ja": "この都市は灌漑と重要な輸送経路として運河に依存しています。"
@@ -4334,6 +4710,18 @@
   "cannot": {
     "en": "You cannot deny the positive impact of volunteering on your community’s well-being.",
     "ja": "ボランティア活動が地域社会の幸福に与える良い影響を否定することはできない。"
+  },
+  "cannot_help_but_do_cannot_but_do": {
+    "en": "Given her demanding schedule, she cannot help but work late every evening.",
+    "ja": "彼女の厳しいスケジュールから、毎晩残業せざるを得ない。"
+  },
+  "cannot_help_doing": {
+    "en": "I cannot help feeling sorry for him after hearing his difficult story.",
+    "ja": "彼の困難な話を聞いた後、同情せずにはいられません。"
+  },
+  "cannot_help_ing": {
+    "en": "The sad movie made me cannot help crying during the final scene.",
+    "ja": "その悲しい映画は、最後のシーンで涙が止まらなくさせた。"
   },
   "canyon": {
     "en": "The hikers marveled at the sheer scale of the Grand Canyon’s vast and dramatic landscape.",
@@ -4523,6 +4911,10 @@
     "en": "It took a while, but the new dance craze is finally starting to catch on among teenagers.",
     "ja": "新しいダンスの流行は時間がかかったが、ついに10代の間で人気が出始めた。"
   },
+  "catch_sight_of": {
+    "en": "I caught sight of a deer while hiking in the mountains last weekend.",
+    "ja": "先週末、山でハイキング中に鹿をちらっと見かけました。"
+  },
   "catch_up_on": {
     "en": "I need to catch up on all the news I missed while I was traveling abroad last month.",
     "ja": "先月海外旅行中だった間に見逃したニュースをすべて追いつく必要があります。"
@@ -4570,6 +4962,10 @@
   "cause": {
     "en": "Smoking is a major cause of lung cancer, and public health campaigns aim to reduce it.",
     "ja": "喫煙は肺がんの大きな原因であり、公衆衛生キャンペーンはその削減を目指しています。"
+  },
+  "cause_o_to_do": {
+    "en": "The loud music caused the baby to wake up from his nap.",
+    "ja": "大きな音の音楽が赤ん坊を起こしてしまった。"
   },
   "caution": {
     "en": "Use caution when crossing the street, and always look both ways before proceeding.",
@@ -5043,6 +5439,10 @@
     "en": "After reviewing the data, it became clear that a significant change was needed.",
     "ja": "データを検証した結果、大きな変化が必要であることが明らかになりました。"
   },
+  "clear_one_s_throat": {
+    "en": "The speaker cleared his throat nervously before beginning his presentation.",
+    "ja": "講演者は発表を始める前に緊張して咳払いをした。"
+  },
   "clear_out": {
     "en": "The store is having a sale to clear out the remaining inventory before the end of the season.",
     "ja": "店舗は、シーズン終了前に残りの在庫を処分するためにセールを行っています。"
@@ -5138,6 +5538,10 @@
   "close_in_on": {
     "en": "Police closed in on the suspect after receiving an anonymous tip about his location.",
     "ja": "警察は、容疑者の居場所に関する匿名の情報を受け取り、彼を取り囲んだ。"
+  },
+  "close_near_at_hand": {
+    "en": "With the deadline approaching, a solution to the problem felt close at hand.",
+    "ja": "締め切りが迫るにつれて、問題の解決策はすぐ近くに感じられました。"
   },
   "closet": {
     "en": "She organized her closet, donating clothes she no longer needed.",
@@ -5343,6 +5747,10 @@
     "en": "How did this unexpected opportunity come about? It’s quite remarkable.",
     "ja": "この予期せぬ機会はどうやって実現したのですか？本当に素晴らしいですね。"
   },
+  "come_across": {
+    "en": "I came across an old photo album while cleaning out my attic.",
+    "ja": "屋根裏を掃除していると、古い写真アルバムを見つけた。"
+  },
   "come_after": {
     "en": "Please come after me, I’ll show you the way to the conference room.",
     "ja": "私についてきてください。会議室への道をご案内します。"
@@ -5358,6 +5766,10 @@
   "come_by": {
     "en": "It’s difficult to come by authentic Japanese pottery these days, especially at reasonable prices.",
     "ja": "最近では、特に手頃な価格で本物の日本の陶器を手に入れるのは困難です。"
+  },
+  "come_close_near_to_doing": {
+    "en": "The runner came close to breaking the world record in the final sprint.",
+    "ja": "そのランナーは最終スパートで世界記録を塗りそうなところまで来ました。"
   },
   "come_down_to": {
     "en": "Ultimately, the success of this project comes down to teamwork and communication.",
@@ -5387,9 +5799,25 @@
     "en": "After years of research, a new understanding of consciousness began to come into being.",
     "ja": "長年の研究を経て、意識に対する新たな理解が生まれ始めた。"
   },
+  "come_into_being_existence": {
+    "en": "The new regulations will come into existence next month, impacting all employees.",
+    "ja": "新しい規制は来月施行され、すべての従業員に影響を与える。"
+  },
   "come_into_effect": {
     "en": "The new law regarding data privacy will come into effect next month.",
     "ja": "データプライバシーに関する新しい法律は来月施行されます。"
+  },
+  "come_into_view_sight": {
+    "en": "After hours of hiking, the mountain peak finally come into view, offering a stunning vista.",
+    "ja": "数時間のハイキングの後、ついに山頂が見えてきて、素晴らしい景色が広がっていた。"
+  },
+  "come_of_age": {
+    "en": "Many young people feel they truly come of age when they move away from home and become independent.",
+    "ja": "多くの若者は、家を出て独立したときに初めて大人になるような気がする。"
+  },
+  "come_off": {
+    "en": "Despite their initial optimism, the negotiations ultimately came off as a failure.",
+    "ja": "彼らの当初の楽観にもかかわらず、交渉は最終的に失敗に終わった。"
   },
   "come_on": {
     "en": "Come on, I can’t believe he actually said that at the important meeting!",
@@ -5407,9 +5835,17 @@
     "en": "After the accident, he didn’t come to for several hours and was rushed to the hospital.",
     "ja": "事故の後、彼は数時間にわたり意識を取り戻さず、病院に搬送されました。"
   },
+  "come_to_an_end_a_close": {
+    "en": "The long and complicated negotiations finally came to a close last night.",
+    "ja": "長い複雑な交渉はついに昨晩、終わりました。"
+  },
   "come_to_light": {
     "en": "New evidence has come to light suggesting the suspect was present at the scene.",
     "ja": "新たな証拠が明らかになり、容疑者が現場にいた可能性を示唆しています。"
+  },
+  "come_to_one_s_senses": {
+    "en": "After the accident, he quickly come to his senses and checked on everyone’s safety.",
+    "ja": "事故の後、彼はすぐに正気を取り戻し、皆の無事を確かめた。"
   },
   "come_to_terms_with": {
     "en": "It took her a long time to come to terms with the loss of her childhood home.",
@@ -5799,6 +6235,10 @@
     "en": "Her conceited attitude often offended her colleagues and made it difficult to collaborate with her.",
     "ja": "彼女のうぬぼれた態度はしばしば同僚を不快にし、協力することを困難にしました。"
   },
+  "conceivable": {
+    "en": "It’s barely conceivable that we could finish this task before Friday afternoon.",
+    "ja": "金曜日の午後までにこのタスクを完了できるとは考えにくいです。"
+  },
   "conceive": {
     "en": "They were overjoyed to conceive and begin planning for the arrival of their first child.",
     "ja": "彼らは妊娠し始め、最初の子供の誕生に向けて計画を立てることをとても喜んだ。"
@@ -5806,6 +6246,10 @@
   "concentrate": {
     "en": "Please concentrate on the lecture and avoid checking your phone during class.",
     "ja": "講義に集中して、授業中に携帯電話をチェックしないでください。"
+  },
+  "concentrate_a_on_b": {
+    "en": "She needs to concentrate her efforts on improving her writing skills for the exam.",
+    "ja": "彼女は試験のために、文章力向上に集中する必要がある。"
   },
   "concentrate_on": {
     "en": "It's important to concentrate on your studies if you want to achieve good grades.",
@@ -5930,6 +6374,10 @@
   "confine": {
     "en": "The illness confined her to bed for a week, preventing any visitors.",
     "ja": "その病気のために彼女は1週間寝たきりになり、誰とも会えませんでした。"
+  },
+  "confine_a_to_b": {
+    "en": "The investigation will confine the search for clues to the immediate vicinity of the crime scene.",
+    "ja": "捜査は、現場付近に手がかりを求める範囲に限定されます。"
   },
   "confirm": {
     "en": "Could you please confirm your attendance at the conference by Friday?",
@@ -6947,6 +7395,10 @@
     "en": "The company decided to cut back on unnecessary expenses to improve its profitability.",
     "ja": "会社は利益率を改善するために、不要な経費を削減することに決定しました。"
   },
+  "cut_down_back_on": {
+    "en": "The doctor advised him to cut back on his sugar intake for better health.",
+    "ja": "医者は彼に健康のために砂糖の摂取量を減らすように忠告した。"
+  },
   "cut_down_on": {
     "en": "My doctor advised me to cut down on my sugar intake for better health.",
     "ja": "医者は私の健康のために砂糖の摂取量を減らすようにアドバイスしてくれました。"
@@ -7010,6 +7462,10 @@
   "dare": {
     "en": "He dared to challenge the established norms and propose innovative solutions for the company’s problems.",
     "ja": "彼は既存の規範に挑戦し、会社の抱える問題に対する革新的な解決策を提案する勇気を出しました。"
+  },
+  "dare_to_do": {
+    "en": "She dared to question the CEO’s decision during the important meeting.",
+    "ja": "彼女は重要な会議中に、CEOの決定をあえて疑問視しました。"
   },
   "daring": {
     "en": "Her daring plan to climb Mount Everest impressed everyone on the team.",
@@ -7171,6 +7627,10 @@
     "en": "After much discussion, they finally decided on a date for the annual conference.",
     "ja": "多くの議論の末、彼らはついに年次会議の日程を決定した。"
   },
+  "decide_on_upon": {
+    "en": "After much discussion, the committee decided upon a new marketing strategy for next year.",
+    "ja": "多くの議論の末、委員会は来年向けの新しいマーケティング戦略を決定した。"
+  },
   "decision": {
     "en": "After careful consideration, she made the difficult decision to resign from her position.",
     "ja": "慎重な検討の結果、彼女は辞任するという難しい決断をしました。"
@@ -7286,6 +7746,10 @@
   "define": {
     "en": "Can you define the term 'sustainable development' in simple, understandable language?",
     "ja": "持続可能な開発という用語を、簡単で理解しやすい言葉で定義できますか？"
+  },
+  "define_a_as_b": {
+    "en": "The professor chose to define happiness as a state of contentment and fulfillment.",
+    "ja": "教授は幸福を満足感と達成感の状態と定義しました。"
   },
   "definite": {
     "en": "There is a definite improvement in his reading comprehension since he started the new program.",
@@ -7483,6 +7947,10 @@
     "en": "We depend on renewable energy sources to reduce our impact on the environment.",
     "ja": "私たちは環境への影響を減らすために再生可能エネルギー源に頼っています。"
   },
+  "depend_on_upon": {
+    "en": "The success of our project will depend upon securing funding from multiple investors.",
+    "ja": "私たちのプロジェクトの成功は、複数の投資家からの資金調達にかかっています。"
+  },
   "dependency": {
     "en": "The country's economic dependency on foreign aid is a serious concern for policymakers.",
     "ja": "外国からの援助への国の経済的依存は政策立案者にとって深刻な懸念事項です。"
@@ -7550,6 +8018,10 @@
   "derive_from": {
     "en": "Many modern musical genres derive from blues and jazz traditions.",
     "ja": "多くの現代的な音楽ジャンルはブルースやジャズの伝統から派生したものである."
+  },
+  "derive_from_be_derived_from": {
+    "en": "Many modern musical styles derive from blues traditions established decades ago.",
+    "ja": "多くの現代的な音楽スタイルは、数十年前の確立されたブルースの伝統に由来しています。"
   },
   "descend": {
     "en": "The hikers watched as the fog began to descend from the mountain peaks.",
@@ -7827,6 +8299,10 @@
     "en": "After a few hours, the excited chatter finally died down in the classroom.",
     "ja": "数時間後、教室での興奮した話し声はついに静まりました。"
   },
+  "die_of_from": {
+    "en": "Sadly, she died from complications related to pneumonia last winter.",
+    "ja": "残念ながら、彼女は昨冬、肺炎による合併症で亡くなりました。"
+  },
   "die_out": {
     "en": "Many species are predicted to die out if climate change continues at its current rate.",
     "ja": "もし気候変動が現在のペースで続けば、多くの種は絶滅すると予測されています。"
@@ -8075,6 +8551,10 @@
     "en": "Don’t let setbacks discourage you; learn from them and keep moving forward.",
     "ja": "挫折して落胆しないでください。そこから学び、前進し続けてください。"
   },
+  "discourage_a_from_b": {
+    "en": "Her parents tried to discourage her from dropping out of college.",
+    "ja": "彼女の両親は、彼女が大学中退するのを思いとどまらせようとしました。"
+  },
   "discouraging": {
     "en": "Receiving so many rejections can be incredibly discouraging for aspiring writers.",
     "ja": "多くの拒絶を受けることは、志望する作家にとって非常にがっかりさせられることである。"
@@ -8287,6 +8767,10 @@
     "en": "It can be difficult to distinguish between similar types of mushrooms, so caution is advised.",
     "ja": "似た種類のキノコを見分けるのは難しいため、注意が必要です。"
   },
+  "distinguish_a_from_b": {
+    "en": "It's often difficult to distinguish genuine antiques from clever reproductions.",
+    "ja": "本物の骨董品と巧妙なレプリカを区別するのは、しばしば難しいものです。"
+  },
   "distort": {
     "en": "The heat rising from the asphalt seemed to distort the view of the distant buildings.",
     "ja": "アスファルトから立ち上る熱気は、遠くの建物の景色を歪めて見えました。"
@@ -8386,6 +8870,10 @@
   "do_nothing_but_do": {
     "en": "After finishing his exam, he did nothing but do push-ups for an hour.",
     "ja": "試験が終わった後、彼はただ腕立て伏せを1時間続けました。"
+  },
+  "do_one_s_best": {
+    "en": "The team will do their best to win the championship game next week.",
+    "ja": "チームは来週の優勝試合で全力を尽くすでしょう。"
   },
   "do_with": {
     "en": "I don’t know what I can do with all these extra tomatoes from my garden.",
@@ -8638,6 +9126,10 @@
   "drive_off": {
     "en": "The loud music helped drive off the noisy pigeons from the balcony.",
     "ja": "大きな音楽は、ベランダから騒がしいハトを追い払うのに役立ちました。"
+  },
+  "drive_off_away": {
+    "en": "The security guard quickly drove away the persistent protestors from the entrance.",
+    "ja": "警備員はすぐに持続的な抗議者たちを入口から追い払った。"
   },
   "drive_out": {
     "en": "The company launched a campaign to drive out corruption within its departments.",
@@ -9199,6 +9691,10 @@
     "en": "Advanced technology will enable us to explore and understand the deepest parts of the ocean.",
     "ja": "高度な技術は、私たちが海洋の最も深い部分を探査し理解することを可能にします。"
   },
+  "enable_o_to_do": {
+    "en": "The new software will enable users to easily edit high-resolution images.",
+    "ja": "新しいソフトウェアは、ユーザーが簡単に高解像度の画像を編集できるようにします。"
+  },
   "enact": {
     "en": "The government plans to enact new legislation addressing climate change concerns.",
     "ja": "政府は気候変動への懸念に対処するための新しい法律を制定する計画です。"
@@ -9250,6 +9746,10 @@
   "endangered": {
     "en": "The snow leopard is an endangered species, facing threats from habitat loss and poaching.",
     "ja": "スノウレオパードは絶滅の危機に瀕した種であり、生息地の消失と密猟によって脅かされています。"
+  },
+  "endear_a_to_b": {
+    "en": "Her kindness and generosity always endeared her to everyone she met.",
+    "ja": "彼女の優しさと寛大さは、出会うすべての人々に慕われていた。"
   },
   "endeavor": {
     "en": "She will endeavor to finish the project before the deadline, despite facing numerous challenges.",
@@ -9707,6 +10207,10 @@
     "en": "Have you ever traveled to another country and experienced a different culture?",
     "ja": "今まで他の国に旅行して、別の文化を体験したことはありますか？"
   },
+  "every_each_time": {
+    "en": "Every time I visit her, she welcomes me with a warm hug and a smile.",
+    "ja": "彼女を訪れるたびに、温かい抱擁と笑顔で迎えてくれます。"
+  },
   "every_now_and_then": {
     "en": "We every now and then visit our grandparents, usually during the summer holidays.",
     "ja": "私たちは時々祖父母を訪れます、通常は夏休み中です。"
@@ -9718,6 +10222,10 @@
   "every_other": {
     "en": "We check the equipment every other day to ensure it’s functioning correctly.",
     "ja": "機器が正しく機能していることを確認するために、隔日チェックしています。"
+  },
+  "every_time_each_time": {
+    "en": "Every time I visit my grandmother, she gives me a homemade cookie.",
+    "ja": "私が祖母を訪れるたびに、彼女は手作りのクッキーをくれます。"
   },
   "everyday": {
     "en": "She wears comfortable everyday clothes when she’s working from home.",
@@ -10035,6 +10543,14 @@
     "en": "The investigation threatened to expose corruption within the government's highest levels.",
     "ja": "その調査は政府の最高レベルにおける汚職を暴露する恐れがありました。"
   },
+  "expose_a_to_b": {
+    "en": "Prolonged sun exposure can damage your skin and increase the risk of cancer.",
+    "ja": "長時間の太陽光への暴露は肌を傷つけ、がんのリスクを高める可能性があります。"
+  },
+  "expose_a_to_b_a_is_exposed_to_b": {
+    "en": "Prolonged exposure to sunlight can damage the skin and increase cancer risk.",
+    "ja": "長時間の太陽光への暴露は、肌を傷つけ、がんのリスクを高める可能性があります。"
+  },
   "exposure": {
     "en": "Increased exposure to sunlight can be harmful if you don't wear sunscreen.",
     "ja": "日焼けに対する過度の暴露は、日焼け止めを塗らないと有害です。"
@@ -10267,6 +10783,10 @@
     "en": "Many people fall for investment scams promising unrealistic returns.",
     "ja": "多くの人が、非現実的なリターンを約束する投資詐欺に引っかかってしまう。"
   },
+  "fall_in_love_with": {
+    "en": "After meeting her, he quickly fell in love with her kindness and spirit.",
+    "ja": "彼女に会った後、彼はすぐに彼女の優しさと精神性に恋に落ちました。"
+  },
   "fall_off": {
     "en": "Sales have fallen off significantly since the new competitor entered the market.",
     "ja": "新しい競合他社が市場に参入して以来、売り上げは大幅に減少している。"
@@ -10274,6 +10794,14 @@
   "fall_on": {
     "en": "The responsibility for resolving this issue will fall on the team leader’s shoulders.",
     "ja": "この問題を解決する責任はチームリーダーの肩にかかる。"
+  },
+  "fall_on_upon": {
+    "en": "The responsibility for the project's failure fell upon the team leader’s shoulders.",
+    "ja": "プロジェクトの失敗という責任はチームリーダーに降りかかった。"
+  },
+  "fall_short_of": {
+    "en": "Despite their hard work, the team’s performance fell short of expectations this season.",
+    "ja": "彼らの努力にもかかわらず、チームのパフォーマンスは今シーズン、期待に達しなかった。"
   },
   "fall_through": {
     "en": "Our carefully laid plans for the conference had to fall through due to unforeseen circumstances.",
@@ -10495,9 +11023,17 @@
     "en": "You can feel free to ask questions at any point during the presentation.",
     "ja": "プレゼンテーション中いつでも質問をしても構いません。"
   },
+  "feel_free_to_do": {
+    "en": "Feel free to ask questions at any point during the lecture; participation is encouraged.",
+    "ja": "講義の途中で質問があれば遠慮なく聞いてください。参加は大歓迎です。"
+  },
   "feel_like_doing": {
     "en": "I feel like doing something creative, maybe painting or writing a short story.",
     "ja": "何かクリエイティブなことをしたい気分だ、絵を描いたり短い物語を書いたりしてみようかな。"
+  },
+  "feel_like_ing": {
+    "en": "I feel like eating some pizza tonight; I'm really craving something savory.",
+    "ja": "今夜はピザを食べたい気分だ。何かおいしいものが食べたいんだ。"
   },
   "feel_obliged_to_do": {
     "en": "After promising to help, I feel obliged to do everything I can for her.",
@@ -10662,6 +11198,22 @@
   "find_fault_with": {
     "en": "The manager shouldn't find fault with the team’s efforts; they worked very hard.",
     "ja": "マネージャーはチームの努力に非難をすべきではありません、彼らはとても懸命に働きました。"
+  },
+  "find_one_s_way": {
+    "en": "Lost in the city, she eventually found her way back to the hotel.",
+    "ja": "街で迷ってしまいましたが、最終的にはホテルへの道を見つけました。"
+  },
+  "find_one_s_way_to": {
+    "en": "Lost in the forest, he eventually found his way to a small cabin by the river.",
+    "ja": "森で道に迷った彼は、最終的に川沿いの小さな小屋までたどり着きました。"
+  },
+  "find_one_s_way_to_into": {
+    "en": "After hours of searching, we finally found our way to the hidden waterfall.",
+    "ja": "何時間も探した末に、ようやく隠された滝へとたどり着きました。"
+  },
+  "find_oneself": {
+    "en": "She found herself completely lost in the bustling city, unsure of which way to go.",
+    "ja": "彼女は自分自身が気がつけば、賑やかな街で完全に迷子になっていることに気づいた。"
   },
   "find_out": {
     "en": "I need to find out what time the train leaves so I don’t miss it.",
@@ -10975,6 +11527,10 @@
     "en": "For all I know, he might have already accepted the job offer in another city.",
     "ja": "彼がもう別の都市での仕事のオファーを受け入れている可能性もあるけど、よく知らない。"
   },
+  "for_example_instance": {
+    "en": "Many fruits are rich in vitamins; for example, oranges and strawberries are excellent sources.",
+    "ja": "多くの果物はビタミンが豊富です。例えば、オレンジやイチゴは優れた供給源です。"
+  },
   "for_fear_of": {
     "en": "She left the room early, for fear of being late for her train.",
     "ja": "彼女は電車の遅延を恐れて、早めに部屋を出ました。"
@@ -10990,6 +11546,10 @@
   "for_instance": {
     "en": "Many fruits are high in vitamins; for instance, oranges and strawberries are excellent choices.",
     "ja": "多くの果物はビタミンが豊富です。例えば、オレンジやイチゴは素晴らしい選択肢です。"
+  },
+  "for_lack_want_of": {
+    "en": "The project was delayed for lack of sufficient funding and resources.",
+    "ja": "プロジェクトは十分な資金と資源が不足していたために遅延した。"
   },
   "for_nothing": {
     "en": "I didn't pay for this concert; I got tickets for nothing from a friend.",
@@ -11018,6 +11578,10 @@
   "for_some_time": {
     "en": "She has been studying Japanese for some time and can now hold a basic conversation.",
     "ja": "彼女はかなり長い間日本語を勉強しており、今では簡単な会話ができるようになった。"
+  },
+  "for_sure_certain": {
+    "en": "Are you coming to the concert? For sure, I wouldn’t miss it!",
+    "ja": "コンサートに来る？もちろん、絶対に行きます！"
   },
   "for_that_matter": {
     "en": "The concert was sold out; for that matter, all the other events were too.",
@@ -11062,6 +11626,10 @@
   "forbid": {
     "en": "Smoking is strictly forbidden inside the library, please respect the rules.",
     "ja": "図書館内での喫煙は厳しく禁止されています、ルールを守ってください。"
+  },
+  "forbid_a_from_b": {
+    "en": "The school forbids students from using cell phones during classes.",
+    "ja": "学校では、授業中に生徒たちが携帯電話を使用することを禁止しています。"
   },
   "force": {
     "en": "The heavy rain began to force the river out of its banks and onto surrounding fields.",
@@ -11371,6 +11939,10 @@
     "en": "My parents frown at my decision to quit university and become a musician.",
     "ja": "両親は私が大学を辞めてミュージシャンになるという決断にしかめ面をしています。"
   },
+  "frown_on_upon": {
+    "en": "The university administration frowns upon students using mobile phones in class.",
+    "ja": "大学の管理職は、授業中に学生が携帯電話を使用することに難色を示している。"
+  },
   "frugal": {
     "en": "Living a frugal lifestyle allows her to save money for travel and other experiences.",
     "ja": "質素な生活を送ることで、彼女は旅行やその他の経験のために貯蓄することができます。"
@@ -11390,6 +11962,10 @@
   "frustration": {
     "en": "He felt a deep frustration when his attempts to solve the problem repeatedly failed.",
     "ja": "彼は、問題解決の試みが何度も失敗する中で、深いフラストレーションを感じた。"
+  },
+  "fry": {
+    "en": "Could you please fry these eggs for breakfast, not scramble them?",
+    "ja": "朝食に卵をスクランブルではなく、炒めてもらえますか？"
   },
   "fuel": {
     "en": "The inspiring speaker's words fueled their determination to succeed.",
@@ -11711,6 +12287,10 @@
     "en": "Despite the rain, we managed to get around the city and see all the sights.",
     "ja": "雨にもかかわらず、私たちは街中を歩き回り、すべての観光名所を見ることができました。"
   },
+  "get_around_to_doing": {
+    "en": "I finally got around to finishing that report after weeks of procrastination.",
+    "ja": "先延ばしにしていたそのレポートを、ようやく取り組む余裕ができた。"
+  },
   "get_at": {
     "en": "I think she’s trying to get at the fact that we haven't met our sales targets.",
     "ja": "彼女は、私たちが販売目標を達成していないということをほのめかそうとしているような気がする。"
@@ -11719,6 +12299,10 @@
     "en": "He thought he could get away with cheating on the exam, but he was caught by the teacher.",
     "ja": "彼は試験でカンニングを見逃されるだろうと思ったが、先生に見つかってしまった。"
   },
+  "get_be_even_with": {
+    "en": "After years of bullying, he finally got even with his tormentors by exposing their lies.",
+    "ja": "長年のいじめの後、彼はついに相手の嘘を暴いて、いじめた者たちに復讐した。"
+  },
   "get_by": {
     "en": "After losing his job, he had to find creative ways to get by on a very limited budget.",
     "ja": "仕事を失った後、彼は非常に限られた予算でなんとか生活する方法を見つけなければならなかった。"
@@ -11726,6 +12310,10 @@
   "get_down_to": {
     "en": "Let's stop talking and finally get down to planning the details of our project.",
     "ja": "話をやめて、いよいよプロジェクトの計画を始めることにしましょう。"
+  },
+  "get_have_the_better_of": {
+    "en": "Despite a tough fight, our team managed to get the better of their rivals in the final match.",
+    "ja": "激しい試合の末、私たちのチームは決勝戦でライバルを出し抜くことができた。"
   },
   "get_in_contact_with": {
     "en": "I need to get in contact with the customer service department as soon as possible.",
@@ -11739,13 +12327,25 @@
     "en": "Could you please get in touch with the customer service department for assistance?",
     "ja": "もし差し支えなければ、お手伝いが必要な場合はカスタマーサービス部門にご連絡ください。"
   },
+  "get_into": {
+    "en": "She really gets into historical dramas, often researching the details afterwards.",
+    "ja": "彼女は時代劇にはまっているようで、その後でよく詳細について調べている。"
+  },
   "get_involved_in": {
     "en": "Many students choose to get involved in community service projects during their free time.",
     "ja": "多くの学生は、空いている時間にボランティア活動に積極的に参加することを選択します。"
   },
+  "get_lost": {
+    "en": "I get lost easily in big cities, even with a map.",
+    "ja": "私は地図を持っていても、大きな都市では簡単に道に迷ってしまいます。"
+  },
   "get_married_to": {
     "en": "My older sister plans to get married to her college sweetheart next summer.",
     "ja": "姉は来夏に大学時代の恋人と結婚する予定です。"
+  },
+  "get_o_to_do": {
+    "en": "She tried to get her younger brother to finish his homework before playing video games.",
+    "ja": "彼女は弟にビデオゲームをする前に宿題を終わらせてもらうように試みました。"
   },
   "get_off": {
     "en": "Please get off the bus at the next stop; it’s just a few blocks from here.",
@@ -11754,6 +12354,10 @@
   "get_on": {
     "en": "I need to get on the train if I want to arrive on time for my meeting.",
     "ja": "会議に間に合わせたいなら、電車に乗る必要があります。"
+  },
+  "get_on_one_s_nerves": {
+    "en": "His constant humming really gets on my nerves, especially when I’m trying to concentrate.",
+    "ja": "彼の絶え間ない鼻歌は本当に私の神経に障ります、特に集中しようとしているときです。"
   },
   "get_on_with": {
     "en": "Despite the initial disagreements, they managed to get on with their colleagues effectively.",
@@ -11774,6 +12378,10 @@
   "get_rid_of": {
     "en": "We need to get rid of these old clothes and donate them to charity.",
     "ja": "これらの古い服を処分して、慈善団体に寄付する必要があります。"
+  },
+  "get_the_better_of": {
+    "en": "Despite his exhaustion, determination ultimately got the better of him and he finished the race.",
+    "ja": "疲労困憊でしたが、最終的に強い意志が彼に打ち勝ち、レースを終えることができました。"
   },
   "get_through": {
     "en": "We need to find a way to get through this difficult period together.",
@@ -11815,6 +12423,10 @@
     "en": "Could you please give me your phone number so I can contact you later?",
     "ja": "後で連絡したいので、電話番号を教えてもらえますか？"
   },
+  "give_a_credit_for_b": {
+    "en": "The professor gave her credit for the insightful research she conducted on climate change.",
+    "ja": "その教授は、彼女が気候変動に関する洞察力のある研究を行ったことを評価した。"
+  },
   "give_a_over_to_b": {
     "en": "The company decided to give over its marketing campaign to a specialized agency for better results.",
     "ja": "その会社は、より良い結果を得るために、マーケティングキャンペーンを専門の広告代理店に委託することを決定した。"
@@ -11838,6 +12450,14 @@
   "give_me_a_break": {
     "en": "Give me a break; I’ve been working non-stop all day and am exhausted.",
     "ja": "よしてくれ；今日は一日中ノンストップで働いて、疲れているんだ。"
+  },
+  "give_off": {
+    "en": "The campfire gave off warmth and a comforting smell of woodsmoke.",
+    "ja": "キャンプファイヤーは暖かさと心地よい木の煙の匂いを放っていました。"
+  },
+  "give_one_s_regard_to": {
+    "en": "Please give my regards to your mother and tell her I said hello.",
+    "ja": "お母様によろしくとお伝えください、私がこんにちはと言いました。"
   },
   "give_out": {
     "en": "Please give out the flyers to everyone who walks by the information booth.",
@@ -11955,6 +12575,10 @@
     "en": "Please be careful not to glue your fingers together when using that craft adhesive.",
     "ja": "その工作用接着剤を使うときは、指がくっつかないように注意してください。"
   },
+  "go_a_long_way_to_do": {
+    "en": "Simple acts of kindness can go a long way to building trust and strengthening relationships.",
+    "ja": "簡単な親切な行為は信頼を築き、関係を強化するのに大いに役立つ。"
+  },
   "go_a_long_way_to_do_toward_s": {
     "en": "Even small donations can go a long way toward supporting local charities and their important work.",
     "ja": "たとえ小さな寄付でも、地元の慈善団体とその重要な活動を支援する上で大きな効果があります。"
@@ -12023,9 +12647,17 @@
     "en": "The new regulations will go into effect on January 1st, so please prepare accordingly.",
     "ja": "新しい規制は１月１日に発効するので、それに合わせて準備してください。"
   },
+  "go_off": {
+    "en": "The fire alarm suddenly went off, startling everyone in the office building.",
+    "ja": "火災警報器が突然鳴り響き、オフィスビルの全員を驚かせた。"
+  },
   "go_on": {
     "en": "Despite the challenges, the project will go on as planned next month.",
     "ja": "困難な状況にもかかわらず、プロジェクトは予定通り来月に実行されるでしょう。"
+  },
+  "go_on_to_do": {
+    "en": "She graduated from university and then went on to pursue a career in medicine.",
+    "ja": "彼女は大学を卒業し、その後、医学の分野でキャリアを追求した。"
   },
   "go_on_with": {
     "en": "Despite the rain, we decided to go on with our picnic in the park.",
@@ -12035,9 +12667,17 @@
     "en": "Let's go out for dinner tonight and celebrate our accomplishment together.",
     "ja": "今夜、外で夕食に出かけて、私たちの成果を一緒に祝おう。"
   },
+  "go_out_of_one_s_way_to_do": {
+    "en": "He went out of his way to help me move my furniture into the apartment.",
+    "ja": "彼はわざわざ手伝ってくれて、私の家具をアパートに運び入れてくれました。"
+  },
   "go_over": {
     "en": "Before submitting the report, please go over it carefully to check for any errors.",
     "ja": "レポートを提出する前に、誤りがないか注意深く見直してください。"
+  },
+  "go_so_far_as_to_do": {
+    "en": "Some critics went so far as to call the film a masterpiece, despite its flaws.",
+    "ja": "批評家の中には、欠点はあるにもかかわらず、その映画を傑作だとさえ言う人がいました。"
   },
   "go_through": {
     "en": "Losing her job was a difficult experience she had to go through.",
@@ -12431,6 +13071,10 @@
     "en": "You had better start studying now if you want to pass the exam next week.",
     "ja": "来週の試験に合格したいなら、今すぐ勉強するべきだ。"
   },
+  "had_better_do": {
+    "en": "You had better start studying now if you want to pass the exam.",
+    "ja": "試験に合格したいなら、今すぐ勉強した方がいいでしょう。"
+  },
   "hail": {
     "en": "The unexpected hail damaged several cars parked on the street yesterday.",
     "ja": "昨日は予期せぬひょうが降ってきて、路上に駐車されていた車をいくつか破損させた。"
@@ -12518,6 +13162,10 @@
   "happen_on": {
     "en": "While hiking, we happened on a beautiful waterfall hidden in the forest.",
     "ja": "ハイキング中に、森の中に隠された美しい滝に偶然出くわした。"
+  },
+  "happen_to_do": {
+    "en": "I happened to see an old friend while I was walking downtown yesterday.",
+    "ja": "昨日、ダウンタウンを歩いているときに、たまたま旧友に会いました。"
   },
   "harass": {
     "en": "Cyberbullying is a serious issue and can harass victims emotionally and mentally.",
@@ -12615,9 +13263,25 @@
     "en": "I have been worrying about my grandmother’s health, but she seems to be doing well today.",
     "ja": "私は祖母の健康を心配していましたが、今日は元気そうに見えます。"
   },
+  "have_a_good_command_of": {
+    "en": "She has a good command of English, allowing her to work internationally with ease.",
+    "ja": "彼女は英語を自由に使いこなす力があり、簡単に国際的に仕事ができる。"
+  },
+  "have_a_good_time_ing": {
+    "en": "We had a really good time hiking through the beautiful mountain trails.",
+    "ja": "私たちは美しい山の小道をハイキングして、本当に楽しい時間を過ごしました。"
+  },
+  "have_a_in_common_with_b": {
+    "en": "My sister and I have a love of classic movies in common.",
+    "ja": "私の姉と私はクラシック映画が好きという共通点があります。"
+  },
   "have_a_liking_for": {
     "en": "Many students have a liking for listening to music while they study.",
     "ja": "多くの学生は勉強中に音楽を聴くのが好きです。"
+  },
+  "have_a_look_take_a_look_at": {
+    "en": "Could you have a look at this document and tell me if it’s accurate?",
+    "ja": "この書類を見て、正確かどうか教えてもらえますか？"
   },
   "have_a_say_in": {
     "en": "Employees should have a say in decisions that directly affect their working conditions.",
@@ -12627,21 +13291,73 @@
     "en": "The decline in bee populations may have a lot to do with pesticide usage and habitat loss.",
     "ja": "ミツバチの個体数の減少は、農薬の使用や生息地の消失と大きく関係があるかもしれません。"
   },
+  "have_a_way_of_doing": {
+    "en": "My grandfather has a way of telling stories that always captivates everyone around him.",
+    "ja": "祖父はいつも周りの人々を魅了するような話をする癖があります。"
+  },
   "have_access_to": {
     "en": "Students have access to a wide range of online resources through the university library website.",
     "ja": "学生は大学の図書館ウェブサイトを通じて、幅広いオンラインリソースを利用できます。"
+  },
+  "have_an_eye": {
+    "en": "She has an eye for detail and always catches errors others miss.",
+    "ja": "彼女は細部に対する眼識があり、他の人が見逃す間違いにいつも気づく。"
+  },
+  "have_an_eye_for": {
+    "en": "He has an eye for detail, which is why he's such a good photographer.",
+    "ja": "彼は細部への目があり、そのため素晴らしい写真家です。"
   },
   "have_an_impact": {
     "en": "Social media can have a significant impact on teenagers' self-esteem and body image.",
     "ja": "ソーシャルメディアは、十代の若者の自尊心や体型に対するイメージに大きな影響を与える可能性があります。"
   },
+  "have_an_influence_effect_on": {
+    "en": "Social media has a significant effect on teenagers’ self-esteem and body image.",
+    "ja": "ソーシャルメディアは、十代の若者の自尊心や体型に大きな影響を与えています。"
+  },
+  "have_be_nothing_to_do_with": {
+    "en": "My involvement in this project has nothing to do with your personal issues.",
+    "ja": "このプロジェクトへの私の関与は、あなたの個人的な問題とは全く関係ない。"
+  },
+  "have_be_yet_to_do": {
+    "en": "The company has yet to release its quarterly earnings report this year.",
+    "ja": "その会社はまだ今年度の四半期決算報告書を発表していません。"
+  },
   "have_difficulty": {
     "en": "Many students have difficulty understanding complex grammar rules when learning English.",
     "ja": "多くの学生は、英語を学ぶ際に複雑な文法ルールを理解するのに苦労します。"
   },
+  "have_difficulty_in_doing": {
+    "en": "Many students have difficulty understanding complex philosophical arguments without further explanation.",
+    "ja": "多くの学生は、さらなる説明なしに複雑な哲学的な議論を理解するのが困難です。"
+  },
+  "have_got_one_s_own_way": {
+    "en": "Despite my objections, she always got her own way regarding holiday destinations.",
+    "ja": "私の反対にもかかわらず、彼女はいつも休暇の目的地について自分の言い分を通しました。"
+  },
   "have_no_idea": {
     "en": "I have no idea why the train was delayed; it's quite frustrating.",
     "ja": "電車が遅れた理由に全く見当もつきません。とてもイライラします。"
+  },
+  "have_no_other_choice_but_to_do": {
+    "en": "We have no choice but to postpone the trip due to the severe weather warnings.",
+    "ja": "厳しい天気予報のため、旅行を延期するしかありません。"
+  },
+  "have_only_to_do": {
+    "en": "You have only to ask if you need any further assistance with the project.",
+    "ja": "プロジェクトについて追加の支援が必要な場合は、尋ねるだけでよい。"
+  },
+  "have_take_a_look_at": {
+    "en": "Could you take a look at this report and let me know if it needs any changes?",
+    "ja": "このレポートを見て、何か修正が必要かどうか教えてもらえますか？"
+  },
+  "have_trouble_in_ing": {
+    "en": "Many students have trouble understanding complex philosophical arguments.",
+    "ja": "多くの学生が、複雑な哲学的な議論を理解するのに苦労している。"
+  },
+  "have_yet_to_do": {
+    "en": "The company has yet to release a statement regarding the recent allegations.",
+    "ja": "その会社は最近の疑惑について声明を発表していまだにしていません。"
   },
   "haven": {
     "en": "The small coastal town became a haven for artists seeking peace and inspiration.",
@@ -12787,6 +13503,18 @@
     "en": "Could you please help me carry these heavy boxes upstairs, if you’re able?",
     "ja": "もし可能であれば、これらの重い箱を2階まで運ぶのを手伝ってもらえますか？"
   },
+  "help_a_with_b": {
+    "en": "I'll help my sister with her English homework tonight.",
+    "ja": "私は今夜、妹の英語の宿題を手伝います。"
+  },
+  "help_o_to_do": {
+    "en": "I'll help you to finish the report before the deadline tomorrow.",
+    "ja": "明日までにレポートが終わるのを手伝うよ。"
+  },
+  "help_oneself_to": {
+    "en": "Please help yourself to some fresh fruit from the bowl on the table.",
+    "ja": "テーブルの上のボウルからフルーツを自由にどうぞ。"
+  },
   "helpful": {
     "en": "The librarian was incredibly helpful, guiding me to resources I needed for my research.",
     "ja": "司書はとても親切で、研究に必要な資料を探すのを手伝ってくれました。"
@@ -12903,6 +13631,10 @@
     "en": "After meeting at the conference, they hit it off with each other and exchanged contact information.",
     "ja": "会議で出会った後、彼らはすぐに意気投合し、連絡先を交換しました。"
   },
+  "hit_on_upon": {
+    "en": "She hit upon a brilliant idea for solving the complex problem during our discussion.",
+    "ja": "私たちの議論中に、彼女は複雑な問題を解決するための素晴らしいアイデアに思いつきました。"
+  },
   "hive": {
     "en": "The beekeeper carefully opened the hive to check on the health of his bees.",
     "ja": "養蜂家はミツバチの健康状態を確認するために、巣箱を注意深く開けました。"
@@ -12939,6 +13671,10 @@
     "en": "Even though it’s challenging, we need to hold on to our dreams and never give up.",
     "ja": "困難な状況でも、私たちは夢を諦めずに、それを手放してはいけません。"
   },
+  "hold_one_s_breath": {
+    "en": "Everyone held their breath as the magician prepared for his final, dramatic trick.",
+    "ja": "皆が息をひそめて、魔術師が最後の劇的なトリックの準備をするのを待ちました。"
+  },
   "hold_out": {
     "en": "Despite facing constant criticism, she continued to hold out hope for a positive outcome.",
     "ja": "厳しい批判にさらされ続けていたにもかかわらず、彼女は依然として良い結果を期待し続けた。"
@@ -12950,6 +13686,10 @@
   "hold_true": {
     "en": "The principles of honesty and integrity should hold true regardless of the situation.",
     "ja": "正直さと誠実さの原則は、どのような状況でも当てはまるべきです。"
+  },
+  "hold_true_good": {
+    "en": "The principles of fairness and honesty still hold true in modern business practices.",
+    "ja": "公正さと誠実さの原則は、現代のビジネス慣行においても通用します。"
   },
   "hold_up": {
     "en": "The sturdy scaffolding will hold up the new building's facade during construction.",
@@ -13078,6 +13818,10 @@
   "how_come": {
     "en": "I’m curious – how come you didn't tell me about the surprise party?",
     "ja": "気になったんだけど、どうしてサプライズパーティーのことを教えてくれなかったの？"
+  },
+  "how_come_sv": {
+    "en": "How come he didn’t tell us about the party until just now?",
+    "ja": "どうして彼は今になってパーティーのことを私たちに言わなかったんだろう？"
   },
   "however": {
     "en": "The initial results were promising; however, more research is needed to confirm them.",
@@ -13275,6 +14019,10 @@
     "en": "The project wouldn't have succeeded if it were not for your team’s dedication and hard work.",
     "ja": "もし君たちのチームの献身と努力がなければ、このプロジェクトは成功しなかっただろう。"
   },
+  "if_it_were_not_for_if_it_had_not_been_for": {
+    "en": "If it were not for my parents' unwavering support, I wouldn’t have been able to pursue my dream.",
+    "ja": "もし両親の揺るぎないサポートがなければ、私の夢を実現できなかったでしょう。"
+  },
   "if_only": {
     "en": "If only I had studied harder in high school, I might be more successful now.",
     "ja": "もし高校時代にもっと勉強していたら、今頃もっと成功しているかもしれません。"
@@ -13286,6 +14034,10 @@
   "if_s_should": {
     "en": "If a problem should arise during the event, please contact security immediately.",
     "ja": "イベント中に問題が発生した場合は、すぐに警備員に連絡してください。"
+  },
+  "if_s_were_to_do": {
+    "en": "If the company were to invest in renewable energy, it would improve its image.",
+    "ja": "もし会社が再生可能エネルギーに投資するとしたら、そのイメージは向上するだろう。"
   },
   "ignition": {
     "en": "The car wouldn't start because of a problem with the ignition system.",
@@ -13571,6 +14323,14 @@
     "en": "She was in a hurry to catch the train, so she skipped breakfast this morning.",
     "ja": "彼女は朝寝食を抜いて、電車に乗り遅れないように急いで出かけました。"
   },
+  "in_a_one_sense": {
+    "en": "In a sense, learning a new language is like solving a complex puzzle.",
+    "ja": "ある意味では、新しい言語を学ぶことは複雑なパズルを解くようなものです。"
+  },
+  "in_a_one_way": {
+    "en": "In a way, learning a new language is like learning how to play an instrument.",
+    "ja": "ある意味で、新しい言語を学ぶことは楽器の演奏方法を学ぶことに似ています。"
+  },
   "in_a_row": {
     "en": "The team won five games in a row, setting a new record.",
     "ja": "チームは5試合連続で勝利し、新しい記録を樹立した。"
@@ -13731,6 +14491,10 @@
     "en": "Please put your books in order on the shelf before you leave the classroom.",
     "ja": "教室を出る前に、本を棚にきちんと並べてください。"
   },
+  "in_order_so_as_to_do": {
+    "en": "He studied hard in order to pass the difficult entrance exam.",
+    "ja": "彼は難関の入試に合格するために懸命に勉強しました。"
+  },
   "in_order_that_s_may": {
     "en": "She studied diligently in order that she may achieve her dream of becoming a doctor.",
     "ja": "彼女は医者になるという夢を実現するために、熱心に勉強しました。"
@@ -13738,6 +14502,10 @@
   "in_order_to": {
     "en": "He studied diligently in order to pass the difficult university entrance exam.",
     "ja": "彼は難関大学の入学試験に合格するために懸命に勉強しました。"
+  },
+  "in_order_to_do": {
+    "en": "I went to the library in order to study for my upcoming history exam.",
+    "ja": "次の歴史の試験のために、図書館へ勉強しに行くことにした。"
   },
   "in_other_words": {
     "en": "The data are inconclusive; in other words, we can't draw any firm conclusions yet.",
@@ -13931,9 +14699,17 @@
     "en": "In the way she explained the problem, it seemed much easier to understand.",
     "ja": "彼女が問題を説明したやり方では、とても理解しやすくなりました。"
   },
+  "in_the_way_in_one_s_way_of": {
+    "en": "The construction equipment was standing in the way of pedestrian traffic, causing a delay.",
+    "ja": "建設機械が歩行者の邪魔をして、遅延を引き起こしていた。"
+  },
   "in_the_way_of": {
     "en": "Don’t leave your backpack in the way of the doorway; it's a safety hazard.",
     "ja": "バックパックをドアの前に置かないでください。安全上の問題になります。"
+  },
+  "in_the_way_of_a_in_a_s_way": {
+    "en": "Don’t stand in the way of progress; embrace new ideas and opportunities.",
+    "ja": "進歩の邪魔をしないで、新しいアイデアと機会を受け入れなさい。"
   },
   "in_the_works": {
     "en": "A new marketing campaign is currently in the works and should be ready next month.",
@@ -13974,6 +14750,10 @@
   "in_view_of": {
     "en": "In view of the recent budget cuts, we’ll have to postpone the project.",
     "ja": "最近の予算削減を考慮すると、プロジェクトは延期せざるを得ません。"
+  },
+  "in_within_sight": {
+    "en": "The climbers could see the summit within sight, motivating them to continue their ascent.",
+    "ja": "登山者は頂上が見える範囲内にあり、彼らを登頂へと励ましました。"
   },
   "inability": {
     "en": "Her inability to speak French prevented her from fully participating in the conference.",
@@ -14523,6 +15303,10 @@
     "en": "She insisted on paying for dinner, even though I offered to split it.",
     "ja": "彼女は夕食代を払うことを主張し、私が割り勘すると言っても聞こうとしなかった。"
   },
+  "insist_on_upon": {
+    "en": "The manager insisted upon following established protocols, even though it slowed down the project.",
+    "ja": "マネージャーは、プロジェクトのスピードが遅くなることになっても、確立された手順に従うことを主張した。"
+  },
   "insist_that": {
     "en": "He insisted that he had seen the thief run down the street.",
     "ja": "彼は泥棒が通りを駆け下りていくのを見たと言い張った。"
@@ -15055,9 +15839,25 @@
     "en": "It is important to remember the historical context when interpreting this artwork.",
     "ja": "この美術作品を解釈する際には、歴史的背景を思い出しておくことが重要です。"
   },
+  "it_is_about_high_time_that": {
+    "en": "It’s about time that we started thinking seriously about reducing our carbon footprint.",
+    "ja": "そろそろ、私たちの炭素排出量を削減することについて真剣に考え始める頃だ。"
+  },
+  "it_is_high_time_that": {
+    "en": "It's high time we started looking for a new apartment.",
+    "ja": "そろそろ新しいアパートを探し始める頃だ。"
+  },
   "it_is_no_use": {
     "en": "It is no use arguing with him; he’s already made up his mind.",
     "ja": "彼と議論しても無駄だ。彼はすでに決心しているんだ。"
+  },
+  "it_is_no_use_doing": {
+    "en": "It’s no use crying over spilled milk; move on and learn from it.",
+    "ja": "こぼれたミルクを嘆いても無駄です、前向きになりましょう。"
+  },
+  "it_is_no_wonder_that": {
+    "en": "No wonder he failed the exam; he hadn't studied at all.",
+    "ja": "彼が試験に落ちたのは当然だ、全く勉強していなかったから。"
   },
   "it_is_not_long_before": {
     "en": "It is not long before the cherry blossoms start blooming this year, I predict.",
@@ -15159,6 +15959,10 @@
     "en": "He told a funny joke that made everyone in the room burst into laughter.",
     "ja": "彼は部屋の中にいる全員が笑い出すような面白い冗談を言いました。"
   },
+  "joking_kidding_aside": {
+    "en": "Joking/kidding aside, the situation is quite serious and requires immediate action.",
+    "ja": "冗談はさておき、状況はかなり深刻であり、早急な対応が必要です。"
+  },
   "journal": {
     "en": "She keeps a daily journal to record her thoughts and experiences.",
     "ja": "彼女は自分の考えや経験を記録するために毎日の日誌をつけています。"
@@ -15186,6 +15990,10 @@
   "judging_from": {
     "en": "Judging from her expression, I think she didn't enjoy the movie very much.",
     "ja": "彼女の表情から判断すると、あまり映画を楽しんでいないようです。"
+  },
+  "judging_from_by": {
+    "en": "Judging from the cloudy sky, I think it’s likely to rain later today.",
+    "ja": "曇り空から判断すると、今日の午後は雨が降る可能性が高いでしょう。"
   },
   "jumble": {
     "en": "The drawer was a jumble of old photographs and tangled cords.",
@@ -15271,6 +16079,10 @@
     "en": "Parents often try to keep their children from harm by setting clear boundaries and expectations.",
     "ja": "親は、明確な境界線と期待を設定することで、子供たちを危険から守ろうとするものである。"
   },
+  "keep_abreast_of_with": {
+    "en": "To succeed in this rapidly changing field, it’s crucial to keep abreast of the latest technological advancements.",
+    "ja": "この急速に変化する分野で成功するためには、最新の技術革新に遅れずついていくことが重要だ。"
+  },
   "keep_an_eye": {
     "en": "Could you please keep an eye on my luggage while I go buy a coffee?",
     "ja": "コーヒーを買ってくる間、私の荷物を見ていてくれませんか？"
@@ -15291,6 +16103,10 @@
     "en": "The company tried to keep back the negative news about their declining profits.",
     "ja": "その会社は、減少する利益に関する否定的なニュースを隠そうとしました。"
   },
+  "keep_bear_in_mind": {
+    "en": "Please keep in mind that the deadline is next Friday afternoon.",
+    "ja": "締め切りが来週金曜日の午後であることを心に留めておいてください。"
+  },
   "keep_company_with": {
     "en": "She likes to keep company with her cat when she feels lonely.",
     "ja": "彼女は寂しい時、猫と交際することが好きです。"
@@ -15299,13 +16115,37 @@
     "en": "If you keep doing your best, I'm sure you’ll eventually achieve your goals.",
     "ja": "もし一生懸命に努力し続けたら、きっといつか目標を達成できるよ。"
   },
+  "keep_hold_one_s_temper": {
+    "en": "It’s important to keep your temper in stressful situations and think before you react.",
+    "ja": "ストレスの多い状況では冷静さを保ち、反応する前に考えることが重要です。"
+  },
   "keep_off": {
     "en": "Please keep off the grass to protect it from damage during dry season.",
     "ja": "草への立ち入りはご遠慮ください。乾燥期には特に傷つきやすいのです。"
   },
+  "keep_one_s_fingers": {
+    "en": "I hope the team wins; I’m keeping my fingers crossed for their success.",
+    "ja": "チームが勝つことを願っています。彼らの成功を祈っています。"
+  },
+  "keep_one_s_fingers_crossed": {
+    "en": "I’m keeping my fingers crossed that our team will win the championship game.",
+    "ja": "私たちのチームが選手権試合で勝つことを祈っている。"
+  },
+  "keep_one_s_promise_word": {
+    "en": "She always keeps her word, so you can trust what she says.",
+    "ja": "彼女はいつも約束を守るので、彼女の言うことは信用できます。"
+  },
+  "keep_one_s_word": {
+    "en": "A true friend always keeps their word and follows through on promises.",
+    "ja": "本当の友達はいつも約束を守り、実行する。"
+  },
   "keep_pace_with": {
     "en": "It’s crucial to keep pace with the latest advancements in artificial intelligence.",
     "ja": "人工知能の最新の進歩に遅れをとらないようにすることが重要です。"
+  },
+  "keep_stay_in_touch_with": {
+    "en": "I hope we can keep in touch with each other after graduation and see where life takes us.",
+    "ja": "卒業後も互いに連絡を取り合い、それぞれの人生がどうなるか見ていけたらと思っています。"
   },
   "keep_to": {
     "en": "Please keep to the designated path and do not wander into the woods.",
@@ -15426,6 +16266,10 @@
   "know_better": {
     "en": "Having experienced that situation firsthand, she knows better than to make similar assumptions now.",
     "ja": "その状況を実際に経験したことがあるので、今は同様の推測をするべきではないと彼女はもっと分別があります。"
+  },
+  "know_better_than_to_do": {
+    "en": "She knows better than to interrupt her boss during an important meeting.",
+    "ja": "彼女は重要な会議中に上司を邪魔するほど愚かではありません。"
   },
   "knowledge": {
     "en": "Gaining knowledge through research can unlock new possibilities and opportunities.",
@@ -15815,6 +16659,10 @@
     "en": "It’s time for you to let go of your past mistakes and move on with your life.",
     "ja": "過去の過ちを手放して、人生を進んでいく時が来たよ。"
   },
+  "let_o_do": {
+    "en": "My parents let me drive the car to school this morning for the first time.",
+    "ja": "両親は今日初めて私に車で学校に行くことを許可してくれた。"
+  },
   "let_off": {
     "en": "The judge decided to let him off with a warning, considering his age and remorse.",
     "ja": "裁判官は彼の年齢と悔悛の念を考慮して、彼を警告で済ませることにしました。"
@@ -15842,6 +16690,10 @@
   "level_off": {
     "en": "After a rapid increase, sales eventually level off due to market saturation.",
     "ja": "急激な増加の後、市場の飽和により販売は最終的に横ばいになる。"
+  },
+  "level_off_out": {
+    "en": "After a steep climb, the road began to level out and offered a scenic view.",
+    "ja": "急な登り坂のあと、道は横ばいになり、景色が広がる場所になった。"
   },
   "leverage": {
     "en": "The company plans to leverage its existing customer base for expansion into new markets.",
@@ -15894,6 +16746,10 @@
   "lie_in": {
     "en": "The beauty of this painting truly lie in the artist's masterful use of light and shadow.",
     "ja": "この絵画の美しさは、アーティストが光と影を巧みに操っている点にあります。"
+  },
+  "lie_in_with": {
+    "en": "The responsibility for the accident ultimately lies within the company’s negligence.",
+    "ja": "事故の責任は最終的に、会社の過失にある。"
   },
   "life": {
     "en": "She dedicated her life to helping animals and protecting the environment.",
@@ -15958,6 +16814,10 @@
   "limit": {
     "en": "There is a speed limit of 60 kilometers per hour on this residential road.",
     "ja": "この住宅地の道路では、時速制限は60キロです。"
+  },
+  "limit_a_to_b": {
+    "en": "The company decided to limit new hires to candidates with at least five years of experience.",
+    "ja": "会社は、少なくとも5年以上の経験を持つ候補者に新入社員を制限することにした。"
   },
   "limitation": {
     "en": "The company’s biggest limitation is its lack of experience in international markets.",
@@ -16199,6 +17059,10 @@
     "en": "Looking back on my childhood, I realize how much my parents sacrificed for me.",
     "ja": "子供時代を振り返ってみると、両親が私のためにどれだけ犠牲になったか思い出す。"
   },
+  "look_back_on_upon_to": {
+    "en": "She often looks back upon her childhood with fondness and a hint of nostalgia.",
+    "ja": "彼女はしばしば子供時代を懐かしさとほんの少しの郷愁を込めて振り返る。"
+  },
   "look_back_upon": {
     "en": "She often looks back upon her childhood summers with fondness.",
     "ja": "彼女はしばしば子供の頃の夏を懐かしく振り返る。"
@@ -16206,6 +17070,10 @@
   "look_down_on": {
     "en": "She refused to look down on people just because they didn't have a lot of money.",
     "ja": "彼女は、お金があまりなくても、人々を見下すことを拒否した。"
+  },
+  "look_down_on_upon": {
+    "en": "He tends to look down upon anyone who hasn’t received a formal education.",
+    "ja": "彼は正式な教育を受けていない人を軽蔑する傾向があります。"
   },
   "look_for": {
     "en": "I'm looking for my keys, but I can’t seem to remember where I last put them.",
@@ -16227,6 +17095,14 @@
     "en": "Many people look on reality television as a form of escapism.",
     "ja": "多くの人々はリアリティテレビを現実逃避の一形態とみなしている。"
   },
+  "look_on_upon": {
+    "en": "Many people look upon plastic surgery as a way to enhance their appearance.",
+    "ja": "多くの人は、美容整形を外見を向上させる方法としてみなしています。"
+  },
+  "look_on_upon_a_as_b": {
+    "en": "Many people look upon physical fitness as essential for a healthy lifestyle.",
+    "ja": "多くの人は健康的なライフスタイルには運動が不可欠であると見なしています。"
+  },
   "look_out": {
     "en": "Look out! There’s a car coming right at us.",
     "ja": "注意！車がまっすぐにこちらに向かってきてる。"
@@ -16242,6 +17118,10 @@
   "look_to": {
     "en": "Many developing countries look to established nations for economic assistance and guidance.",
     "ja": "多くの発展途上国は、経済支援と指導のために確立された国々を見ている。"
+  },
+  "look_to_a_for_b": {
+    "en": "Many startups look to experienced mentors for guidance on their business plans.",
+    "ja": "多くのスタートアップ企業は、事業計画に関する指導について経験豊富なメンターに期待しています。"
   },
   "look_up": {
     "en": "I need to look up the definition of this word in the dictionary.",
@@ -16266,6 +17146,18 @@
   "lose": {
     "en": "Don’t lose your passport; it's essential for international travel and identification.",
     "ja": "パスポートをなくさないでください。国際旅行や身分証明書には必須です。"
+  },
+  "lose_one_s_face": {
+    "en": "Publicly criticizing him would only cause him to lose face and feel embarrassed.",
+    "ja": "彼を公に批判すると、彼は面子を失い、恥ずかしい思いをするだけだ。"
+  },
+  "lose_one_s_temper": {
+    "en": "He tends to lose his temper when he’s under a lot of pressure at work.",
+    "ja": "彼は仕事でプレッシャーを感じると、怒ってしまう傾向がある。"
+  },
+  "lose_oneself_in": {
+    "en": "She often loses herself in classical music, forgetting all her worries for a while.",
+    "ja": "彼女はしばしばクラシック音楽に没頭し、しばらくの間、心配事をすべて忘れます。"
   },
   "lose_sight_of": {
     "en": "Don't lose sight of your goals, even when facing difficult challenges.",
@@ -16447,6 +17339,14 @@
     "en": "Volunteering at the animal shelter really makes a difference to the lives of those animals.",
     "ja": "動物保護シェルターでボランティアをすることは、動物たちの生活に本当に影響を与えます。"
   },
+  "make_a_face": {
+    "en": "The child made a face when she tasted the bitter medicine.",
+    "ja": "その子は苦い薬を飲んだとき、顔をしかめました。"
+  },
+  "make_a_from_b": {
+    "en": "The chef makes delicious pasta from fresh, locally sourced ingredients.",
+    "ja": "その料理人は地元の新鮮な食材から美味しいパスタを作ります。"
+  },
   "make_a_mistake": {
     "en": "Everyone makes a mistake sometimes; the important thing is to learn from it.",
     "ja": "誰でも時々間違いをするものです。大切なのは、そこから学ぶことです。"
@@ -16454,6 +17354,14 @@
   "make_a_out_of_b": {
     "en": "The resourceful artist decided to make beautiful sculptures out of recycled plastic bottles.",
     "ja": "その器用な芸術家は、再生プラスチックのペットボトルを使って美しい彫刻を作ることにした。"
+  },
+  "make_a_point_of_doing": {
+    "en": "She makes a point of reading for at least an hour every night before bed.",
+    "ja": "彼女は毎晩寝る前に少なくとも1時間は必ず読書をするようにしています。"
+  },
+  "make_a_point_of_ing": {
+    "en": "I make a point of reading the news every morning to stay informed.",
+    "ja": "私はいつも情報を得るために、毎朝必ずニュースを読むようにしています。"
   },
   "make_a_reservation": {
     "en": "We need to make a reservation at that popular restaurant well in advance.",
@@ -16479,6 +17387,10 @@
     "en": "To improve your English, you really need to make an effort every day.",
     "ja": "英語を上達させるためには、毎日努力する必要があります。"
   },
+  "make_believe": {
+    "en": "The children made believe they were explorers, searching for buried treasure in the garden.",
+    "ja": "子供たちは探検家になりきって、庭で埋蔵金を捜しているふりをしていた。"
+  },
   "make_believe_that": {
     "en": "To entertain his little sister, he would make believe that he was a brave knight.",
     "ja": "妹を喜ばせるために、彼は勇敢な騎士になったふりをすることがあった。"
@@ -16495,9 +17407,21 @@
     "en": "Since the restaurant was closed, we had to make do with instant noodles for dinner.",
     "ja": "レストランが閉まっていたので、夕食はインスタントラーメンで間に合わせることになりました。"
   },
+  "make_earn_a_living": {
+    "en": "She works two jobs to make a living and support her family.",
+    "ja": "彼女は生計を立てて家族を養うために2つの仕事をしています。"
+  },
+  "make_earn_a_one_s_living": {
+    "en": "As a freelance photographer, he makes his living by capturing beautiful moments for clients.",
+    "ja": "フリーランスのカメラマンとして、彼は顧客のために美しい瞬間を捉えて生計を立てています。"
+  },
   "make_ends_meet": {
     "en": "With rising costs, it's becoming increasingly difficult for many families to make ends meet.",
     "ja": "物価上昇のため、多くの家族にとってやりくりするのがますます難しくなっています。"
+  },
+  "make_for": {
+    "en": "We need to make for the train station immediately if we want to catch our connection.",
+    "ja": "接続を逃さないために、今すぐ駅に向かわなければならない。"
   },
   "make_friends_with": {
     "en": "She tried to make friends with the new students on her first day at school.",
@@ -16523,9 +17447,25 @@
     "en": "I really hope I can make it to the concert next Saturday.",
     "ja": "本当に来週の土曜日のコンサートに間に合いますように。"
   },
+  "make_it_a_rule_to_do": {
+    "en": "We made it a rule to always double-check our work before submitting it.",
+    "ja": "私たちは常に提出する前に仕事を再確認することにしました。"
+  },
   "make_much_of": {
     "en": "The company shouldn't make much of minor setbacks when discussing its long-term strategy.",
     "ja": "その会社は、長期戦略について議論する際に、些細な挫折を大げさに強調すべきではない。"
+  },
+  "make_off_with": {
+    "en": "The thief quickly made off with the valuable painting during the chaos.",
+    "ja": "泥棒は騒ぎに乗じて、貴重な絵画を素早く持ち去りました。"
+  },
+  "make_one_s_way": {
+    "en": "Despite the challenges, she continued to make her way towards achieving her dreams.",
+    "ja": "困難にもかかわらず、彼女は夢を実現するために前進し続けた。"
+  },
+  "make_oneself_understood": {
+    "en": "She tried her best to make herself understood despite the language barrier.",
+    "ja": "彼女は言語の壁にもかかわらず、自分の考えを伝えるよう最善を尽くした。"
   },
   "make_out": {
     "en": "I could barely make out the address on the faded envelope in the dim light.",
@@ -16571,6 +17511,14 @@
     "en": "She bought him flowers to make up for forgetting our anniversary.",
     "ja": "彼女は、記念日を忘れた償いに彼に花を買いました。"
   },
+  "make_up_one_s_mind": {
+    "en": "After careful consideration, she finally made up her mind to accept the job offer.",
+    "ja": "慎重な検討の後、彼女はついにその就職オファーを受け入れることに決意しました。"
+  },
+  "make_up_one_s_mind_to_do": {
+    "en": "After much deliberation, she finally made up her mind to apply for the scholarship.",
+    "ja": "熟考の末、彼女はついに奨学金に応募することを決意しました。"
+  },
   "make_use_of": {
     "en": "Students should make use of all available resources to succeed in their studies.",
     "ja": "学生は、学習で成功するために利用できるすべてのリソースを活用すべきです。"
@@ -16614,6 +17562,10 @@
   "manage": {
     "en": "Despite the challenges, she managed to complete the project successfully on time.",
     "ja": "困難にもかかわらず、彼女は予定通りプロジェクトを成功裏に完了させることを見事にやり遂げた。"
+  },
+  "manage_to_do": {
+    "en": "Despite the heavy rain, she managed to finish the marathon in under three hours.",
+    "ja": "大雨にもかかわらず、彼女は何とか3時間以内にマラソンを終えました。"
   },
   "management": {
     "en": "Effective management requires strong leadership, clear communication, and efficient resource allocation.",
@@ -16814,6 +17766,14 @@
   "may_have": {
     "en": "He may have forgotten to lock the door, which is why someone entered.",
     "ja": "彼は鍵をかけたことを忘れたのかもしれません、だから誰かが侵入したのです。"
+  },
+  "may_might_as_well": {
+    "en": "Since we're already here, we may as well visit the museum.",
+    "ja": "すでにここに来ているのだから、博物館を訪れるのもいいでしょう。"
+  },
+  "may_might_as_well_do": {
+    "en": "The weather is terrible; you might as well stay in and read a book.",
+    "ja": "天候はひどいので、家で本を読むのもいいかもしれません。"
   },
   "may_want_to_do": {
     "en": "If you're feeling overwhelmed, you may want to do some light stretching to relax.",
@@ -17158,6 +18118,10 @@
   "midst": {
     "en": "She found herself in the midst of a lively and engaging conversation with her colleagues.",
     "ja": "彼女は同僚たちとの活発で魅力的な会話の中にいました。"
+  },
+  "might_just_as_well_do": {
+    "en": "Since we're already here, we might as well visit the museum while we're at it.",
+    "ja": "すでにここに来ているので、ついでに博物館も訪れるのもいいでしょう。"
   },
   "mighty": {
     "en": "The mighty oak tree has stood for centuries, weathering countless storms.",
@@ -17547,6 +18511,10 @@
     "en": "Most students enjoy listening to music while they study for exams.",
     "ja": "ほとんどの学生は、試験勉強をしながら音楽を聴くことを楽しんでいます。"
   },
+  "most_one_all_some_of": {
+    "en": "Most of the students enjoyed the lecture, although some found it slightly too technical.",
+    "ja": "学生のほとんどがその講義を楽しみましたが、一部の人にとっては少し難しすぎました。"
+  },
   "mostly": {
     "en": "The students mostly enjoyed the lecture, although a few found it difficult to follow.",
     "ja": "学生たちは主にその講義を楽しんだようですが、一部の学生は理解に苦労したようです。"
@@ -17590,6 +18558,10 @@
   "much": {
     "en": "I'd like to travel, but I don’t have much free time these days.",
     "ja": "旅行したいけれど、最近はあまり時間がないんです。"
+  },
+  "much_still_less": {
+    "en": "He can’t even drive; much less is he allowed to borrow the car.",
+    "ja": "彼は運転すらできない、まして車を借りることは許可されていません。"
   },
   "mud": {
     "en": "After the rainstorm, thick mud made walking difficult and messy for everyone.",
@@ -17714,6 +18686,14 @@
   "naked": {
     "en": "She felt vulnerable standing on the beach, completely naked and exposed to the wind.",
     "ja": "彼女は風にさらされ、完全に裸でむき出しになったため、無防備な気持ちになりました。"
+  },
+  "name_a_after_b": {
+    "en": "They named their daughter Emily after her grandmother, a beloved family member.",
+    "ja": "彼らは娘を、愛されていた祖母エミリーにちなんで名付けました。"
+  },
+  "name_a_b_after_c": {
+    "en": "They named their daughter Emily after their grandmother, Eleanor.",
+    "ja": "彼らは祖母のエレノアにちなんで娘をエミリーと名付けました。"
   },
   "name_after": {
     "en": "My parents named after their favorite author when I was born.",
@@ -17863,6 +18843,10 @@
     "en": "Neither of my siblings wants to go to the concert with me tonight.",
     "ja": "私の兄弟姉妹のどちらも今夜コンサートに行く気はありません。"
   },
+  "neither_a_nor_b": {
+    "en": "I’m planning to visit neither Paris nor Rome this year, I think.",
+    "ja": "今年はパリにもローマにも行かないと思うんだ。"
+  },
   "nephew": {
     "en": "My nephew is visiting us next week and he’s really excited to see the new puppy.",
     "ja": "私の甥っ子は来週私たちを訪ねてきます。新しい子犬に会うのがとても楽しみです。"
@@ -17926,6 +18910,10 @@
   "never_fail_to": {
     "en": "The dedicated team never fails to deliver exceptional results under pressure.",
     "ja": "献身的なチームは、プレッシャーの中でも常に素晴らしい結果を出します。"
+  },
+  "never_fail_to_do": {
+    "en": "The dedicated team never fails to deliver exceptional results under pressure.",
+    "ja": "献身的なチームは、プレッシャーの中でも必ず素晴らしい結果を出してくれる。"
   },
   "nevertheless": {
     "en": "The weather was bad; nevertheless, we decided to go hiking in the mountains.",
@@ -18090,6 +19078,10 @@
   "not_possibly": {
     "en": "He could not possibly understand the complexity of quantum physics without studying it.",
     "ja": "彼は勉強しなければ、量子物理学の複雑さを理解することはできません。"
+  },
+  "not_so_much_a_as_b": {
+    "en": "This project is not so much about profit as it is about helping the community.",
+    "ja": "このプロジェクトは利益というよりむしろ地域社会を支援することについてです。"
   },
   "not_so_much_as_do": {
     "en": "She didn't even offer to help, not so much as do the dishes after dinner.",
@@ -18427,6 +19419,14 @@
     "en": "Having a quiet space of one's own can significantly improve concentration and reduce stress.",
     "ja": "自分自身の静かな空間を持つことは、集中力を高め、ストレスを軽減するのに大きく役立つでしょう。"
   },
+  "of_one_s_own_accord": {
+    "en": "She decided to leave early of her own accord, without anyone asking her to.",
+    "ja": "彼女は誰かに頼まれたわけではなく、自発的に早く帰ることにした。"
+  },
+  "of_one_s_own_doing": {
+    "en": "The damage to the car was entirely of his own doing, a result of reckless driving.",
+    "ja": "車の損傷はすべて彼の責任であり、無謀な運転の結果でした。"
+  },
   "offend": {
     "en": "His insensitive remarks unintentionally offended many people at the conference.",
     "ja": "彼の無神経な発言は、会議に参加していた多くの人を不快にさせました。"
@@ -18535,6 +19535,26 @@
     "en": "On occasions, she likes to visit her grandmother who lives in a quiet village.",
     "ja": "時々彼女は、静かな村に住む祖母の家を訪れます。"
   },
+  "on_one_s_guard": {
+    "en": "Always be on your guard when walking alone at night in unfamiliar areas.",
+    "ja": "見慣れない場所で夜間、一人で歩くときは常に警戒してください。"
+  },
+  "on_one_s_own": {
+    "en": "He decided to travel across Europe on his own last summer.",
+    "ja": "彼は先夏、たったひとりでヨーロッパを旅することにした。"
+  },
+  "on_one_s_part": {
+    "en": "The government, on its part, promised to invest more in renewable energy resources.",
+    "ja": "政府としては、再生可能エネルギー資源への投資を増やすことを約束しました。"
+  },
+  "on_one_s_the_way_to": {
+    "en": "I stopped at a coffee shop on my way to work this morning.",
+    "ja": "今朝、仕事に向かう途中でコーヒーショップに立ち寄ったんだ。"
+  },
+  "on_one_s_way_to": {
+    "en": "I was on my way to school when I saw a beautiful rainbow in the sky.",
+    "ja": "私は学校へ行く途中で、空に美しい虹を見ました。"
+  },
   "on_purpose": {
     "en": "He didn't spill the drink accidentally; he did it on purpose to annoy her.",
     "ja": "彼は誤って飲み物をこぼしたのではなく、彼女をイライラさせるためにわざとやったのです。"
@@ -18562,6 +19582,10 @@
   "on_the_air": {
     "en": "Check your local listings to see when the concert will be on the air again.",
     "ja": "コンサートの再放送の日時は、お近くの番組表でご確認ください。"
+  },
+  "on_the_an_average": {
+    "en": "Students spend on the average three hours per week studying English vocabulary.",
+    "ja": "生徒は週平均３時間英語の語彙を勉強に費やしています。"
   },
   "on_the_brink_of": {
     "en": "Many species are on the brink of extinction due to habitat loss and climate change.",
@@ -18666,6 +19690,10 @@
   "one_after_another": {
     "en": "The contestants delivered their speeches one after another, each striving for excellence.",
     "ja": "参加者は次々にスピーチを行い、それぞれが卓越性を目指しました。"
+  },
+  "one_after_another_the_other": {
+    "en": "The students submitted their essays one after another during the exam period.",
+    "ja": "生徒たちは試験期間中、次々とレポートを提出しました。"
   },
   "one_by_one": {
     "en": "The children lined up, waiting their turn to go on the roller coaster one by one.",
@@ -18787,6 +19815,10 @@
     "en": "I’d like to order the salmon dish, please; it looks delicious on the menu.",
     "ja": "メニューに載っているサーモンの料理を注文したいのですが、とても美味しそうですね。"
   },
+  "order_a_from_b": {
+    "en": "We often order pizza from Mario's for our weekly movie night.",
+    "ja": "私たちは毎週の映画鑑賞会でよくマリオからピザを注文します。"
+  },
   "ordinary": {
     "en": "She prefers an ordinary life, valuing peace and quiet above all else.",
     "ja": "彼女は平穏で静かな生活を好みます。それが何よりも大切です。"
@@ -18882,6 +19914,10 @@
   "out_of_hand": {
     "en": "The situation quickly got out of hand when the protesters started throwing rocks.",
     "ja": "抗議者が石を投げ始めたとき、状況はすぐに手に負えなくなりました。"
+  },
+  "out_of_one_s_control": {
+    "en": "The situation quickly spiraled out of our control, requiring immediate intervention.",
+    "ja": "状況はすぐに制御不能になり、緊急の介入が必要だった。"
   },
   "out_of_order": {
     "en": "The elevator was out of order, forcing everyone to use the stairs.",
@@ -19155,6 +20191,10 @@
     "en": "I owe my success to the support of my family and friends.",
     "ja": "私は成功を家族や友人のサポートのおかげで負っています。"
   },
+  "owe_a_to_b": {
+    "en": "I owe my success to my parents' unwavering support and encouragement.",
+    "ja": "私の成功は、両親の揺るぎないサポートと励ましのおかげです。"
+  },
   "owing": {
     "en": "We are grateful for your support, owing much of our success to your generous donations.",
     "ja": "あなたの寛大なご寄付のおかげで、私達の成功の多くはあなたのお陰です。"
@@ -19423,6 +20463,10 @@
     "en": "Please pass the salt to your neighbor; they requested it earlier during dinner.",
     "ja": "塩を隣の人に渡してください。以前夕食中にねだられていました。"
   },
+  "pass_a_on_to_b": {
+    "en": "Please pass this important document on to the manager for his review.",
+    "ja": "この重要な書類を、彼のレビューのためにマネージャーに渡してください。"
+  },
   "pass_away": {
     "en": "My grandfather passed away peacefully in his sleep last year.",
     "ja": "私の祖父は昨年、眠っている間に静かに亡くなりました。"
@@ -19435,13 +20479,25 @@
     "en": "His clumsy attempts at dancing often pass for endearing charm with his friends.",
     "ja": "彼のぎこちないダンスの試みは、友人たちからは魅力的に見えることがある。"
   },
+  "pass_for_as": {
+    "en": "His innovative design, initially met with skepticism, quickly began to pass for genius among industry experts.",
+    "ja": "彼の革新的なデザインは、当初懐疑的に見られていたが、すぐに業界の専門家たちの間で天才的作品として通用するようになった。"
+  },
   "pass_off": {
     "en": "The con artist tried to pass off fake paintings as originals at the auction.",
     "ja": "その詐欺師は、オークションで偽の絵画を本物だと見せかけようとした。"
   },
+  "pass_off_a_as_b": {
+    "en": "He tried to pass off his imitation watch as an authentic Rolex to impress her.",
+    "ja": "彼は彼女を感心させるために、偽物の時計を本物のアテロレックスだと偽ろうとした。"
+  },
   "pass_on": {
     "en": "Could you please pass on this message to your colleague when you have a chance?",
     "ja": "もし機会があれば、このメッセージを同僚に伝えてもらえますか？"
+  },
+  "pass_on_down": {
+    "en": "My grandmother passed down her family recipes through generations, preserving our traditions.",
+    "ja": "祖母は世代を超えて家族のレシピを伝わり、私たちの伝統を守ってきました。"
   },
   "pass_out": {
     "en": "The heat was so intense that several concertgoers began to pass out during the performance.",
@@ -19547,6 +20603,10 @@
     "en": "The city plans to pave the old dirt road with asphalt next spring.",
     "ja": "都市は来春、古い砂利道をアスファルトで舗装する計画です。"
   },
+  "pave_the_way_for_to": {
+    "en": "The new legislation hopes to pave the way for increased investment in renewable energy sources.",
+    "ja": "新しい法律は、再生可能エネルギー源への投資の増加への道を開くことを目指している。"
+  },
   "pavement": {
     "en": "Careful pedestrians navigated the cracked pavement, avoiding tripping hazards.",
     "ja": "注意深い歩行者は、転倒の危険を避けて、ひび割れた舗装を歩きました。"
@@ -19558,6 +20618,10 @@
   "pay": {
     "en": "We should pay the electricity bill before the end of the month to avoid late fees.",
     "ja": "遅延料金を避けるために、月末までに電気代を支払うべきです。"
+  },
+  "pay_a_for_b": {
+    "en": "My parents paid a significant sum for my university tuition last year.",
+    "ja": "両親は昨年、私の大学の学費を多額支払ってくれた。"
   },
   "pay_a_visit_to": {
     "en": "We decided to pay a visit to our grandparents over the weekend.",
@@ -20735,6 +21799,10 @@
     "en": "Regular exercise can help prevent heart disease and improve overall health.",
     "ja": "定期的な運動は心臓病を予防し、全体的な健康状態を改善するのに役立ちます。"
   },
+  "prevent_a_from_b": {
+    "en": "Regular exercise can prevent heart disease from developing later in life.",
+    "ja": "定期的な運動は、将来的に心臓病を発症するのを防ぐことができます。"
+  },
   "prevention": {
     "en": "Regular exercise and a healthy diet are key to disease prevention.",
     "ja": "定期的な運動と健康的な食事は、病気の予防に不可欠です。"
@@ -20766,6 +21834,10 @@
   "pride": {
     "en": "She felt a great sense of pride in her daughter’s accomplishments.",
     "ja": "彼女は娘さんの功績に大きな誇りを感じていました。"
+  },
+  "pride_oneself_on": {
+    "en": "She prides herself on her ability to quickly learn new languages and adapt to different cultures.",
+    "ja": "彼女は新しい言語をすぐに習得し、異なる文化に適応する能力を誇りに思っています。"
   },
   "priest": {
     "en": "The priest offered words of comfort and hope during the difficult time for the community.",
@@ -20951,6 +22023,10 @@
     "en": "The school strictly prohibits the use of cell phones during class hours.",
     "ja": "学校では授業時間中の携帯電話の使用を厳しく禁止しています。"
   },
+  "prohibit_a_from_b": {
+    "en": "The school rules prohibit students from using cell phones during exams.",
+    "ja": "学校の規則では、生徒が試験中に携帯電話を使用することを禁止しています。"
+  },
   "project": {
     "en": "The students are working on a science project to investigate the effects of pollution on local wildlife.",
     "ja": "生徒たちは、汚染が地元の野生生物に与える影響を調査するための科学プロジェクトに取り組んでいます。"
@@ -21131,6 +22207,14 @@
     "en": "The library provides a quiet space for students to study and conduct research.",
     "ja": "図書館は学生が勉強や研究を行うための静かな場所を提供しています。"
   },
+  "provide_a_with_b": {
+    "en": "The company will provide employees with laptops and internet access.",
+    "ja": "会社は従業員にラップトップとインターネットアクセスを提供します。"
+  },
+  "provide_b_for": {
+    "en": "The company will provide training for all new employees to ensure their success.",
+    "ja": "会社は、すべての新入社員の成功を確実にするために、研修を提供します。"
+  },
   "provide_for": {
     "en": "My parents worked hard to provide for my education and future.",
     "ja": "両親は懸命に働き、私の教育と将来のために経済的支援をしました。"
@@ -21223,6 +22307,10 @@
     "en": "Despite the challenges, she managed to pull off a flawless performance at the concert.",
     "ja": "困難に直面したにもかかわらず、彼女はコンサートで完璧なパフォーマンスをやってのけました。"
   },
+  "pull_one_s_leg": {
+    "en": "Don’t believe him; he’s just pulling your leg about winning the lottery.",
+    "ja": "彼を信じるな、彼はただ冗談で宝くじに当たったと言っているだけだ。"
+  },
   "pull_over": {
     "en": "The police officer signaled for the driver to pull over and check his license.",
     "ja": "警察官は運転手に車を道端に寄せて、免許証を確認するように合図しました。"
@@ -21263,6 +22351,10 @@
     "en": "The judge decided to punish the offender with a hefty fine and community service.",
     "ja": "裁判官は加害者を多額の罰金と地域貢献で処罰することにしました。"
   },
+  "punish_a_for_b": {
+    "en": "The judge decided to punish the driver severely for reckless speeding.",
+    "ja": "裁判官は、危険なスピード違反で運転手を取り締まることにしました。"
+  },
   "punitive": {
     "en": "The company faced punitive damages after the product safety scandal was revealed.",
     "ja": "製品の安全に関するスキャンダルが明らかになった後、その会社は罰的な損害賠償に直面しました。"
@@ -21302,6 +22394,10 @@
   "push_for": {
     "en": "The environmental activists are pushing for stricter regulations on pollution.",
     "ja": "環境保護活動家たちは、汚染に対するより厳しい規制を求めています。"
+  },
+  "push_one_s_way": {
+    "en": "She had to push her way through the crowded marketplace to reach the stall.",
+    "ja": "彼女は市場の人混みを押しのけて、屋台までたどり着かなければならなかった。"
   },
   "push_through": {
     "en": "Despite strong opposition, the government managed to push through the controversial bill.",
@@ -21346,6 +22442,10 @@
   "put_in": {
     "en": "The company plans to put in new security systems throughout all its offices.",
     "ja": "会社はすべてのオフィス全体に新しいセキュリティシステムを備え付ける計画です。"
+  },
+  "put_into_practice_operation": {
+    "en": "The company decided to put its new marketing strategy into practice immediately.",
+    "ja": "会社は新しいマーケティング戦略を直ちに実行することを決定した。"
   },
   "put_off": {
     "en": "We had to put off the meeting until next week due to a scheduling conflict.",
@@ -21955,6 +23055,10 @@
     "en": "The lake's surface reflected the vibrant colors of the sunset, creating a stunning scene.",
     "ja": "湖の表面が夕焼けの色を映し出し、息を呑むような光景を作り出しました。"
   },
+  "reflect_on_upon": {
+    "en": "She needed some time to reflect upon her decisions and their consequences before moving forward.",
+    "ja": "彼女は前に進む前に、自分の決断とその結果について熟考する必要があった。"
+  },
   "reflect_upon": {
     "en": "She asked us to reflect upon our experiences during the study abroad program.",
     "ja": "彼女は私たちに留学プログラム中の経験についてよく考えるように求めた。"
@@ -21978,6 +23082,10 @@
   "refrain_from": {
     "en": "Please refrain from smoking in designated non-smoking areas of the building.",
     "ja": "建物の指定された喫煙禁止エリアでの喫煙はご遠慮ください。"
+  },
+  "refrain_from_doing": {
+    "en": "To maintain a healthy diet, you should refrain from eating processed foods.",
+    "ja": "健康的な食事を維持するために、加工食品を食べるのを控えるべきです。"
   },
   "reframe": {
     "en": "She tried to reframe her disappointment as an opportunity for growth.",
@@ -22027,6 +23135,10 @@
     "en": "I regard her as a valuable mentor who has greatly influenced my career path.",
     "ja": "私は彼女を自分のキャリアに大きな影響を与えた貴重なメンターとして尊敬している。"
   },
+  "regard_a_as_b": {
+    "en": "Many people regard him as a leader and an inspiration to others.",
+    "ja": "多くの人は彼をリーダーであり、他の人々のインスピレーションとしてみなしています。"
+  },
   "regarding": {
     "en": "Regarding your inquiry about the job opening, please find attached a detailed description.",
     "ja": "求人に関するお問い合わせについて、詳細な説明書を添付しました。"
@@ -22054,6 +23166,10 @@
   "regret": {
     "en": "I deeply regret not studying harder when I was in high school.",
     "ja": "高校時代にもっと勉強しておけばよかったと深く後悔しています。"
+  },
+  "regret_to_do": {
+    "en": "I regret to inform you that your application has been rejected due to budget constraints.",
+    "ja": "残念ながら、予算の制約により、あなたの応募は却下された旨をお知らせします。"
   },
   "regular": {
     "en": "He goes for a regular jog in the park every morning to stay healthy.",
@@ -22238,6 +23354,10 @@
   "remember_doing": {
     "en": "I remember doing that project with you when we were much younger.",
     "ja": "私達がもっと若かった頃、一緒にそのプロジェクトをしたのを覚えています。"
+  },
+  "remember_to_do": {
+    "en": "Remember to submit your essay by Friday evening to avoid penalties.",
+    "ja": "金曜日の夜までにレポートを提出することを忘れないでください。そうしないとペナルティが発生します。"
   },
   "remind": {
     "en": "Please remind me to call my sister when I get home from work tonight.",
@@ -22571,6 +23691,10 @@
     "en": "The success of the project will rest on your ability to lead the team effectively.",
     "ja": "プロジェクトの成功は、チームを効果的に率いるあなたの能力にかかっている。"
   },
+  "rest_on_upon": {
+    "en": "The success of the project rests upon careful planning and teamwork.",
+    "ja": "プロジェクトの成功は、慎重な計画とチームワークに基づいています。"
+  },
   "restate": {
     "en": "Could you restate your argument, please? I want to make sure I understand it fully.",
     "ja": "あなたの主張をもう一度言い換えていただけますか？完全に理解したいので。"
@@ -22778,6 +23902,10 @@
   "right_away": {
     "en": "Please clean up your desk and put all the books right away.",
     "ja": "机の上を片付けて、教科書をすぐに全部しまってください。"
+  },
+  "right_away_off": {
+    "en": "Please contact customer service right away if you experience any problems.",
+    "ja": "何か問題が発生した場合は、すぐにカスタマーサービスにご連絡ください。"
   },
   "right_now": {
     "en": "I’m incredibly busy right now, so I can't talk for a while.",
@@ -23035,6 +24163,10 @@
     "en": "I need to run errands this afternoon, including buying groceries and picking up dry cleaning.",
     "ja": "今日の午後、食料品の買い出しやクリーニングの受け取りなど、用事を済ませる必要があります。"
   },
+  "run_across": {
+    "en": "While hiking, we ran across a beautiful waterfall hidden deep in the forest.",
+    "ja": "ハイキング中、私たちは森の奥深くで隠された美しい滝を偶然見つけました。"
+  },
   "run_after": {
     "en": "The playful puppy would run after butterflies in the meadow, wagging its tail.",
     "ja": "いたずら好きな子犬は、野原でチョウを追いかけながら、尻尾を振っていました。"
@@ -23054,6 +24186,10 @@
   "run_for": {
     "en": "The experienced politician plans to run for mayor in next year's election.",
     "ja": "経験豊富な政治家は、来年の選挙で市長に立候補する予定です。"
+  },
+  "run_into": {
+    "en": "I ran into an old friend at the grocery store yesterday, which was a pleasant surprise.",
+    "ja": "昨日、食料品店で旧友と偶然出会い、それは嬉しい驚きでした。"
   },
   "run_out": {
     "en": "We need to buy more coffee; we're going to run out of it by tomorrow morning.",
@@ -23459,6 +24595,10 @@
     "en": "Please take your seat and fasten your safety belt before takeoff.",
     "ja": "席にお座りになり、離陸前にシートベルトを締めてください。"
   },
+  "seat_oneself": {
+    "en": "Please seat yourself comfortably in any of the available chairs, and we’ll begin shortly.",
+    "ja": "空いている椅子に楽な姿勢で座ってください。そしてすぐに始めます。"
+  },
   "secluded": {
     "en": "They built a small cabin in a secluded valley, far from the city’s noise.",
     "ja": "彼らは都市の騒音から遠く離れた人里離れた谷に小さなコテージを建てた。"
@@ -23507,6 +24647,10 @@
     "en": "We went to the airport to see my grandmother off on her trip to Hawaii.",
     "ja": "私は祖母がハワイへの旅行に出発するのを、空港で見送りました。"
   },
+  "see_a_as_b": {
+    "en": "Many people see climate change as a serious threat to global stability.",
+    "ja": "多くの人々は気候変動を地球の安定に対する深刻な脅威とみなしています。"
+  },
   "see_a_off": {
     "en": "We went to the airport to see Sarah off on her trip around Europe.",
     "ja": "私たちはサラがヨーロッパ周遊旅行に出るのを空港で見送りました。"
@@ -23518,6 +24662,10 @@
   "see_about_doing": {
     "en": "I'll see about doing some research on renewable energy sources next week.",
     "ja": "来週、再生可能エネルギー源について調べてみる手配をします。"
+  },
+  "see_do_the_sights_of": {
+    "en": "During our trip to Rome, we made sure to see the sights of the Colosseum and Vatican City.",
+    "ja": "ローマ旅行中、私たちはコロッセオやバチカン市国の観光名所を見ることを確かめた。"
   },
   "see_little": {
     "en": "I see little of my friends these days because I'm so busy with work.",
@@ -23755,9 +24903,17 @@
     "en": "We set out early in the morning to avoid the afternoon heat.",
     "ja": "私たちは午後の暑さを避けるために、朝早くに出発しました。"
   },
+  "set_out_off": {
+    "en": "We set out early that morning to avoid the worst of the traffic.",
+    "ja": "私たちは混雑を避けるため、その朝早く出発しました。"
+  },
   "set_out_to": {
     "en": "The company set out to develop a sustainable and eco-friendly product line.",
     "ja": "その会社は、持続可能で環境に優しい製品ラインの開発に取り組み始めました。"
+  },
+  "set_out_to_do": {
+    "en": "The team set out to develop a sustainable energy solution for the community.",
+    "ja": "そのチームは地域社会のための持続可能なエネルギーソリューションを開発することに着手した。"
   },
   "set_up": {
     "en": "They decided to set up a new charity organization to help underprivileged children.",
@@ -23847,6 +25003,10 @@
     "en": "After the presentation, several attendees lined up to shake hands with the speaker.",
     "ja": "プレゼンテーションの後、多くの参加者が講演者と握手を求めに列を作りました。"
   },
+  "shake_hands_with": {
+    "en": "After a long separation, they shook hands with each other as a sign of reconciliation.",
+    "ja": "長い別離の後、彼らは和解のサインとして互いに握手しました。"
+  },
   "shake_up": {
     "en": "The new CEO plans to shake up the company's outdated marketing strategies.",
     "ja": "新しいCEOは、会社の時代遅れのマーケティング戦略を刷新する計画です。"
@@ -23870,6 +25030,10 @@
   "share": {
     "en": "Let's share this delicious cake among all of our friends at the party.",
     "ja": "パーティーの友達全員とこの美味しいケーキを分け合いましょう。"
+  },
+  "share_a_with_b": {
+    "en": "We should share our knowledge and resources with future generations to build a better world.",
+    "ja": "私たちはより良い世界を築くために、次世代と知識や資源を共有すべきです。"
   },
   "shark": {
     "en": "Divers spotted a large shark swimming near the coral reef.",
@@ -24523,6 +25687,10 @@
     "en": "It was so cold yesterday that I had to wear three layers of clothing.",
     "ja": "昨日はとても寒かったので、3枚重ね着しなければなりませんでした。"
   },
+  "so_as_to_do": {
+    "en": "He practiced the piano diligently so as to improve his technique before the concert.",
+    "ja": "彼はコンサートの前に技術を向上させるために、ピアノを熱心に練習しました。"
+  },
   "so_called": {
     "en": "The so-called expert's advice turned out to be completely wrong and harmful.",
     "ja": "いわゆる専門家の助言は、完全に間違っていて有害であることがわかった。"
@@ -24811,6 +25979,10 @@
     "en": "Her actions truly speak for her commitment and dedication to environmental protection.",
     "ja": "彼女の行動は、環境保護への献身と決意を物語っている。"
   },
+  "speak_of_a_as_b": {
+    "en": "The media often speak of him as a hero despite his controversial actions.",
+    "ja": "メディアは彼を物議を醸す行動にもかかわらず、しばしば英雄として語ります。"
+  },
   "speak_to_speak_with": {
     "en": "I need to speak with my supervisor about the changes in the project timeline.",
     "ja": "プロジェクトのタイムライン変更について上司と話す必要があります。"
@@ -24898,6 +26070,10 @@
   "spend": {
     "en": "I tend to spend too much time scrolling through social media each evening.",
     "ja": "私は夕方になると、ソーシャルメディアをスクロールする時間を使いすぎてしまう傾向があります。"
+  },
+  "spend_a_on": {
+    "en": "My parents decided to spend their savings on renovating the old family home.",
+    "ja": "両親は古くからの家族の家を改築するために貯金を費やすことに決めました。"
   },
   "sperm": {
     "en": "Marine biologists study the reproductive habits and behavior of various marine sperm whales.",
@@ -25291,6 +26467,10 @@
     "en": "If you’re enjoying the concert, please stick around for the encore performance.",
     "ja": "コンサートを楽しんでいるなら、アンコール公演のためにここにいてください。"
   },
+  "stick_around_about": {
+    "en": "If you're finished with your meal, you can stick around for a while and chat.",
+    "ja": "もし食事の準備が終わりに近づいたら、少しそこらで待って、おしゃべりしよう。"
+  },
   "stick_by": {
     "en": "Despite the criticism, she asked her team to stick by their original plan.",
     "ja": "批判があるにもかかわらず、彼女はチームに当初の計画を貫き通すように頼みました。"
@@ -25302,6 +26482,10 @@
   "stick_to": {
     "en": "If you want to achieve your goal, you must stick to a strict training schedule.",
     "ja": "目標を達成したいなら、厳格なトレーニングスケジュールを守らなければならない。"
+  },
+  "stick_to_by": {
+    "en": "If you want to achieve your goals, you must stick to your training schedule diligently.",
+    "ja": "目標を達成したいなら、トレーニングのスケジュールをきちんとやり続ける必要があります。"
   },
   "stick_up_for": {
     "en": "She always sticks up for her friends, even when they are wrong.",
@@ -25502,6 +26686,10 @@
   "strike": {
     "en": "The lightning strike caused a power outage across the entire neighborhood.",
     "ja": "稲妻の衝撃により、近隣全体で停電が発生しました。"
+  },
+  "strike_a_as_b": {
+    "en": "His calm demeanor struck me as unusual given the stressful situation.",
+    "ja": "彼の冷静な態度は、緊迫した状況下では珍しい印象を与えました。"
   },
   "striking": {
     "en": "Her striking beauty and intelligence made her instantly memorable.",
@@ -25895,6 +27083,10 @@
     "en": "The store can supply all the necessary materials for your art project within two days.",
     "ja": "その店は、あなたの芸術プロジェクトに必要なすべての材料を2日以内に供給できます。"
   },
+  "supply_a_with_b": {
+    "en": "The factory supplies the city with clean drinking water every day.",
+    "ja": "工場は毎日、その市にきれいな飲料水を供給しています。"
+  },
   "support": {
     "en": "We need to support local businesses and help them thrive in a competitive market.",
     "ja": "私たちは地元のビジネスを支援し、競争の激しい市場で成功する手助けをする必要があります。"
@@ -25998,6 +27190,10 @@
   "suspect": {
     "en": "Police suspect that the missing painting was stolen from the museum last night.",
     "ja": "警察は、その絵画は昨夜美術館から盗まれたのではないかと疑っています。"
+  },
+  "suspect_a_of_b": {
+    "en": "Police suspect him of involvement in the recent bank robbery.",
+    "ja": "警察は彼を最近の銀行強盗への関与を疑っています。"
   },
   "suspend": {
     "en": "The school decided to suspend classes for three days due to the severe weather conditions.",
@@ -26187,6 +27383,10 @@
     "en": "He decided to take a chance and apply for the competitive scholarship program.",
     "ja": "彼は思い切って競争の激しい奨学金プログラムに応募することにしました。"
   },
+  "take_a_for_b": {
+    "en": "I took his silence for agreement, but later I found out he hadn't heard me.",
+    "ja": "彼の沈黙を同意だと思ったが、後で彼に聞こえていなかったことがわかった。"
+  },
   "take_a_look": {
     "en": "Could you take a look at this essay and tell me what you think?",
     "ja": "このエッセイを見て、どう思うか教えてもらえますか？"
@@ -26231,6 +27431,18 @@
     "en": "The new policy will take effect next month and impact all employees.",
     "ja": "新しいポリシーは来月から施行され、全従業員に影響を与えるだろう。"
   },
+  "take_have_a_seat": {
+    "en": "Please have a seat; we're ready to begin our discussion about the project proposal.",
+    "ja": "どうぞお席にお座りください、プロジェクト提案に関する議論を開始する準備ができています。"
+  },
+  "take_have_a_walk": {
+    "en": "Let's take a walk in the park this evening; it will be very relaxing.",
+    "ja": "今晩、公園を散歩しよう。とてもリラックスできるよ。"
+  },
+  "take_have_pity_on": {
+    "en": "Seeing her distress, we couldn't help but take pity on her situation.",
+    "ja": "彼女の苦しみを見て、私たちは彼女の状況に同情せずにはいられませんでした。"
+  },
   "take_hold_of": {
     "en": "Fear began to take hold of him as he walked through the dark forest alone.",
     "ja": "彼は暗い森を一人で歩いているうちに、恐怖を感じ始めた。"
@@ -26267,9 +27479,25 @@
     "en": "The company decided to take on a new marketing strategy to boost sales.",
     "ja": "会社は売上を伸ばすために、新しいマーケティング戦略を引き受けることにした。"
   },
+  "take_one_s_place": {
+    "en": "After the retiring director, she will take her place and lead the company into a new era.",
+    "ja": "退職する社長の後任として、彼女は彼の地位を引き継ぎ、会社を新しい時代へと導きます。"
+  },
+  "take_one_s_time": {
+    "en": "You should take your time when answering the essay questions on the exam.",
+    "ja": "試験の記述問題に答える際は、時間をかけてください。"
+  },
+  "take_one_s_word_for_it": {
+    "en": "I’ll take your word for it; I trust you know what’s best for our project.",
+    "ja": "あなたの言うことを信じます。プロジェクトのために何が一番良いかはあなたなら分かりますよね。"
+  },
   "take_over": {
     "en": "After the CEO's retirement, his daughter will take over the company’s leadership.",
     "ja": "CEO の退職後、彼の娘が会社のリーダーシップを引き継ぐだろう。"
+  },
+  "take_pains": {
+    "en": "The chef took pains to ensure every dish was prepared perfectly for the important guests.",
+    "ja": "料理人は、重要なゲストのためにすべての料理が完璧に準備されるように骨を折った。"
   },
   "take_part": {
     "en": "Many students decided to take part in the community cleanup project this Saturday.",
@@ -26294,6 +27522,18 @@
   "take_the_place_of": {
     "en": "With the CEO’s retirement, a younger executive will take the place of the experienced leader.",
     "ja": "CEOの退職に伴い、経験豊富なリーダーに代わって若い幹部がその地位を担うだろう。"
+  },
+  "take_the_trouble_to_do": {
+    "en": "She always takes the trouble to carefully proofread all her important documents.",
+    "ja": "彼女はいつも重要な書類を注意深く校正する手間をかけます。"
+  },
+  "take_time_to_do": {
+    "en": "Learning to play the piano takes time and requires consistent practice.",
+    "ja": "ピアノを習うには時間がかかる。そして一貫した練習が必要だ。"
+  },
+  "take_to": {
+    "en": "After trying yoga, she started to take to it and now practices daily.",
+    "ja": "ヨガを試した彼女は、それが好きになり、今では毎日練習している。"
   },
   "take_turns": {
     "en": "We decided to take turns driving on the long road trip across the country.",
@@ -26322,6 +27562,10 @@
   "talk_a_into_b": {
     "en": "My sister tried to talk me into buying a new car, but I resisted her persuasive arguments.",
     "ja": "妹は私が新しい車を買うように説得しようとしたが、私は彼女の説得力のある主張に屈しなかった。"
+  },
+  "talk_a_into_doing": {
+    "en": "My friend talked me into trying the spicy ramen, even though I was hesitant.",
+    "ja": "私の友人は、私がためらっていたにもかかわらず、スパイシーラーメンを試すように私を説得した。"
   },
   "talk_down_to_a": {
     "en": "I don't appreciate you talking down to me; I’m perfectly capable of understanding things.",
@@ -26435,6 +27679,10 @@
     "en": "My little brother tried to tell on me to my mom about the broken vase.",
     "ja": "弟は割れた花瓶について、母に私をこたえさせようとしました。"
   },
+  "tell_on_upon": {
+    "en": "The constant criticism began to tell upon his confidence and motivation.",
+    "ja": "絶え間ない批判は彼の自信とモチベーションに影響し始めました。"
+  },
   "temper": {
     "en": "He has a quick temper and often loses his patience in stressful situations.",
     "ja": "彼は短気で、ストレスの多い状況ではしばしば我慢できなくなります。"
@@ -26478,6 +27726,10 @@
   "tend": {
     "en": "People tend to enjoy activities they're good at, which boosts their confidence and motivation.",
     "ja": "人は自分が得意な活動を好む傾向があり、それが自信とモチベーションを高めます。"
+  },
+  "tend_to_do": {
+    "en": "Prices tend to rise during the holiday season due to high demand.",
+    "ja": "需要が高いため、価格は祝日シーズンに上昇する傾向がある。"
   },
   "tendency": {
     "en": "There is a growing tendency towards using renewable energy sources worldwide.",
@@ -26647,6 +27899,10 @@
     "en": "I thought he was paying for dinner, but it turns out the other way around.",
     "ja": "彼が夕食代を払うと思っていましたが、実際は逆でした。"
   },
+  "the_other_way_around_round_about": {
+    "en": "It’s often the case that children teach their parents, not the other way around.",
+    "ja": "子供が親を教えることが多く、その逆はあまりありません。"
+  },
   "the_pros_and_cons": {
     "en": "Before making the purchase, carefully consider the pros and cons of each option.",
     "ja": "購入前に、それぞれの選択肢の賛否両論を慎重に検討してください。"
@@ -26694,6 +27950,10 @@
   "there_is_no_doing": {
     "en": "There is no doing anything about it now; we simply have to accept the decision.",
     "ja": "今更何もできない。ただ決定を受け入れるしかない。"
+  },
+  "there_is_nothing_for_it_but_to_do": {
+    "en": "The storm worsened, and there was nothing for it but to seek shelter immediately.",
+    "ja": "嵐が激化し、すぐに避難所を求めるしかありませんでした。"
   },
   "thereby": {
     "en": "Investing in renewable energy will reduce pollution and thereby improve public health.",
@@ -26762,6 +28022,10 @@
   "think_much": {
     "en": "She really thinks much of her mentor, often seeking his advice on difficult decisions.",
     "ja": "彼女は本当に尊敬している先生を高く評価しており、難しい決断をする際にはよく彼の助言を求めている。"
+  },
+  "think_much_highly_of": {
+    "en": "We think highly of her dedication and hard work on the project.",
+    "ja": "私たちは彼女のプロジェクトへの献身と勤勉さを高く評価している。"
   },
   "think_much_of": {
     "en": "She doesn’t think much of his latest artwork, finding it rather uninspired.",
@@ -27015,6 +28279,10 @@
     "en": "To begin with, let’s review the key concepts we covered in last week's class.",
     "ja": "まず第一に、先週の授業で扱った主要な概念を復習しましょう。"
   },
+  "to_begin_start_with": {
+    "en": "To begin with, let's outline the main objectives of this research project.",
+    "ja": "まず第一に、この研究プロジェクトの主な目的を概説しましょう。"
+  },
   "to_come": {
     "en": "The future of artificial intelligence holds both promise and challenges to come.",
     "ja": "人工知能の未来は、約束とこれから来るべき課題を抱えています。"
@@ -27031,6 +28299,10 @@
     "en": "Please pack the leftovers to go and refrigerate them when you get home.",
     "ja": "残りは持ち帰り用にして、家に帰ったら冷蔵庫に入れてください。"
   },
+  "to_make_matters_things_worse": {
+    "en": "To make matters worse, the rain started just as we were about to leave.",
+    "ja": "さらに悪いことに、ちょうど出発しようとしたとき、雨が降り始めました。"
+  },
   "to_make_matters_worse": {
     "en": "To make matters worse, I realized I had left my wallet at home.",
     "ja": "さらに悪いことに、私は財布を家に置き忘れたことに気づいた。"
@@ -27042,6 +28314,10 @@
   "to_one_s_advantage": {
     "en": "She cleverly used her connections to one's advantage when applying for the scholarship.",
     "ja": "彼女は奨学金の応募の際、賢くして自分の有利な状況を利用した。"
+  },
+  "to_one_s_feet": {
+    "en": "After falling, he struggled to get back to his feet and continue the race.",
+    "ja": "転倒した後、彼は立ち上がってレースを続けるために苦労しました。"
   },
   "to_one_s_surprise": {
     "en": "To one’s surprise, the concert was canceled just an hour before it was scheduled to begin.",
@@ -27082,6 +28358,10 @@
   "to_the_best_of_my_knowledge": {
     "en": "To the best of my knowledge, the museum will be closed for renovations next month.",
     "ja": "私の知る限りでは、美術館は来月改修工事のため閉館されます。"
+  },
+  "to_the_best_of_one_s_knowledge": {
+    "en": "To the best of my knowledge, all the necessary documents have been submitted.",
+    "ja": "私の知る限りでは、必要な書類はすべて提出されています。"
   },
   "to_the_contrary": {
     "en": "There was nothing to suggest otherwise, and there was no evidence to the contrary.",
@@ -27387,6 +28667,10 @@
     "en": "Could you translate this paragraph from English into Japanese for me, please?",
     "ja": "この段落を英語から日本語に翻訳してもらえますか？"
   },
+  "translate_a_into_b": {
+    "en": "The novelist hired a professional to translate her work into French for international publication.",
+    "ja": "小説家は国際的な出版のために、自分の作品をフランス語に翻訳するプロを採用しました。"
+  },
   "translation": {
     "en": "A skilled translation is crucial for accurately conveying the author’s original intent.",
     "ja": "正確な翻訳は、著者の本来の意図を正確に伝えるために不可欠です。"
@@ -27446,6 +28730,10 @@
   "treat": {
     "en": "We should treat everyone with respect, regardless of their background or beliefs.",
     "ja": "私たちは誰に対しても、その背景や信念に関わらず、敬意をもって接するべきです。"
+  },
+  "treat_a_to_b": {
+    "en": "My grandparents treated me to a delicious dinner at a fancy restaurant.",
+    "ja": "両親は私を高級レストランで美味しい夕食におごってくれた。"
   },
   "treaty": {
     "en": "The two countries signed a historic treaty to promote cooperation in trade and technology.",
@@ -27583,6 +28871,10 @@
     "en": "The company is encouraging employees to try out new software applications.",
     "ja": "会社は従業員に新しいソフトウェアアプリケーションを試すことを推奨しています。"
   },
+  "try_to_do": {
+    "en": "I will try to finish reading this novel before our discussion next week.",
+    "ja": "来週の議論までに、この小説を読み終えるように頑張ります。"
+  },
   "tube": {
     "en": "The city's underground tube system is an efficient way to navigate the crowded urban landscape.",
     "ja": "その都市の地下鉄は、混雑した都市景観を移動する効率的な方法です。"
@@ -27646,6 +28938,10 @@
   "turn_a_deaf_ear_to": {
     "en": "Despite my warnings, he continued to turn a deaf ear to the potential risks.",
     "ja": "私の警告にもかかわらず、彼は潜在的なリスクについて耳を貸さなかった。"
+  },
+  "turn_a_into_b": {
+    "en": "The chef can turn simple ingredients into a delicious and impressive meal.",
+    "ja": "その料理人は、シンプルな材料を美味しくて印象的な食事に変えることができます。"
   },
   "turn_around": {
     "en": "The new marketing strategy helped turn around the company's declining sales figures.",
@@ -28199,6 +29495,10 @@
     "en": "I used to play basketball every day when I was in high school.",
     "ja": "高校生の時、毎日バスケットボールをしていました。"
   },
+  "used_to_do_be": {
+    "en": "I used to play the piano every day when I was a child.",
+    "ja": "子供の頃は毎日ピアノを弾いていました。"
+  },
   "useful": {
     "en": "Learning basic first aid is a useful skill for everyone to have.",
     "ja": "基本的な応急処置を学ぶことは、誰にとっても役に立つスキルです。"
@@ -28491,6 +29791,10 @@
     "en": "From the top of the mountain, you have a breathtaking view of the valley below.",
     "ja": "山頂からは、谷の素晴らしい眺めを一望できます。"
   },
+  "view_a_as_b": {
+    "en": "Many people view online learning as a convenient alternative to traditional classrooms.",
+    "ja": "多くの人々は、オンライン学習を従来の教室での学習の便利な代替手段とみなしています。"
+  },
   "viewpoint": {
     "en": "From my viewpoint, more funding is needed to address the growing problem of climate change.",
     "ja": "私の見解からすると、気候変動の深刻化する問題に対処するためには、より多くの資金が必要です。"
@@ -28691,6 +29995,10 @@
     "en": "The smell of freshly brewed coffee helped me wake up and start the day feeling refreshed.",
     "ja": "淹れたてのコーヒーの香りが私を起こし、気分爽やかに一日を始めるのに役立ちました。"
   },
+  "walk_off_away_with": {
+    "en": "The talented pianist walked away with first prize at the international competition.",
+    "ja": "才能のあるピアニストは国際コンクールであっさり一等賞を手に入れた。"
+  },
   "wallet": {
     "en": "He nervously patted his pocket to ensure his wallet was still there.",
     "ja": "彼は落ち着かない様子で、財布がまだあるかを確認するためにポケットに手を当てました。"
@@ -28778,6 +30086,10 @@
   "watch": {
     "en": "We watched a captivating documentary about wildlife in Africa last night.",
     "ja": "私たちは昨夜、アフリカの野生動物に関する魅力的なドキュメンタリーを観ました。"
+  },
+  "watch_one_s_step": {
+    "en": "Please watch your step on these icy stairs to avoid a fall.",
+    "ja": "凍った階段では、転ばないように足元に注意してください。"
   },
   "watch_out_for": {
     "en": "Watch out for pickpockets when you are traveling in crowded tourist areas.",
@@ -28947,6 +30259,10 @@
     "en": "What do you think about the new policy changes implemented by the company?",
     "ja": "会社によって実施された新しいポリシーの変更について、どう思いますか？"
   },
+  "what_do_you_say_to_ing": {
+    "en": "What do you say to trying that new restaurant downtown tonight?",
+    "ja": "今夜、ダウンタウンにある新しいレストランを試してみるのはどうですか？"
+  },
   "what_for": {
     "en": "What is this strange tool for; I’ve never seen anything like it before.",
     "ja": "この奇妙な道具は何のために使うのか、今まで見たことがない."
@@ -28978,6 +30294,10 @@
   "what_we_call": {
     "en": "This type of traditional music is what we call a folk ballad, passed down through generations.",
     "ja": "このタイプの伝統的な音楽は、世代から世代へと受け継がれてきたフォークバラードいわゆるものです。"
+  },
+  "what_we_they_call_what_is_called": {
+    "en": "This phenomenon, what scientists call 'quantum entanglement,' remains largely mysterious.",
+    "ja": "この現象、科学者たちが「量子エンタングルメント」と呼ぶものは、依然として大きく謎に包まれています。"
   },
   "what_with_a_and_b": {
     "en": "What with the looming deadline and unexpected travel delays, we’re running significantly behind schedule.",
@@ -29219,6 +30539,14 @@
     "en": "She approached the task with a detailed plan and unwavering determination.",
     "ja": "彼女は詳細な計画と揺るぎない決意をもってその仕事に取り組んだ。"
   },
+  "with_a_view_to_doing": {
+    "en": "The company is investing heavily with a view to developing new sustainable technologies.",
+    "ja": "その会社は、新しい持続可能な技術を開発する目的で多額の投資を行っています。"
+  },
+  "with_a_view_to_ing": {
+    "en": "The company invested heavily with a view to expanding its market share internationally.",
+    "ja": "その会社は、国際的に市場シェアを拡大することを目的として多額の投資を行いました。"
+  },
   "with_all": {
     "en": "With all his experience, he still made a significant error in judgment during the negotiation.",
     "ja": "彼には豊富な経験があるにもかかわらず、交渉中に重大な判断ミスを犯しました。"
@@ -29230,6 +30558,10 @@
   "with_ease": {
     "en": "She completed the challenging exam with ease, surprising even her teacher.",
     "ja": "彼女は、先生さえも驚かせるほど、難しい試験を容易に終えました。"
+  },
+  "with_in_regard_to": {
+    "en": "We received your email with regard to the upcoming conference schedule changes.",
+    "ja": "会議のスケジュール変更に関するあなたのメールを受け取りました。"
   },
   "with_pleasure": {
     "en": "I’d be happy to help; I'll do it with pleasure.",
@@ -29339,6 +30671,10 @@
     "en": "I worry about my grandmother's health, but she seems to be doing well today.",
     "ja": "祖母の健康を心配していますが、今日は元気そうに見えます。"
   },
+  "worse_still_yet": {
+    "en": "The project was already behind schedule; worse still, the budget had been cut.",
+    "ja": "プロジェクトはすでにスケジュールより遅れていた、いっそう悪いことに予算が削減されました。"
+  },
   "worsen": {
     "en": "Without proper treatment, her vision will likely worsen over time.",
     "ja": "適切な治療を受けずにいると、彼女の視力は時間とともに悪化する可能性があります。"
@@ -29358,6 +30694,10 @@
   "worthwhile": {
     "en": "Volunteering at the animal shelter proved to be a truly worthwhile experience for her.",
     "ja": "動物保護施設でのボランティア活動は、彼女にとって本当に価値のある経験でした。"
+  },
+  "would_had_rather_do_than": {
+    "en": "I would much rather read a book than watch another reality TV show.",
+    "ja": "私はもう一つのリアリティ番組を見るよりもむしろ本を読むことを好みます。"
   },
   "would_like_to": {
     "en": "I would like to express my sincere gratitude for your kind assistance.",
