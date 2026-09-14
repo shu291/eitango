@@ -8,6 +8,9 @@
 //   npm run build:examples -- --force               既にある例文も作り直す
 //   npm run build:examples -- --limit 50            先頭から N 語だけ（試しに回すとき）
 //   npm run build:examples -- --batch 10            1回の問い合わせで何語まとめて作るか（既定 10。1 で1語ずつ）
+//   npm run build:examples -- --merge sonnet.json  別の LLM（Claude など）に作らせた例文を取り込む（Ollama は使わない）
+//                                                  形式: {"<キー>": {"en": "...", "ja": "..."}}。キーは exampleMap.json と同じ。
+//                                                  検査に落ちた語は取り込まない（--force で強制）
 //
 // --from は、アプリの「保存」で書き出した JSON をそのまま渡せる（v1 / v2 どちらも可）。
 // JSON でなければテキストの単語リストとして読む。区切りはアプリの一括追加と同じ
@@ -173,7 +176,7 @@ function validate(word, ex) {
   // 1語の見出しはその語が必要。熟語は中身の語の6割以上（of/about のような「どちらか」を吸収）
   const { content, found, missing } = headwordCoverage(en, word);
   if (content.length === 1 && !found.length) return `英文に「${content[0]}」が使われていない`;
-  if (content.length > 1 && found.length < Math.max(1, Math.ceil(content.length * 0.6))) {
+  if (content.length > 1 && found.length < Math.max(1, Math.round(content.length * 0.6))) {
     return `英文に熟語の中身（${missing.join(', ')}）が使われていない`;
   }
   return null;
@@ -307,6 +310,46 @@ async function main() {
   if (extra) extra.split(',').map((s) => s.trim()).filter(Boolean).forEach((en) => add({ en, ja: '' }));
 
   const map = loadMap();
+
+  // --merge: 別の LLM が作った例文を検査して取り込むだけ（Ollama には聞かない）
+  const mergeFile = argValue('--merge');
+  if (mergeFile) {
+    const abs = resolve(mergeFile);
+    if (!existsSync(abs)) {
+      console.error(`--merge のファイルが見つかりません: ${abs}`);
+      process.exit(1);
+    }
+    let data;
+    try {
+      const raw = readFileSync(abs, 'utf8');
+      const m = raw.match(/\{[\s\S]*\}/); // 前後に説明文が付いていても { 〜 } だけ取る
+      data = JSON.parse(m ? m[0] : raw);
+    } catch (e) {
+      console.error(`JSON として読めませんでした: ${e.message}`);
+      process.exit(1);
+    }
+    let ok = 0;
+    let ng = 0;
+    for (const [rawKey, ex] of Object.entries(data)) {
+      const key = keyOf(rawKey);
+      // 見出し語は --from の単語 → 取り込みデータの word → キーから復元、の順
+      const head = seen.get(key)?.en || (ex && ex.word) || rawKey.replace(/_/g, ' ');
+      const reason = validate(head, ex);
+      if (reason && !force) {
+        ng++;
+        console.log(`✗ ${rawKey}: ${reason}`);
+        continue;
+      }
+      map[key] = { en: String(ex.en).replace(/\s+/g, ' ').trim(), ja: String(ex.ja).replace(/\s+/g, ' ').trim() };
+      ok++;
+      console.log(`✓ ${rawKey}: ${map[key].en}${reason ? '（検査は不合格だが --force で取り込み）' : ''}`);
+    }
+    saveMap(map);
+    console.log(`\n取り込み: ${ok} 語、見送り: ${ng} 語。${Object.keys(map).length} 語ぶんを ${MAP_FILE} に保存しました。`);
+    if (ng) console.log('見送った語は、文を直して再度 --merge するか、--force を付けると取り込めます。');
+    return;
+  }
+
   let targets = [...seen.values()].filter((w) => force || !map[w.key]);
   if (targets.length > limit) targets = targets.slice(0, limit);
   console.log(`対象 ${seen.size} 語のうち、これから作るのは ${targets.length} 語（既にある: ${Object.keys(map).length}）`);

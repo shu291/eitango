@@ -14,7 +14,7 @@
 /** 熟語の見出しに混ざる「型の記号」。文中にそのまま出ないので探さない */
 export const PLACEHOLDERS = new Set([
   'one', 'ones', "one's", 'oneself', 'someone', 'somebody', 'something', 'sth', 'sb',
-  'doing', 'the', 'and', 'that', 'all', 'just', 'it', 'is', 'etc',
+  'doing', 'ing', 'the', 'and', 'that', 'all', 'just', 'it', 'is', 'etc', 'with',
 ]);
 
 /** よく熟語に出る不規則動詞。原形 → 文中に出うる別の形 */
@@ -102,5 +102,6 @@ export const hasHeadword = (sentence, headword) => {
   const { content, found } = headwordCoverage(sentence, headword);
   if (!content.length) return false;
   if (content.length === 1) return found.length === 1;
-  return found.length >= Math.max(1, Math.ceil(content.length * 0.6));
+  // 2語なら1語、3語なら2語、5語なら3語。「as ~ as possible [one can]」のような別案つきを吸収する
+  return found.length >= Math.max(1, Math.round(content.length * 0.6));
 };
