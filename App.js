@@ -14,7 +14,8 @@ import {
   Animated,
   Platform,
   StatusBar,
-  KeyboardAvoidingView } from 'react-native';
+  KeyboardAvoidingView,
+  useWindowDimensions } from 'react-native';
 import { SafeAreaView, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // 書体。英単語と数字だけに当てる（日本語はヒラギノ等のシステム書体に任せる＝容量0）
@@ -408,6 +409,18 @@ export default function App() {
   // フラッシュカードドラッグ
   const pan = useRef(new Animated.Value(0)).current;
   const [dragOff, setDragOff] = useState(0);
+
+  // フラッシュカードの高さ。表（単語だけ）と裏（意味＋例文）で中身の量が違うので、
+  // 高さを中身任せにすると意味を出した瞬間にカードが伸び、下の「知らない／知ってた」が
+  // 動いて押し間違える。そこで高さを決め打ちにして、めくっても動かないようにする。
+  // 端末ごとに変えるのは、小さい画面でボタンが画面の外に出ないようにするため
+  // （画面の高さの 42%。ただし 260〜360px に収める）。同じ端末では常に同じ高さ。
+  const { height: winH } = useWindowDimensions();
+  const flashCardH = Math.round(Math.min(360, Math.max(260, winH * 0.42)));
+  // いまのカードの中身が、その固定の高さに収まらない（訳や例文が長い）かどうか。
+  // 収まらないときだけカードの中をスクロールできるようにする。ふだんからスクロールを
+  // 効かせておくと、めくる操作（スワイプ／タップ）をスクロール側が拾ってしまうことがあるため。
+  const [cardOverflow, setCardOverflow] = useState(false);
 
   // 初回ロード。
   // 新形式(v2)が無ければ旧形式(v1)から移行する。v1 のデータは消さずに残すので、
@@ -2527,9 +2540,33 @@ export default function App() {
               }}
             >
               {/* この画面の主役。カードの中は単語と意味だけにして、縦罫は引かない。
-                  以前は左端に朱のマージン罫を1本入れていたが、単語を読むときに目に入って邪魔だった */}
-              <Sheet className="justify-center" style={{ backgroundColor: bgTint, minHeight: 280 }}>
-                <View className="items-center" style={{ paddingHorizontal: SP[5], paddingVertical: SP[5] }}>
+                  以前は左端に朱のマージン罫を1本入れていたが、単語を読むときに目に入って邪魔だった。
+                  高さは flashCardH で固定（→ 宣言部のコメント）。めくっても大きさが変わらないので、
+                  下の「知らない／知ってた」の位置も動かない */}
+              <Sheet style={{ backgroundColor: bgTint, height: flashCardH }}>
+                {/* 訳や例文が長くて固定の高さに収まらない語だけ、カードの中で縦にスクロールして読める
+                    （はみ出したぶんが切れて読めなくならないように）。収まるときは中央ぞろえのまま動かず、
+                    スクロールも切っておく＝めくる操作（スワイプ／ドラッグ）の邪魔をしない。
+                    中身は flexGrow:1 で必ず枠以上の高さになるので、それより大きければはみ出している */}
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{
+                    flexGrow: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: SP[5],
+                    paddingVertical: SP[5],
+                    // はみ出していないときは、中身がタップ・ドラッグを受け取らないようにして、
+                    // カードのタップ（意味を出す）と横スワイプ（判定）を下の層にそのまま通す。
+                    // ScrollView 側の prop と両方に要る（外側だけだと中身が先に受け取ってしまう）
+                    pointerEvents: cardOverflow ? 'auto' : 'none',
+                  }}
+                  scrollEnabled={cardOverflow}
+                  onContentSizeChange={(_, h) => setCardOverflow(h > flashCardH - 2)}
+                  pointerEvents={cardOverflow ? 'auto' : 'none'}
+                  showsVerticalScrollIndicator={false}
+                  alwaysBounceVertical={false}
+                >
                   <View style={{ marginBottom: SP[4] }}>
                     <LvBadge w={w} />
                   </View>
@@ -2570,7 +2607,7 @@ export default function App() {
                       })()}
                     </>
                   )}
-                </View>
+                </ScrollView>
               </Sheet>
             </Pressable>
           </Animated.View>
