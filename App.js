@@ -71,6 +71,7 @@ import {
   levelDeltaToday,
   isJustMissed,
   isNew,
+  levelKey,
   parseLine,
   INIT_WORDS } from './src/lib/logic';
 import { exampleFor, splitByHeadword, hasHeadword } from './src/lib/examples';
@@ -295,6 +296,10 @@ export default function App() {
   // 学習設定
   const [cfgMode, setCfgMode] = useState(null);
   const [wordSel, setWordSel] = useState('normal');
+  // 覚え具合で絞る（LEVELS の k の配列。いくつでも選べる）。空なら絞らない。
+  // 出題範囲と同じく「どの単語を対象にするか」の絞り込みで、出題モード（通常／苦手／今日の復習）と重ねて効く。
+  // 新規（未学習）の語はどの段階にも入らないので、新規とは同時に選べない（選んだら片方を外す）
+  const [cfgLevels, setCfgLevels] = useState([]);
   const [rStart, setRStart] = useState(1);
   const [rEnd, setREnd] = useState(30);
   const [rST, setRST] = useState('1');
@@ -712,8 +717,17 @@ export default function App() {
     const s = clamp(rStart, 1, words.length);
     const e = clamp(rEnd, s, words.length);
     const range0 = words.slice(s - 1, e);
-    const range = cfgMode === 'cloze' ? range0.filter(clozeOk) : range0;
-    const nw = range.filter(isNew);
+    const range1 = cfgMode === 'cloze' ? range0.filter(clozeOk) : range0;
+    // 覚え具合の帯に出す語数。範囲の中で数える（段階を選んでも他の段の数は変わらない）
+    const lv = {};
+    for (const l of LEVELS) lv[l.k] = 0;
+    for (const w of range1) {
+      const k = levelKey(w);
+      if (k in lv) lv[k]++;
+    }
+    const range = cfgLevels.length > 0 && wordSel !== 'new' ? range1.filter((w) => cfgLevels.includes(levelKey(w))) : range1;
+    // 新規は段階に入らない（選ぶと段階の絞り込みを外す）ので、段階で絞る前の範囲で数える
+    const nw = range1.filter(isNew);
     const wk = range.filter(isWeak);
     const du = range.filter((w) => isDue(w, td));
     let pool = range;
@@ -722,8 +736,8 @@ export default function App() {
     // 復習だけは対象が無くても範囲全体に広げない。
     // 「今日の復習は0語」と出したのに全部出題されては意味が逆になる
     else if (wordSel === 'due') pool = du;
-    return { total: range.length, pool: pool.length, nw: nw.length, wk: wk.length, du: du.length };
-  }, [words, rStart, rEnd, wordSel, cfgMode]);
+    return { total: range.length, pool: pool.length, nw: nw.length, wk: wk.length, du: du.length, lv };
+  }, [words, rStart, rEnd, wordSel, cfgMode, cfgLevels]);
 
   const actualNumQ = Math.min(numQ, poolInfo.pool);
 
@@ -861,6 +875,8 @@ export default function App() {
     let pool = words.slice(s - 1, e);
     // 例文クイズは例文のある語だけ。無い語は出しようがないので範囲全体へのフォールバックもしない
     if (cfgMode === 'cloze') pool = pool.filter(clozeOk);
+    // 覚え具合で絞る。新規は段階に入らないので、新規のときはかけない（poolInfo と同じ）
+    if (cfgLevels.length > 0 && wordSel !== 'new') pool = pool.filter((w) => cfgLevels.includes(levelKey(w)));
     if (wordSel === 'new') {
       const f = pool.filter(isNew);
       if (f.length > 0) pool = f;
@@ -883,6 +899,9 @@ export default function App() {
     setRST('1');
     setRET(String(words.length));
     setWordSel(sel);
+    // 覚え具合の絞り込みも毎回外す。残しておくと、ホームの「今日の復習」から開いたときに
+    // 前回選んだ段階だけに絞られて、復習が全部出てこない
+    setCfgLevels([]);
     setNumQ(9999);
     setScr('config');
   };
@@ -895,7 +914,15 @@ export default function App() {
     // ここを 2 のままにすると押しても「対象単語が不足しています」で行き止まりになる。
     const minWords = wordSel === 'due' || cfgMode === 'flashcard' ? 1 : 2;
     if (pool.length < minWords) {
-      setToast(cfgMode === 'cloze' && pool.length === 0 ? '例文のある単語がありません' : wordSel === 'due' ? '今日の復習はもうありません' : '対象単語が不足しています');
+      setToast(
+        cfgMode === 'cloze' && pool.length === 0
+          ? '例文のある単語がありません'
+          : wordSel === 'due'
+            ? '今日の復習はもうありません'
+            : cfgLevels.length > 0 && pool.length === 0
+              ? '選んだ覚え具合の単語がありません'
+              : '対象単語が不足しています'
+      );
       return;
     }
     if (['quiz', 'speed', 'cloze'].includes(cfgMode) && words.length < 4) {
@@ -2258,13 +2285,80 @@ export default function App() {
   };
 
   // ===================== Config =====================
+  /*
+    覚え具合の6段階を、幅を6等分した1本の帯で出す（単語帳の絞り込みと学習の設定で共用）。
+    丸いチップを6つ並べると375px幅で2段に折り返すので、1行に収まる帯にしてある。
+    左が覚えていない側で、右へ行くほど覚えている＝並びそのものが目盛りになる。
+    段階の色は下の罫線で出す。
+
+    実機幅 375px なら「マスター」まで収まる。320px（iPhone SE 初代）だけは
+    「マス…」と切れるが、並びの位置と語数で読めるのでそのままにしてある。
+
+    items: [{ k, l, n, dot }] / isActive(k): 選択中か / onPress(k)
+  */
+  const levelBand = (items, isActive, onPress) => (
+    <View className="flex-row bg-sheet border border-rule rounded" style={{ overflow: 'hidden' }}>
+      {items.map((t, i) => {
+        const active = isActive(t.k);
+        return (
+          <TouchableOpacity
+            key={t.k}
+            onPress={() => onPress(t.k)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={`${t.l} ${t.n}語`}
+            accessibilityState={{ selected: active }}
+            className="flex-1 items-center justify-center"
+            style={{
+              minHeight: 44,
+              paddingVertical: SP[1],
+              paddingHorizontal: 2,
+              backgroundColor: active ? C.primary : 'transparent',
+              borderLeftWidth: i === 0 ? 0 : 1,
+              borderLeftColor: C.border,
+            }}
+          >
+            <Text className="text-xs font-bold" style={{ color: active ? C.onPrimary : C.muted }} numberOfLines={1}>
+              {t.l}
+            </Text>
+            <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>
+              {t.n}
+            </Text>
+            {/* 段階の色。選んでいる間は地が藍なので引かない（濃い藍だと見えないため） */}
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 2,
+                backgroundColor: active ? 'transparent' : t.dot,
+              }}
+            />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  // 学習の設定で、覚え具合の段を1つ押した。押すたびに入れる／外すを切り替える（いくつでも選べる）
+  const toggleCfgLevel = (k) => {
+    setCfgLevels((ls) => (ls.includes(k) ? ls.filter((x) => x !== k) : [...ls, k]));
+    // 新規（未学習）の語はどの段階にも入らないので、重ねると必ず0語になる。通常に戻す
+    if (wordSel === 'new') setWordSel('normal');
+  };
+
   const renderConfig = () => {
     const mn = { flashcard: 'フラッシュカード', quiz: '4択クイズ', cloze: '例文クイズ', matching: 'マッチング', speed: 'スピード' };
     const isMat = cfgMode === 'matching';
     const dNQ = isMat ? Math.min(6, poolInfo.pool) : actualNumQ;
+    const lvNames = LEVELS.filter((lv) => cfgLevels.includes(lv.k))
+      .map((lv) => lv.name)
+      .join('・');
     return (
-      // 「学習を開始」までスクロールせずに届くよう、かたまりの数を5つ以内に抑えてある。
+      // 「学習を開始」までスクロールせずに届くよう、かたまりの数を抑えてある。
       // 要素を足すときは実機幅（375×812）で開始ボタンが見えるか確かめること。
+      // 2026-10-03 に覚え具合の帯を足した時点で、フラッシュカードの開始ボタンの下端は 725px（下タブより上）。
       <ScrollView>
         {/* モード名はヘッダのタイトルに入れる。バンドを1枚減らしたぶん、下の余白を広く取れる */}
         <Header title={`${mn[cfgMode] || '学習'}の設定`} back="study" />
@@ -2296,7 +2390,11 @@ export default function App() {
                   return (
                     <TouchableOpacity
                       key={mi.k}
-                      onPress={() => setWordSel(mi.k)}
+                      onPress={() => {
+                        setWordSel(mi.k);
+                        // 新規（未学習）の語はどの段階にも入らないので、覚え具合の絞り込みを外す
+                        if (mi.k === 'new') setCfgLevels([]);
+                      }}
                       activeOpacity={0.75}
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
@@ -2325,6 +2423,35 @@ export default function App() {
                   );
                 })}
               </View>
+            </View>
+
+            {/* ── 覚え具合 ── 単語帳の絞り込みと同じ帯。いくつでも選べて、何も選ばなければ絞らない。
+                出題モードと重ねて効く（例: 苦手 × うろ覚え）。1行 44px に収めて「学習を開始」を押し下げない */}
+            <View>
+              <SectionTitle
+                right={
+                  cfgLevels.length > 0 ? (
+                    <TouchableOpacity
+                      onPress={() => setCfgLevels([])}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel="覚え具合の絞り込みを外す"
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
+                      <Text className="text-xs font-bold text-navy">選択をはずす</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text className="text-xs text-ink-soft">複数選べる・選ばなければ全部</Text>
+                  )
+                }
+              >
+                覚え具合
+              </SectionTitle>
+              {levelBand(
+                LEVELS.map((lv) => ({ k: lv.k, l: lv.name, n: poolInfo.lv[lv.k], dot: lv.barColor })),
+                (k) => cfgLevels.includes(k),
+                toggleCfgLevel
+              )}
             </View>
 
             {/* ── 出題範囲 ── */}
@@ -2444,6 +2571,9 @@ export default function App() {
             <Sheet mark={C.primary} className="p-4">
               <View className="flex-row items-end justify-between" style={{ gap: SP[3], marginBottom: SP[3] }}>
                 <Text className="flex-1 text-xs text-ink-soft" style={{ lineHeight: 19 }}>
+                  {/* 覚え具合を選んでいれば段階名を前に添える（LEVELS の並び＝覚えていない順） */}
+                  {lvNames ? <Text className="text-ink font-bold">{lvNames}</Text> : null}
+                  {lvNames ? ' ／ ' : null}
                   {wordSel === 'due' ? (
                     poolInfo.du > 0 ? (
                       <>
@@ -3393,67 +3523,16 @@ export default function App() {
         </View>
 
         {/*
-          覚え具合の6段階。丸いチップを6つ足すと375px幅で2段に折り返し、
-          そのぶん単語リストが下に押し出される。幅を6等分した1本の帯にして1行に収めた。
-          左が覚えていない側で、右へ行くほど覚えている＝並びそのものが目盛りになる。
-          段階の色（藍の濃淡。要復習だけ朱）は下の罫線で出す。
-
-          実機幅 375px なら「マスター」まで収まる。320px（iPhone SE 初代）だけは
-          「マス…」と切れるが、並びの位置と語数で読めるのでそのままにしてある。
-
+          覚え具合の6段階（帯の作りは levelBand を参照）。
           「全て」はこの帯に入っていないので、選んでいる段をもう一度押すと絞り込みを外す。
         */}
         <View>
           <Text className="text-xs text-ink-soft" style={{ marginBottom: SP[1] }}>覚え具合</Text>
-          <View
-            className="flex-row bg-sheet border border-rule rounded"
-            style={{ overflow: 'hidden' }}
-          >
-            {levelTabs.map((t, i) => {
-              const active = wordFilter === t.k;
-              return (
-                <TouchableOpacity
-                  key={t.k}
-                  onPress={() => setWordFilter(active ? 'all' : t.k)}
-                  activeOpacity={0.75}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t.l} ${t.n}語`}
-                  accessibilityState={{ selected: active }}
-                  className="flex-1 items-center justify-center"
-                  style={{
-                    minHeight: 44,
-                    paddingVertical: SP[1],
-                    paddingHorizontal: 2,
-                    backgroundColor: active ? C.primary : 'transparent',
-                    borderLeftWidth: i === 0 ? 0 : 1,
-                    borderLeftColor: C.border,
-                  }}
-                >
-                  <Text
-                    className="text-xs font-bold"
-                    style={{ color: active ? C.onPrimary : C.muted }}
-                    numberOfLines={1}
-                  >
-                    {t.l}
-                  </Text>
-                  <Text className="text-xs" style={[NUM, { color: active ? C.navyTint : C.muted2 }]}>
-                    {t.n}
-                  </Text>
-                  {/* 段階の色。選んでいる間は地が藍なので引かない（濃い藍だと見えないため） */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: 2,
-                      backgroundColor: active ? 'transparent' : t.dot,
-                    }}
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {levelBand(
+            levelTabs,
+            (k) => wordFilter === k,
+            (k) => setWordFilter(wordFilter === k ? 'all' : k)
+          )}
         </View>
 
         <View className="flex-row items-center bg-sheet border border-rule rounded" style={{ minHeight: 44, paddingHorizontal: SP[3], gap: SP[2] }}>
