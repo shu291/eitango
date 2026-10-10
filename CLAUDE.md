@@ -462,6 +462,8 @@ UI を全面的に作り替えた。**色・余白・書体を触るときは必
 - **同じ語が出ないように:** 単語帳内の重複は `keyOf(en)` で1つにまとめる（`reelUniq`）。続きを足すときは直近10語を除く（`reelMore(recentKeys)`）。
   続きは残り8語になったら足す（`REEL_AHEAD`）。以前は `onEndReached` で先頭すぐに足していて、周回の継ぎ目で同じ語が並んだ。
 - **覚え具合（`progress` / `due` / `ivl` / `ef`）には触らない。** 聞き流しと同じく読むだけ。
+- **学習時間（`timeLog`）には加算する。** 1語の画面を見ていた時間を、ページが変わる／閉じるときに `onTime` で積む（0.4秒未満は数えない）。
+  頭打ちは通常 `MAX_WORD_MS`（15秒）。自動スクロール中だけ `autoSec`＋4秒に広げる（`addStudyTime` の第5引数）。語数 `n` はページ数。
 - 単語の選び方は聞き流しと同じ `listenLevelFilter` / `listenRange` を使う。
 - イラスト（絵文字）は `src/lib/emojiMap.json`（単語キー → 絵文字）を `emojiFor(w)`（`src/lib/emoji.js`）で引く。
   キーは `examples.js` の `keyOf`。単語が `emoji` を持っていればそちらを優先。対応表に無い語は何も出さない。
