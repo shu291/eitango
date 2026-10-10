@@ -369,8 +369,9 @@ export default function App() {
   // リール（縦スクロールで単語を流す）。list が null の間は設定画面、配列が入ったらリールを出す。
   // 覚え具合（progress / 復習日）には一切触らない。pics はイラスト（絵文字）を出すか
   // voice: off / en（単語だけ）/ enja（単語＋意味）。autoSec: 0 なら自動送りなし。from / to は単語帳の番号（文字列。空なら全部）
-  const [reelCfg, setReelCfg] = useState({ level: 'all', order: 'low', count: 50, voice: 'enja', autoSec: 0, reveal: 'delay', from: '', to: '' });
+  const [reelCfg, setReelCfg] = useState({ level: 'all', order: 'low', count: 50, voice: 'enja', autoSec: 0, reveal: 'delay', end: 'more', from: '', to: '' });
   const [reelList, setReelList] = useState(null);
+  const [reelRun, setReelRun] = useState(0); // 増やすと ReelFeed が作り直される（同じ語をもう一度／次の語へ）
   const [reelPics, setReelPics] = useState(true);
   const [listenState, setListenState] = useState('idle'); // idle / playing / paused / done
   const [listenList, setListenList] = useState([]);
@@ -1562,6 +1563,7 @@ export default function App() {
           count: Number.isFinite(c.count) && c.count > 0 ? c.count : cur.count,
           voice: ['off', 'en', 'enja'].includes(c.voice) ? c.voice : cur.voice,
           reveal: c.reveal === 'all' ? 'all' : 'delay',
+          end: c.end === 'stop' ? 'stop' : 'more',
           autoSec: Number.isFinite(c.autoSec) && c.autoSec >= 0 ? c.autoSec : cur.autoSec,
         }));
       })
@@ -2027,7 +2029,7 @@ export default function App() {
   // リールの設定画面を「初学者向け」の値で開く。絵文字・意味・英単語を最初から全部見せ、
   // 単語→意味の順に音声で読む。覚えていない語から10語ずつ。ほかの設定は設定画面でそのまま変えられる。
   const startBeginner = () => {
-    setReelCfg((c) => ({ ...c, level: 'all', order: 'low', count: 10, voice: 'enja', autoSec: 0, reveal: 'all', from: '', to: '' }));
+    setReelCfg((c) => ({ ...c, level: 'all', order: 'low', count: 10, voice: 'enja', autoSec: 0, reveal: 'all', end: 'stop', from: '', to: '' }));
     changeReelPics(true);
     setScr('reel');
   };
@@ -2350,8 +2352,13 @@ export default function App() {
     });
   };
   const reelPool = (cfg = reelCfg) => reelUniq(listenLevelFilter(listenRange(cfg), cfg.level));
-  const reelBuild = () => {
+  // exclude: すでに出した語のキー。「次の語へ」で同じ語を避ける（候補が尽きたら避けずに出す）
+  const reelBuild = (exclude) => {
     let list = [...reelPool()];
+    if (exclude && exclude.size) {
+      const fresh = list.filter((w) => !exclude.has(keyOf(w.en)));
+      if (fresh.length) list = fresh;
+    }
     if (reelCfg.order === 'low') list.sort((a, b) => (a.progress || 0) - (b.progress || 0));
     else if (reelCfg.order === 'high') list.sort((a, b) => (b.progress || 0) - (a.progress || 0));
     else if (reelCfg.order === 'random') list = shuffleArr(list);
@@ -2369,14 +2376,16 @@ export default function App() {
   const startReel = () => {
     Storage.setItem(
       '@eitango_reel_cfg',
-      JSON.stringify({ order: reelCfg.order, count: reelCfg.count, voice: reelCfg.voice, autoSec: reelCfg.autoSec, reveal: reelCfg.reveal })
+      JSON.stringify({ order: reelCfg.order, count: reelCfg.count, voice: reelCfg.voice, autoSec: reelCfg.autoSec, reveal: reelCfg.reveal, end: reelCfg.end })
     ).catch(() => {});
     setReelList(reelBuild());
+    setReelRun((r) => r + 1);
   };
   const renderReel = () => {
     if (reelList) {
       return (
         <ReelFeed
+          key={reelRun}
           initial={reelList}
           more={reelMore}
           pics={reelPics}
@@ -2384,6 +2393,13 @@ export default function App() {
           voice={reelCfg.voice}
           autoSec={reelCfg.autoSec}
           revealAll={reelCfg.reveal === 'all'}
+          stopAtEnd={reelCfg.end === 'stop'}
+          // 設定した語数が終わったあとの「同じ語をもう一度」「次の語へ」
+          onRestart={() => setReelRun((r) => r + 1)}
+          onNext={(keys) => {
+            setReelList(reelBuild(keys));
+            setReelRun((r) => r + 1);
+          }}
           // 1語の画面を見ていた時間を学習時間に積む（放置ぶんは addStudyTime が頭打ちにする）
           onTime={(ms, cap) => {
             const td = getToday();
@@ -2453,7 +2469,7 @@ export default function App() {
         accessibilityLabel={label}
       />
     );
-    const PRESET_COUNT = [10, 20, 50, 100, 9999];
+    const PRESET_COUNT = [5, 10, 20, 50, 100, 9999];
     const PRESET_AUTO = [0, 3, 5, 8, 10];
     return (
       <ScrollView>
@@ -2508,6 +2524,21 @@ export default function App() {
               )}
               <Text className="text-xs text-ink-soft">語</Text>
             </View>
+          </View>
+          <View>
+            <SectionTitle>この語数が終わったら</SectionTitle>
+            {chips(
+              [
+                { k: 'more', l: '続ける（同じ条件でもう一周）' },
+                { k: 'stop', l: 'そこで終わる' },
+              ],
+              reelCfg.end,
+              (v) => set('end', v),
+              true
+            )}
+            <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2], lineHeight: 18 }}>
+              「そこで終わる」は、決めた語数を見終わると終了の画面が出て、同じ語をもう一度見るか、次の語へ進むか選べます。
+            </Text>
           </View>
           <View>
             <SectionTitle>音声</SectionTitle>
@@ -2573,7 +2604,7 @@ export default function App() {
           </View>
           <Btn label={`リールを開始（${target} 語）`} icon="albums-outline" onPress={startReel} disabled={target === 0} />
           <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
-            最後まで行くと、同じ条件でもう一周が続きます。
+            「続ける」にしているときは、最後まで行くと同じ条件でもう一周が続きます。
           </Text>
         </View>
       </ScrollView>
@@ -5209,9 +5240,10 @@ const reelJa = (ja) =>
 let reelSeq = 0;
 const mkReelItems = (ws, again = false) => ws.map((w) => ({ key: `r${reelSeq++}`, w, again }));
 
-function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTime, onExit }) {
+function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, stopAtEnd, onRestart, onNext, onTime, onExit }) {
   const [h, setH] = useState(0);
-  const [items, setItems] = useState(() => mkReelItems(initial));
+  // stopAtEnd: 決めた語数だけ出して、最後に終了の画面（end）を置く。続きは足さない
+  const [items, setItems] = useState(() => [...mkReelItems(initial), ...(stopAtEnd ? [{ key: `r${reelSeq++}`, end: true }] : [])]);
   const [active, setActive] = useState(0);
   const [shown, setShown] = useState({});
   const [seen, setSeen] = useState(() => new Set());
@@ -5236,7 +5268,7 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTi
 
   // 残りが少なくなったら続きを足す。直近8語は避ける
   useEffect(() => {
-    if (items.length - active > REEL_AHEAD) return;
+    if (stopAtEnd || items.length - active > REEL_AHEAD) return;
     const recent = new Set(items.slice(-10).map((x) => keyOfWord(x.w)));
     const ws = more(recent);
     if (ws.length) setItems((arr) => [...arr, ...mkReelItems(ws)]);
@@ -5246,7 +5278,9 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTi
 
   useEffect(() => {
     const t0 = Date.now();
+    const onEnd = !!(itemsRef.current[active] && itemsRef.current[active].end);
     return () => {
+      if (onEnd) return; // 終了の画面にいた時間は学習時間にしない
       const ms = Date.now() - t0;
       // 一瞬で飛ばしたページは数えない。自動スクロール中は設定の秒数＋音声ぶんまでを認める
       if (ms >= 400) onTimeRef.current(ms, autoRef.current ? autoRef.current * 1000 + 4000 : undefined);
@@ -5256,7 +5290,7 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTi
   // 1語ぶんの流れ（音声・意味の表示・自動送り）。ページが変わる／設定を切り替えると最初からやり直す
   useEffect(() => {
     const it = itemsRef.current[active];
-    if (!it) return undefined;
+    if (!it || it.end) return undefined;
     let dead = false;
     const t0 = Date.now();
     (async () => {
@@ -5295,7 +5329,7 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTi
   }, [curKey, vOn, auto, revealAll]);
 
   const again = (it) => {
-    if (againIds.current.has(it.w.id)) return;
+    if (it.end || againIds.current.has(it.w.id)) return;
     againIds.current.add(it.w.id);
     setTimeout(() => againIds.current.delete(it.w.id), 20000);
     setItems((arr) => {
@@ -5307,6 +5341,7 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTi
   };
 
   const onTap = (it) => {
+    if (it.end) return;
     const now = Date.now();
     if (now - lastTap.current < 300) again(it);
     lastTap.current = now;
@@ -5323,6 +5358,21 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTi
   const viewCfg = useRef({ itemVisiblePercentThreshold: 60 }).current;
 
   const renderItem = ({ item }) => {
+    if (item.end) {
+      const keys = new Set(itemsRef.current.filter((x) => x.w).map((x) => keyOfWord(x.w)));
+      return (
+        <View style={{ height: h, paddingHorizontal: SP[5], justifyContent: 'center', backgroundColor: C.bg, gap: SP[3] }}>
+          <Icon name="checkmark-circle" size={44} color={C.success} />
+          <Text style={{ fontSize: 24, fontWeight: '700', color: C.text }}>{initial.length} 語、おわり</Text>
+          <Text style={{ fontSize: 13, color: C.muted, lineHeight: 20 }}>
+            もう一度同じ語を見直すか、次の語へ進めます。
+          </Text>
+          <Btn label="同じ語をもう一度" tone="line" icon="refresh-outline" onPress={onRestart} />
+          <Btn label="次の語へ" icon="arrow-forward" onPress={() => onNext(keys)} />
+          <Btn label="設定にもどる" tone="quiet" icon="close-outline" onPress={onExit} />
+        </View>
+      );
+    }
     const w = item.w;
     const open = revealAll || !!shown[item.key];
     const emo = pics ? emojiFor(w) : '';
