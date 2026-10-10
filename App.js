@@ -74,7 +74,7 @@ import {
   levelKey,
   parseLine,
   INIT_WORDS } from './src/lib/logic';
-import { exampleFor, splitByHeadword, hasHeadword } from './src/lib/examples';
+import { exampleFor, splitByHeadword, hasHeadword, keyOf } from './src/lib/examples';
 import { emojiFor } from './src/lib/emoji';
 
 const STORAGE_KEY = '@eitango_state_v1';
@@ -368,7 +368,8 @@ export default function App() {
   const [listenCfg, setListenCfg] = useState({ level: 'all', order: 'low', count: 20, dir: 'enja', example: true, loop: false, speed: 1, from: '', to: '' });
   // リール（縦スクロールで単語を流す）。list が null の間は設定画面、配列が入ったらリールを出す。
   // 覚え具合（progress / 復習日）には一切触らない。pics はイラスト（絵文字）を出すか
-  const [reelCfg, setReelCfg] = useState({ level: 'all', order: 'low', count: 50 });
+  // voice: off / en（単語だけ）/ enja（単語＋意味）。autoSec: 0 なら自動送りなし。from / to は単語帳の番号（文字列。空なら全部）
+  const [reelCfg, setReelCfg] = useState({ level: 'all', order: 'low', count: 50, voice: 'enja', autoSec: 0, from: '', to: '' });
   const [reelList, setReelList] = useState(null);
   const [reelPics, setReelPics] = useState(true);
   const [listenState, setListenState] = useState('idle'); // idle / playing / paused / done
@@ -1550,6 +1551,21 @@ export default function App() {
       })
       .catch(() => {});
   }, []);
+  useEffect(() => {
+    Storage.getItem('@eitango_reel_cfg')
+      .then((v) => {
+        if (!v) return;
+        const c = JSON.parse(v);
+        setReelCfg((cur) => ({
+          ...cur,
+          order: ['low', 'high', 'deck', 'random'].includes(c.order) ? c.order : cur.order,
+          count: Number.isFinite(c.count) && c.count > 0 ? c.count : cur.count,
+          voice: ['off', 'en', 'enja'].includes(c.voice) ? c.voice : cur.voice,
+          autoSec: Number.isFinite(c.autoSec) && c.autoSec >= 0 ? c.autoSec : cur.autoSec,
+        }));
+      })
+      .catch(() => {});
+  }, []);
   const changeReelPics = (on) => {
     setReelPics(on);
     Storage.setItem('@eitango_reel_pics', on ? '1' : '0').catch(() => {});
@@ -2309,13 +2325,56 @@ export default function App() {
   };
 
   // ===================== リール（画面） =====================
-  // 設定（どの単語・並び・語数・イラスト）→ 縦スクロールのリール。操作は上スワイプだけ。
-  // 意味は出て 1.3 秒で自動表示。タップで即表示、ダブルタップで「もう一回」（3枚先に同じ単語が戻る）。
-  const reelMore = () => shuffleArr(buildListenList({ ...reelCfg, count: 9999, from: '', to: '' })).slice(0, reelCfg.count);
-  const startReel = () => setReelList(buildListenList({ ...reelCfg, from: '', to: '' }));
+  // 設定（どの単語・範囲・並び・語数・音声・自動スクロール・イラスト）→ 縦スクロールのリール。
+  // 操作は上スワイプだけ。音声は単語→意味の順に流れ、自動スクロールをつけると画面を見ているだけでいい。
+  // 意味はタップで即表示、ダブルタップで「もう一回」（3枚先に同じ単語が戻る）。覚え具合には触らない。
+  /** 同じ単語（つづり同じ）を1つにする。単語帳の中の重複で同じ語が2回出ないように */
+  const reelUniq = (list) => {
+    const seen = new Set();
+    return list.filter((w) => {
+      const k = keyOf(w.en);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+  const reelPool = (cfg = reelCfg) => reelUniq(listenLevelFilter(listenRange(cfg), cfg.level));
+  const reelBuild = () => {
+    let list = [...reelPool()];
+    if (reelCfg.order === 'low') list.sort((a, b) => (a.progress || 0) - (b.progress || 0));
+    else if (reelCfg.order === 'high') list.sort((a, b) => (b.progress || 0) - (a.progress || 0));
+    else if (reelCfg.order === 'random') list = shuffleArr(list);
+    return list.slice(0, reelCfg.count);
+  };
+  /** 2周目以降の続き。直近に出した語は避ける（同じ語が続けて出ないように） */
+  const reelMore = (recentKeys) => {
+    const pool = shuffleArr(reelPool());
+    const fresh = pool.filter((w) => !recentKeys.has(keyOf(w.en)));
+    let out = (fresh.length ? fresh : pool).slice(0, reelCfg.count);
+    // 先頭が直前と同じ語なら、後ろへ回す
+    if (out.length > 1 && recentKeys.has(keyOf(out[0].en))) out = [...out.slice(1), out[0]];
+    return out;
+  };
+  const startReel = () => {
+    Storage.setItem(
+      '@eitango_reel_cfg',
+      JSON.stringify({ order: reelCfg.order, count: reelCfg.count, voice: reelCfg.voice, autoSec: reelCfg.autoSec })
+    ).catch(() => {});
+    setReelList(reelBuild());
+  };
   const renderReel = () => {
     if (reelList) {
-      return <ReelFeed initial={reelList} more={reelMore} pics={reelPics} onPics={changeReelPics} onExit={() => setReelList(null)} />;
+      return (
+        <ReelFeed
+          initial={reelList}
+          more={reelMore}
+          pics={reelPics}
+          onPics={changeReelPics}
+          voice={reelCfg.voice}
+          autoSec={reelCfg.autoSec}
+          onExit={() => setReelList(null)}
+        />
+      );
     }
     const chips = (opts, val, onPick, wrap = false) => (
       <View className="flex-row" style={{ gap: SP[2], flexWrap: wrap ? 'wrap' : 'nowrap' }}>
@@ -2352,7 +2411,9 @@ export default function App() {
         })}
       </View>
     );
-    const cnt = (level) => listenLevelFilter(words, level).length;
+    // 範囲だけ先に当てた語数。段階ごとの語数もこの範囲の中で数える
+    const inRange = listenRange(reelCfg);
+    const cnt = (level) => reelUniq(listenLevelFilter(inRange, level)).length;
     const levelOpts = [
       { k: 'all', l: '全て', d: cnt('all') },
       { k: 'weak', l: '苦手', d: cnt('weak') },
@@ -2361,15 +2422,41 @@ export default function App() {
       ...LEVELS.map((lv) => ({ k: lv.k, l: lv.name, d: cnt(lv.k) })),
     ];
     const set = (k, v) => setReelCfg((c) => ({ ...c, [k]: v }));
-    const target = buildListenList({ ...reelCfg, from: '', to: '' }).length;
+    const pool = reelPool().length;
+    const target = Math.min(pool, reelCfg.count);
+    const numInput = (value, onChange, placeholder, label) => (
+      <TextInput
+        keyboardType="number-pad"
+        value={value}
+        onChangeText={(t) => onChange(t.replace(/[^0-9]/g, ''))}
+        placeholder={placeholder}
+        placeholderTextColor={C.muted2}
+        className="flex-1 bg-sheet border border-rule rounded px-3 py-3 text-base text-center"
+        style={[NUM_BOLD, { color: C.text, minHeight: 44, minWidth: 0 }]}
+        accessibilityLabel={label}
+      />
+    );
+    const PRESET_COUNT = [10, 20, 50, 100, 9999];
+    const PRESET_AUTO = [0, 3, 5, 8, 10];
     return (
       <ScrollView>
         <Header title="リールの設定" back="study" />
         <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[4] }}>
           <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
-            上にスワイプするだけで、単語が次々に流れます。意味は少し待つと自動で出ます。
+            上にスワイプするだけで、単語が次々に流れます。音声をつけ、自動スクロールにすれば、画面を見ているだけでも進みます。
             苦手な語はダブルタップで、あとからもう一度出せます。覚え具合は変わりません。
           </Text>
+          <View>
+            <SectionTitle>番号で絞る</SectionTitle>
+            <View className="flex-row items-center" style={{ gap: SP[2] }}>
+              {numInput(reelCfg.from, (t) => set('from', t), '1', '何番から')}
+              <Text className="text-sm text-ink-soft">〜</Text>
+              {numInput(reelCfg.to, (t) => set('to', t), String(words.length), '何番まで')}
+            </View>
+            <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2] }}>
+              空なら全部。いまの範囲は {inRange.length} 語
+            </Text>
+          </View>
           <View>
             <SectionTitle>どの単語</SectionTitle>
             {chips(levelOpts, reelCfg.level, (v) => set('level', v), true)}
@@ -2390,10 +2477,56 @@ export default function App() {
           <View>
             <SectionTitle>最初に出す語数</SectionTitle>
             {chips(
-              [20, 50, 100, 9999].map((n) => ({ k: n, l: n === 9999 ? '全' : String(n) })),
+              PRESET_COUNT.map((n) => ({ k: n, l: n === 9999 ? '全' : String(n) })),
               reelCfg.count,
               (v) => set('count', v)
             )}
+            <View className="flex-row items-center" style={{ gap: SP[2], marginTop: SP[2] }}>
+              <Text className="text-xs text-ink-soft">自分で入力</Text>
+              {numInput(
+                PRESET_COUNT.includes(reelCfg.count) ? '' : String(reelCfg.count),
+                (t) => set('count', t ? Math.max(1, parseInt(t, 10)) : 50),
+                '例: 35',
+                '語数を入力'
+              )}
+              <Text className="text-xs text-ink-soft">語</Text>
+            </View>
+          </View>
+          <View>
+            <SectionTitle>音声</SectionTitle>
+            {chips(
+              [
+                { k: 'off', l: 'なし' },
+                { k: 'en', l: '単語だけ' },
+                { k: 'enja', l: '単語＋意味' },
+              ],
+              reelCfg.voice,
+              (v) => set('voice', v)
+            )}
+            <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2], lineHeight: 18 }}>
+              単語を読み上げ、意味が出るタイミングで日本語を読みます。音量はホームの「発音の音量」で変えられます。
+            </Text>
+          </View>
+          <View>
+            <SectionTitle>自動スクロール</SectionTitle>
+            {chips(
+              PRESET_AUTO.map((n) => ({ k: n, l: n === 0 ? 'なし' : `${n}秒` })),
+              reelCfg.autoSec,
+              (v) => set('autoSec', v)
+            )}
+            <View className="flex-row items-center" style={{ gap: SP[2], marginTop: SP[2] }}>
+              <Text className="text-xs text-ink-soft">自分で入力</Text>
+              {numInput(
+                PRESET_AUTO.includes(reelCfg.autoSec) ? '' : String(reelCfg.autoSec),
+                (t) => set('autoSec', t ? Math.min(60, Math.max(2, parseInt(t, 10))) : 0),
+                '例: 6',
+                '自動スクロールの秒数'
+              )}
+              <Text className="text-xs text-ink-soft">秒ごと</Text>
+            </View>
+            <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2], lineHeight: 18 }}>
+              音声が長いときは、読み終わってから次へ進みます。流している間も、右上で止めたり再開したりできます。
+            </Text>
           </View>
           <View>
             <SectionTitle>イラスト</SectionTitle>
@@ -2408,7 +2541,7 @@ export default function App() {
           </View>
           <Btn label={`リールを開始（${target} 語）`} icon="albums-outline" onPress={startReel} disabled={target === 0} />
           <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
-            最後まで行くと、同じ条件でもう一周が続きます。始めたあとも、右上のボタンでイラストを切り替えられます。
+            最後まで行くと、同じ条件でもう一周が続きます。
           </Text>
         </View>
       </ScrollView>
@@ -5025,36 +5158,91 @@ export default function App() {
 }
 
 /* リール。1語1画面の縦ページ送り。操作は上スワイプだけで、ボタンを押す必要は無い。
-   - 画面に出て 1.3 秒で意味（とイラスト ON なら絵文字）が自動で出る。タップで即表示。
-   - ダブルタップ＝もう一回。3枚先に同じ語が戻る（20秒に1回まで）。
+   流れ（1語ごと）: 0.35秒 → 単語を読む（音声あり） → 意味とイラストが出る（最低1.3秒後） → 意味を読む
+                   → 自動スクロールが付いていれば、設定の秒数がたつまで待って次へ
+   - タップで意味をすぐ表示。ダブルタップ＝もう一回。3枚先に同じ語が戻る（20秒に1回まで）。
    - 覚え具合（progress / due）には触らない。単語帳は読むだけ。
+   - 同じ語が続けて出ないよう、続きを足すときは直近に出した語を除く（more に渡す recentKeys）。
    App() の外に置いてあるのは、中に置くと App が再描画されるたびに作り直されてスクロール位置が飛ぶため。 */
-const REEL_BG = '#0E0B1C';
-const REEL_ACCENTS = [C.navyMid, C.accent, C.success, C.ochre, '#9333EA', '#0EA5E9'];
+const REEL_AHEAD = 8; // 残りがこれだけになったら続きを足す
+const reelSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** 読み上げ用に意味の記号をならす（App 内の jaForSpeech と同じ） */
+const reelJa = (ja) =>
+  String(ja ?? '')
+    .replace(/[～〜]/g, '')
+    .replace(/[；;／|]/g, '、')
+    .replace(/[〔〕\[\]（）()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 let reelSeq = 0;
 const mkReelItems = (ws, again = false) => ws.map((w) => ({ key: `r${reelSeq++}`, w, again }));
 
-function ReelFeed({ initial, more, pics, onPics, onExit }) {
+function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onExit }) {
   const [h, setH] = useState(0);
   const [items, setItems] = useState(() => mkReelItems(initial));
   const [active, setActive] = useState(0);
   const [shown, setShown] = useState({});
   const [seen, setSeen] = useState(() => new Set());
+  const [vOn, setVOn] = useState(voice !== 'off'); // 流している間の音声 ON/OFF
+  const [auto, setAuto] = useState(autoSec > 0); // 流している間の自動スクロール ON/OFF
+  const listRef = useRef(null);
   const lastTap = useRef(0);
   const againIds = useRef(new Set());
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const activeRef = useRef(0);
 
   const reveal = (it) => {
     setShown((s) => (s[it.key] ? s : { ...s, [it.key]: true }));
     setSeen((s) => (s.has(it.w.id) ? s : new Set(s).add(it.w.id)));
   };
 
-  // 画面に出て 1.3 秒たったら意味を出す
+  // 残りが少なくなったら続きを足す。直近8語は避ける
   useEffect(() => {
-    const it = items[active];
-    if (!it || shown[it.key]) return undefined;
-    const t = setTimeout(() => reveal(it), 1300);
-    return () => clearTimeout(t);
-  }, [active, items, shown]);
+    if (items.length - active > REEL_AHEAD) return;
+    const recent = new Set(items.slice(-10).map((x) => keyOfWord(x.w)));
+    const ws = more(recent);
+    if (ws.length) setItems((arr) => [...arr, ...mkReelItems(ws)]);
+  }, [active, items.length]);
+
+  const curKey = items[active] ? items[active].key : null;
+
+  // 1語ぶんの流れ（音声・意味の表示・自動送り）。ページが変わる／設定を切り替えると最初からやり直す
+  useEffect(() => {
+    const it = itemsRef.current[active];
+    if (!it) return undefined;
+    let dead = false;
+    const t0 = Date.now();
+    (async () => {
+      await reelSleep(350);
+      if (dead) return;
+      if (vOn) {
+        await sayWord(it.w.en, 1);
+        if (dead) return;
+      }
+      const wait = 1300 - (Date.now() - t0);
+      if (wait > 0) await reelSleep(wait);
+      if (dead) return;
+      reveal(it);
+      if (vOn && voice === 'enja') {
+        await reelSleep(150);
+        if (dead) return;
+        await sayText(reelJa(it.w.ja), 'ja-JP', 1.0);
+        if (dead) return;
+      }
+      if (auto && autoSec > 0) {
+        const rest = autoSec * 1000 - (Date.now() - t0);
+        if (rest > 0) await reelSleep(rest);
+        if (dead) return;
+        const next = activeRef.current + 1;
+        if (next < itemsRef.current.length && listRef.current) listRef.current.scrollToIndex({ index: next, animated: true });
+      }
+    })();
+    return () => {
+      dead = true;
+      stopSpeaking();
+    };
+  }, [curKey, vOn, auto]);
 
   const again = (it) => {
     if (againIds.current.has(it.w.id)) return;
@@ -5077,51 +5265,72 @@ function ReelFeed({ initial, more, pics, onPics, onExit }) {
 
   const onViewable = useRef(({ viewableItems }) => {
     const v = viewableItems.find((x) => x.isViewable && x.index != null);
-    if (v) setActive(v.index);
+    if (v) {
+      activeRef.current = v.index;
+      setActive(v.index);
+    }
   }).current;
   const viewCfg = useRef({ itemVisiblePercentThreshold: 60 }).current;
 
-  const loadMore = () => {
-    const ws = more();
-    if (ws.length) setItems((arr) => [...arr, ...mkReelItems(ws)]);
-  };
-
-  const renderItem = ({ item, index }) => {
+  const renderItem = ({ item }) => {
     const w = item.w;
-    const acc = REEL_ACCENTS[index % REEL_ACCENTS.length];
     const open = !!shown[item.key];
     const emo = pics ? emojiFor(w) : '';
     const long = w.en.length > 14;
+    const lv = getLevel(w.progress, !isNew(w));
     return (
       <Pressable
         onPress={() => onTap(item)}
         accessibilityLabel={`${w.en}。${open ? w.ja : 'タップで意味を見る'}`}
-        style={{ height: h, paddingHorizontal: SP[5], justifyContent: 'center', backgroundColor: REEL_BG }}
+        style={{ height: h, paddingHorizontal: SP[5], justifyContent: 'center', backgroundColor: C.bg }}
       >
-        <View style={{ alignSelf: 'flex-start', backgroundColor: acc, paddingHorizontal: SP[2], paddingVertical: 3, borderRadius: 4, marginBottom: SP[3] }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }}>
-            {item.again ? 'もう一回' : `定着度 ${w.progress || 0}%`}
+        {/* 覚え具合のしるし。もう一回で戻ってきた語は朱（アクセント）で印をつける */}
+        <View
+          className="flex-row items-center"
+          style={{ alignSelf: 'flex-start', gap: SP[1], paddingHorizontal: SP[2], paddingVertical: SP[1], marginBottom: SP[3], backgroundColor: item.again ? C.accentSoft : C.surface, borderWidth: 1, borderColor: item.again ? C.accentTint : C.border, borderRadius: 4 }}
+        >
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: item.again ? C.accent : lv.barColor }} />
+          <Text style={{ fontSize: 12, fontWeight: '700', color: item.again ? C.accent : C.text }}>
+            {item.again ? 'もう一回' : `${lv.name}  ${w.progress || 0}%`}
           </Text>
         </View>
         {emo ? <Text style={{ fontSize: 84, lineHeight: 100, marginBottom: SP[1] }}>{emo}</Text> : null}
-        <Text style={{ fontFamily: F.enBold, fontSize: long ? 36 : 56, lineHeight: long ? 44 : 64, color: '#F5F3FF' }}>{w.en}</Text>
-        <View style={{ minHeight: 110, marginTop: SP[4] }}>
+        <Text style={{ fontFamily: F.enBold, fontSize: long ? 36 : 56, lineHeight: long ? 44 : 64, color: C.text }}>{w.en}</Text>
+        <View style={{ height: 1, backgroundColor: C.border, marginTop: SP[3] }} />
+        <View style={{ minHeight: 110, marginTop: SP[3] }}>
           {open ? (
-            <Text style={{ fontSize: w.ja.length > 14 ? 22 : 30, lineHeight: w.ja.length > 14 ? 32 : 40, fontWeight: '700', color: acc === C.ochre || acc === C.success ? acc : C.navyTint }}>
-              {w.ja}
-            </Text>
+            <Text style={{ fontSize: w.ja.length > 14 ? 22 : 30, lineHeight: w.ja.length > 14 ? 32 : 40, fontWeight: '700', color: C.primary }}>{w.ja}</Text>
           ) : (
-            <Text style={{ fontSize: 14, color: '#8F8AB0' }}>タップで意味を見る</Text>
+            <Text style={{ fontSize: 14, color: C.muted2 }}>タップで意味を見る</Text>
           )}
         </View>
       </Pressable>
     );
   };
 
+  // 上のボタンは流している間に切り替えたいものだけ。押す必要はない
+  const pill = (on, label, onPress, a11y) => (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      accessibilityState={{ selected: on }}
+      activeOpacity={0.75}
+      style={{ minHeight: 44, paddingHorizontal: SP[3], borderRadius: 22, justifyContent: 'center', backgroundColor: on ? C.primary : C.surface, borderWidth: 1, borderColor: on ? C.primary : C.border }}
+    >
+      {typeof label === 'string' ? (
+        <Text style={{ color: on ? C.onPrimary : C.text, fontSize: 13, fontWeight: '700' }}>{label}</Text>
+      ) : (
+        label
+      )}
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={{ flex: 1, backgroundColor: REEL_BG }} onLayout={(e) => setH(Math.round(e.nativeEvent.layout.height))}>
+    <View style={{ flex: 1, backgroundColor: C.bg }} onLayout={(e) => setH(Math.round(e.nativeEvent.layout.height))}>
       {h > 0 ? (
         <FlatList
+          ref={listRef}
           data={items}
           keyExtractor={(it) => it.key}
           renderItem={renderItem}
@@ -5133,42 +5342,35 @@ function ReelFeed({ initial, more, pics, onPics, onExit }) {
           getItemLayout={(_, i) => ({ length: h, offset: h * i, index: i })}
           onViewableItemsChanged={onViewable}
           viewabilityConfig={viewCfg}
-          onEndReached={loadMore}
-          onEndReachedThreshold={2}
           initialNumToRender={3}
           windowSize={5}
         />
       ) : null}
-      {/* 上の操作は最初に1回だけ触れば済むものだけ。流している間は触らなくていい */}
       <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: SP[2], padding: SP[3] }}>
         <TouchableOpacity
           onPress={onExit}
           accessibilityLabel="リールをやめて設定に戻る"
           activeOpacity={0.75}
-          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' }}
+          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}
         >
-          <Icon name="close" size={22} color="#F5F3FF" />
+          <Icon name="close" size={22} color={C.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          onPress={() => onPics(!pics)}
-          accessibilityRole="button"
-          accessibilityLabel={`イラスト ${pics ? 'ON' : 'OFF'}。押して切り替え`}
-          activeOpacity={0.75}
-          style={{ minHeight: 44, paddingHorizontal: SP[3], borderRadius: 22, justifyContent: 'center', backgroundColor: pics ? C.accent : 'rgba(255,255,255,0.12)' }}
-        >
-          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>イラスト {pics ? 'ON' : 'OFF'}</Text>
-        </TouchableOpacity>
-        <View style={{ minHeight: 44, paddingHorizontal: SP[3], borderRadius: 22, justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' }}>
-          <Text style={[NUM, { color: '#FFFFFF', fontSize: 13, fontWeight: '700' }]}>{seen.size} 語</Text>
+        {voice !== 'off' ? pill(vOn, vOn ? '音声' : '音声 切', () => setVOn((v) => !v), `音声 ${vOn ? 'ON' : 'OFF'}。押して切り替え`) : null}
+        {autoSec > 0 ? pill(auto, auto ? `自動 ${autoSec}秒` : '自動 停止', () => setAuto((v) => !v), `自動スクロール ${auto ? 'ON' : '停止中'}。押して切り替え`) : null}
+        {pill(pics, <Icon name="image-outline" size={20} color={pics ? C.onPrimary : C.text} />, () => onPics(!pics), `イラスト ${pics ? 'ON' : 'OFF'}。押して切り替え`)}
+        <View style={{ minHeight: 44, paddingHorizontal: SP[3], borderRadius: 22, justifyContent: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}>
+          <Text style={[NUM, { color: C.text, fontSize: 13, fontWeight: '700' }]}>{seen.size} 語</Text>
         </View>
       </View>
-      <Text pointerEvents="none" style={{ position: 'absolute', bottom: SP[3], left: 0, right: 0, textAlign: 'center', color: '#8F8AB0', fontSize: 12 }}>
+      <Text pointerEvents="none" style={{ position: 'absolute', bottom: SP[3], left: 0, right: 0, textAlign: 'center', color: C.muted2, fontSize: 12 }}>
         上にスワイプで次へ ／ ダブルタップでもう一回
       </Text>
     </View>
   );
 }
+
+const keyOfWord = (w) => keyOf(w.en);
 
 /* 下タブ。影を使わないぶん、上辺だけ2pxの罫線で「浮いている」ことを言う。
    iPhone のホームインジケータ（下の横棒）にラベルが重ならないよう、
