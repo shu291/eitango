@@ -369,7 +369,7 @@ export default function App() {
   // リール（縦スクロールで単語を流す）。list が null の間は設定画面、配列が入ったらリールを出す。
   // 覚え具合（progress / 復習日）には一切触らない。pics はイラスト（絵文字）を出すか
   // voice: off / en（単語だけ）/ enja（単語＋意味）。autoSec: 0 なら自動送りなし。from / to は単語帳の番号（文字列。空なら全部）
-  const [reelCfg, setReelCfg] = useState({ level: 'all', order: 'low', count: 50, voice: 'enja', autoSec: 0, from: '', to: '' });
+  const [reelCfg, setReelCfg] = useState({ level: 'all', order: 'low', count: 50, voice: 'enja', autoSec: 0, reveal: 'delay', from: '', to: '' });
   const [reelList, setReelList] = useState(null);
   const [reelPics, setReelPics] = useState(true);
   const [listenState, setListenState] = useState('idle'); // idle / playing / paused / done
@@ -1561,6 +1561,7 @@ export default function App() {
           order: ['low', 'high', 'deck', 'random'].includes(c.order) ? c.order : cur.order,
           count: Number.isFinite(c.count) && c.count > 0 ? c.count : cur.count,
           voice: ['off', 'en', 'enja'].includes(c.voice) ? c.voice : cur.voice,
+          reveal: c.reveal === 'all' ? 'all' : 'delay',
           autoSec: Number.isFinite(c.autoSec) && c.autoSec >= 0 ? c.autoSec : cur.autoSec,
         }));
       })
@@ -2022,6 +2023,15 @@ export default function App() {
     );
   };
 
+  // ===================== 初学者向けモード =====================
+  // リールの設定画面を「初学者向け」の値で開く。絵文字・意味・英単語を最初から全部見せ、
+  // 単語→意味の順に音声で読む。覚えていない語から10語ずつ。ほかの設定は設定画面でそのまま変えられる。
+  const startBeginner = () => {
+    setReelCfg((c) => ({ ...c, level: 'all', order: 'low', count: 10, voice: 'enja', autoSec: 0, reveal: 'all', from: '', to: '' }));
+    changeReelPics(true);
+    setScr('reel');
+  };
+
   // ===================== Study mode menu =====================
   const renderStudy = () => {
     const modes = [
@@ -2031,6 +2041,7 @@ export default function App() {
       { m: 'matching', icon: 'shuffle-outline', t: 'マッチング', d: '英語と日本語をペアにする' },
       { m: 'speed', icon: 'flash-outline', t: 'スピードチャレンジ', d: '60秒で何問解けるか挑戦' },
       { m: 'listen', icon: 'headset-outline', t: '聞き流し', d: '単語→意味→例文を音声で連続再生。画面を触らずに' },
+      { m: 'beginner', icon: 'happy-outline', t: '初学者向け', d: '絵文字・意味・英単語を一度に見せて、音声つきで少しずつ覚える' },
       { m: 'reel', icon: 'albums-outline', t: 'リール', d: '縦にスワイプするだけで単語が流れる。イラスト付きで片手でも覚えられる' },
     ];
     return (
@@ -2052,7 +2063,7 @@ export default function App() {
               {modes.map(({ m, icon, t, d }, i) => (
                 <View key={m}>
                   <TouchableOpacity
-                    onPress={() => (m === 'listen' || m === 'reel' ? setScr(m) : openConfig(m))}
+                    onPress={() => (m === 'beginner' ? startBeginner() : m === 'listen' || m === 'reel' ? setScr(m) : openConfig(m))}
                     activeOpacity={0.75}
                     accessibilityRole="button"
                     // モード名だけだと説明文が読み上げられない。1行ぜんぶを1つの読み上げにする
@@ -2358,7 +2369,7 @@ export default function App() {
   const startReel = () => {
     Storage.setItem(
       '@eitango_reel_cfg',
-      JSON.stringify({ order: reelCfg.order, count: reelCfg.count, voice: reelCfg.voice, autoSec: reelCfg.autoSec })
+      JSON.stringify({ order: reelCfg.order, count: reelCfg.count, voice: reelCfg.voice, autoSec: reelCfg.autoSec, reveal: reelCfg.reveal })
     ).catch(() => {});
     setReelList(reelBuild());
   };
@@ -2372,6 +2383,7 @@ export default function App() {
           onPics={changeReelPics}
           voice={reelCfg.voice}
           autoSec={reelCfg.autoSec}
+          revealAll={reelCfg.reveal === 'all'}
           // 1語の画面を見ていた時間を学習時間に積む（放置ぶんは addStudyTime が頭打ちにする）
           onTime={(ms, cap) => {
             const td = getToday();
@@ -2531,6 +2543,21 @@ export default function App() {
             </View>
             <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2], lineHeight: 18 }}>
               音声が長いときは、読み終わってから次へ進みます。流している間も、右上で止めたり再開したりできます。
+            </Text>
+          </View>
+          <View>
+            <SectionTitle>見せ方</SectionTitle>
+            {chips(
+              [
+                { k: 'delay', l: '単語→少し待って意味' },
+                { k: 'all', l: '全部いっぺんに（初学者向け）' },
+              ],
+              reelCfg.reveal,
+              (v) => set('reveal', v),
+              true
+            )}
+            <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2], lineHeight: 18 }}>
+              「全部いっぺんに」は、絵文字・意味・英単語を最初から表示します。タップで意味を出す必要はありません。
             </Text>
           </View>
           <View>
@@ -5182,7 +5209,7 @@ const reelJa = (ja) =>
 let reelSeq = 0;
 const mkReelItems = (ws, again = false) => ws.map((w) => ({ key: `r${reelSeq++}`, w, again }));
 
-function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onTime, onExit }) {
+function ReelFeed({ initial, more, pics, onPics, voice, autoSec, revealAll, onTime, onExit }) {
   const [h, setH] = useState(0);
   const [items, setItems] = useState(() => mkReelItems(initial));
   const [active, setActive] = useState(0);
@@ -5235,14 +5262,18 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onTime, onExit 
     (async () => {
       await reelSleep(350);
       if (dead) return;
+      // 初学者向け: 絵文字・意味・英単語を最初から全部出す
+      if (revealAll) reveal(it);
       if (vOn) {
         await sayWord(it.w.en, 1);
         if (dead) return;
       }
-      const wait = 1300 - (Date.now() - t0);
-      if (wait > 0) await reelSleep(wait);
-      if (dead) return;
-      reveal(it);
+      if (!revealAll) {
+        const wait = 1300 - (Date.now() - t0);
+        if (wait > 0) await reelSleep(wait);
+        if (dead) return;
+        reveal(it);
+      }
       if (vOn && voice === 'enja') {
         await reelSleep(150);
         if (dead) return;
@@ -5261,7 +5292,7 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onTime, onExit 
       dead = true;
       stopSpeaking();
     };
-  }, [curKey, vOn, auto]);
+  }, [curKey, vOn, auto, revealAll]);
 
   const again = (it) => {
     if (againIds.current.has(it.w.id)) return;
@@ -5293,7 +5324,7 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onTime, onExit 
 
   const renderItem = ({ item }) => {
     const w = item.w;
-    const open = !!shown[item.key];
+    const open = revealAll || !!shown[item.key];
     const emo = pics ? emojiFor(w) : '';
     const long = w.en.length > 14;
     const lv = getLevel(w.progress, !isNew(w));
@@ -5353,7 +5384,7 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onTime, onExit 
           data={items}
           keyExtractor={(it) => it.key}
           renderItem={renderItem}
-          extraData={{ pics, shown, h }}
+          extraData={{ pics, shown, h, revealAll }}
           pagingEnabled
           disableIntervalMomentum
           decelerationRate="fast"
