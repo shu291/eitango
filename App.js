@@ -316,7 +316,7 @@ export default function App() {
   const [volume, setVolume] = useState(1);
 
   // 学習時間の記録 { 'YYYY-MM-DD': { ms, n } }。
-  // 時間を測れるのはフラッシュカードだけなので、積まれるのもそのぶんだけ
+  // 積まれるのはフラッシュカード（答えるまで）とリール（1語を見ていた時間）のぶんだけ
   const [timeLog, setTimeLog] = useState({});
 
   // 学習中
@@ -2372,6 +2372,11 @@ export default function App() {
           onPics={changeReelPics}
           voice={reelCfg.voice}
           autoSec={reelCfg.autoSec}
+          // 1語の画面を見ていた時間を学習時間に積む（放置ぶんは addStudyTime が頭打ちにする）
+          onTime={(ms, cap) => {
+            const td = getToday();
+            setTimeLog((log) => addStudyTime(log, td, ms, td, cap));
+          }}
           onExit={() => setReelList(null)}
         />
       );
@@ -4645,7 +4650,7 @@ export default function App() {
 
   // ===================== Stats =====================
   const renderStats = () => {
-    // 学習時間。フラッシュカードで計った時間だけが入っている
+    // 学習時間。フラッシュカードとリールで計った時間だけが入っている
     const tToday = sumStudyTime(timeLog, [getToday()]);
     const t7 = sumStudyTime(timeLog, last7keys);
     const tAll = sumStudyTime(timeLog);
@@ -4734,11 +4739,11 @@ export default function App() {
               </View>
             </Sheet>
 
-            {/* 学習時間。計測できるのはフラッシュカードだけなので、その旨を明記する */}
+            {/* 学習時間。計測できるのはフラッシュカードとリールだけなので、その旨を明記する */}
             <Sheet className="p-4">
               <SectionTitle
                 icon="time-outline"
-                right={<Text className="text-xs text-ink-soft">フラッシュカードのみ計測</Text>}
+                right={<Text className="text-xs text-ink-soft">フラッシュカード・リールを計測</Text>}
               >
                 学習時間
               </SectionTitle>
@@ -5177,7 +5182,7 @@ const reelJa = (ja) =>
 let reelSeq = 0;
 const mkReelItems = (ws, again = false) => ws.map((w) => ({ key: `r${reelSeq++}`, w, again }));
 
-function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onExit }) {
+function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onTime, onExit }) {
   const [h, setH] = useState(0);
   const [items, setItems] = useState(() => mkReelItems(initial));
   const [active, setActive] = useState(0);
@@ -5191,6 +5196,11 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onExit }) {
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const activeRef = useRef(0);
+  // 学習時間。1語の画面を見ていた時間を、ページが変わる／リールを閉じるときに積む
+  const onTimeRef = useRef(onTime);
+  onTimeRef.current = onTime;
+  const autoRef = useRef(0);
+  autoRef.current = auto && autoSec > 0 ? autoSec : 0;
 
   const reveal = (it) => {
     setShown((s) => (s[it.key] ? s : { ...s, [it.key]: true }));
@@ -5206,6 +5216,15 @@ function ReelFeed({ initial, more, pics, onPics, voice, autoSec, onExit }) {
   }, [active, items.length]);
 
   const curKey = items[active] ? items[active].key : null;
+
+  useEffect(() => {
+    const t0 = Date.now();
+    return () => {
+      const ms = Date.now() - t0;
+      // 一瞬で飛ばしたページは数えない。自動スクロール中は設定の秒数＋音声ぶんまでを認める
+      if (ms >= 400) onTimeRef.current(ms, autoRef.current ? autoRef.current * 1000 + 4000 : undefined);
+    };
+  }, [curKey]);
 
   // 1語ぶんの流れ（音声・意味の表示・自動送り）。ページが変わる／設定を切り替えると最初からやり直す
   useEffect(() => {

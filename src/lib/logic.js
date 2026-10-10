@@ -566,8 +566,8 @@ export const formatDue = (due, todayStr) => {
 
 // ===== 学習時間の記録 =====
 //
-// 時間を測れるのはフラッシュカードだけ（カードが出てから答えるまでを計っている）。
-// 他のモードは計測していないので、ここに積むのはフラッシュカードぶんだけ。
+// 時間を測っているのはフラッシュカード（カードが出てから答えるまで）とリール（1語の画面を見ていた時間）。
+// 他のモードは計測していないので、ここに積むのはその2つぶんだけ。
 //
 // 形は { 'YYYY-MM-DD': { ms: 合計ミリ秒, n: 語数 } }。
 
@@ -592,10 +592,13 @@ const TIME_KEEP_DAYS = 30;
  * @param {string} day 'YYYY-MM-DD'
  * @param {number} ms その語にかかった時間
  * @param {string} [todayStr] 古い記録を捨てる基準日。省略時は day
+ * @param {number} [capMs] 1語の頭打ち。省略時は MAX_WORD_MS。リールの自動スクロールは
+ *   画面を見ているだけで1語に十分かかるので、その秒数ぶん広げて渡す（放置の切り捨ては変えない）
  * @returns {object}
  */
-export const addStudyTime = (log, day, ms, todayStr) => {
-  const capped = Math.max(0, Math.min(Number(ms) || 0, MAX_WORD_MS));
+export const addStudyTime = (log, day, ms, todayStr, capMs) => {
+  const cap = Math.max(MAX_WORD_MS, Number(capMs) || 0);
+  const capped = Math.max(0, Math.min(Number(ms) || 0, cap));
   const base = log && typeof log === 'object' ? log : {};
   const prev = base[day] || { ms: 0, n: 0 };
   const next = { ...base, [day]: { ms: prev.ms + capped, n: prev.n + 1 } };
