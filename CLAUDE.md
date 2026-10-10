@@ -446,3 +446,18 @@ UI を全面的に作り替えた。**色・余白・書体を触るときは必
   `useFonts` の完了を待って `return null` しないこと（Web で一瞬まっ白になる）。
 - `getLevel()`（`src/lib/logic.js`）の色は虹色をやめ、**藍1色の濃淡ランプ**にした（要復習だけ朱）。
 - 下タブは `TabBar`（App.js 末尾）。`useSafeAreaInsets().bottom` を足しているので `SafeAreaProvider` の中でのみ使える。
+
+---
+
+## 10. リールモード（2026-10-10 追加）
+
+学習タブの「リール」。縦にスワイプするだけで単語が流れる（`scr === 'reel'` / `ReelFeed`、App.js 末尾）。
+
+- 1語1画面の `FlatList`（`pagingEnabled`）。意味は表示1.3秒で自動表示、タップで即表示、ダブルタップで「もう一回」（3枚先に同じ語を戻す）。
+- **覚え具合（`progress` / `due` / `ivl` / `ef`）には触らない。** 聞き流しと同じく読むだけ。
+- 単語の選び方は聞き流しと同じ `listenLevelFilter` / `buildListenList` を使う。2周目以降は同じ条件をシャッフルして続く。
+- イラスト（絵文字）は `src/lib/emojiMap.json`（単語キー → 絵文字）を `emojiFor(w)`（`src/lib/emoji.js`）で引く。
+  キーは `examples.js` の `keyOf`。単語が `emoji` を持っていればそちらを優先。対応表に無い語は何も出さない。
+  今は大学受験系の単語帳 7,751 語ぶん。足すときは JSON にキーを足すだけ。
+- イラストの ON/OFF は `@eitango_reel_pics`（`0` で OFF）に保存。
+- `ReelFeed` を `App()` の外に置いているのは、中に置くと再描画のたびに作り直されてスクロール位置が飛ぶため。

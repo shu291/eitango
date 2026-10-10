@@ -75,6 +75,7 @@ import {
   parseLine,
   INIT_WORDS } from './src/lib/logic';
 import { exampleFor, splitByHeadword, hasHeadword } from './src/lib/examples';
+import { emojiFor } from './src/lib/emoji';
 
 const STORAGE_KEY = '@eitango_state_v1';
 
@@ -365,6 +366,11 @@ export default function App() {
   // speed: 再生速度の倍率。単語の音声・意味・例文の読み上げすべてに掛かる
   // from / to: 単語帳の番号で絞る（文字列のまま持つ。空なら全部）
   const [listenCfg, setListenCfg] = useState({ level: 'all', order: 'low', count: 20, dir: 'enja', example: true, loop: false, speed: 1, from: '', to: '' });
+  // リール（縦スクロールで単語を流す）。list が null の間は設定画面、配列が入ったらリールを出す。
+  // 覚え具合（progress / 復習日）には一切触らない。pics はイラスト（絵文字）を出すか
+  const [reelCfg, setReelCfg] = useState({ level: 'all', order: 'low', count: 50 });
+  const [reelList, setReelList] = useState(null);
+  const [reelPics, setReelPics] = useState(true);
   const [listenState, setListenState] = useState('idle'); // idle / playing / paused / done
   const [listenList, setListenList] = useState([]);
   const [listenIdx, setListenIdx] = useState(0);
@@ -673,7 +679,7 @@ export default function App() {
   const aTab = useMemo(() => {
     if (scr === 'shelf') return 'shelf';
     if (scr === 'dashboard') return 'home';
-    if (['study', 'config', 'flashcard', 'quiz', 'cloze', 'matching', 'speed', 'results', 'listen'].includes(scr)) return 'study';
+    if (['study', 'config', 'flashcard', 'quiz', 'cloze', 'matching', 'speed', 'results', 'listen', 'reel'].includes(scr)) return 'study';
     if (scr === 'words') return 'words';
     return 'stats';
   }, [scr]);
@@ -1536,6 +1542,23 @@ export default function App() {
     listenPlayFrom(listenList, next);
   };
 
+  // リールのイラスト表示の ON/OFF は端末に覚えさせる
+  useEffect(() => {
+    Storage.getItem('@eitango_reel_pics')
+      .then((v) => {
+        if (v === '0') setReelPics(false);
+      })
+      .catch(() => {});
+  }, []);
+  const changeReelPics = (on) => {
+    setReelPics(on);
+    Storage.setItem('@eitango_reel_pics', on ? '1' : '0').catch(() => {});
+  };
+  // リールから出たら設定画面に戻しておく（次に開いたとき途中のリールが残らないように）
+  useEffect(() => {
+    if (scr !== 'reel') setReelList(null);
+  }, [scr]);
+
   // 画面を離れたら必ず止める（タブを切り替えても声だけ流れ続けないように）
   useEffect(() => {
     if (scr !== 'listen' && listenState !== 'idle') stopListen();
@@ -1992,6 +2015,7 @@ export default function App() {
       { m: 'matching', icon: 'shuffle-outline', t: 'マッチング', d: '英語と日本語をペアにする' },
       { m: 'speed', icon: 'flash-outline', t: 'スピードチャレンジ', d: '60秒で何問解けるか挑戦' },
       { m: 'listen', icon: 'headset-outline', t: '聞き流し', d: '単語→意味→例文を音声で連続再生。画面を触らずに' },
+      { m: 'reel', icon: 'albums-outline', t: 'リール', d: '縦にスワイプするだけで単語が流れる。イラスト付きで片手でも覚えられる' },
     ];
     return (
       <ScrollView>
@@ -2012,7 +2036,7 @@ export default function App() {
               {modes.map(({ m, icon, t, d }, i) => (
                 <View key={m}>
                   <TouchableOpacity
-                    onPress={() => (m === 'listen' ? setScr('listen') : openConfig(m))}
+                    onPress={() => (m === 'listen' || m === 'reel' ? setScr(m) : openConfig(m))}
                     activeOpacity={0.75}
                     accessibilityRole="button"
                     // モード名だけだと説明文が読み上げられない。1行ぜんぶを1つの読み上げにする
@@ -2034,7 +2058,7 @@ export default function App() {
                     </View>
                     <Icon name="chevron-forward" size={18} color={C.muted2} />
                   </TouchableOpacity>
-                  {/* 単語一覧などと違いこの一覧はスクロールせず6行で終わるので、最終行に罫を引くと
+                  {/* 単語一覧などと違いこの一覧はスクロールせず7行で終わるので、最終行に罫を引くと
                       Sheet の下枠と重なって2px の二重線に見える。ここだけ最終行の罫を省く */}
                   {i < modes.length - 1 ? <Rule /> : null}
                 </View>
@@ -2281,6 +2305,113 @@ export default function App() {
           </Text>
         </ScrollView>
       </View>
+    );
+  };
+
+  // ===================== リール（画面） =====================
+  // 設定（どの単語・並び・語数・イラスト）→ 縦スクロールのリール。操作は上スワイプだけ。
+  // 意味は出て 1.3 秒で自動表示。タップで即表示、ダブルタップで「もう一回」（3枚先に同じ単語が戻る）。
+  const reelMore = () => shuffleArr(buildListenList({ ...reelCfg, count: 9999, from: '', to: '' })).slice(0, reelCfg.count);
+  const startReel = () => setReelList(buildListenList({ ...reelCfg, from: '', to: '' }));
+  const renderReel = () => {
+    if (reelList) {
+      return <ReelFeed initial={reelList} more={reelMore} pics={reelPics} onPics={changeReelPics} onExit={() => setReelList(null)} />;
+    }
+    const chips = (opts, val, onPick, wrap = false) => (
+      <View className="flex-row" style={{ gap: SP[2], flexWrap: wrap ? 'wrap' : 'nowrap' }}>
+        {opts.map((o) => {
+          const active = val === o.k;
+          return (
+            <TouchableOpacity
+              key={String(o.k)}
+              onPress={() => onPick(o.k)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              className={`${wrap ? '' : 'flex-1'} items-center justify-center rounded`}
+              style={{
+                backgroundColor: active ? C.primary : C.surface,
+                borderWidth: 1,
+                borderColor: active ? C.primary : C.border,
+                paddingVertical: SP[2],
+                paddingHorizontal: wrap ? SP[3] : SP[1],
+                minHeight: 44,
+                minWidth: wrap ? 72 : undefined,
+              }}
+            >
+              <Text className="text-xs font-bold text-center" style={{ color: active ? C.onPrimary : C.text }}>
+                {o.l}
+              </Text>
+              {o.d !== undefined ? (
+                <Text className="text-xs" style={[NUM, { color: active ? C.onPrimary : C.muted, marginTop: 1 }]}>
+                  {o.d}
+                </Text>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+    const cnt = (level) => listenLevelFilter(words, level).length;
+    const levelOpts = [
+      { k: 'all', l: '全て', d: cnt('all') },
+      { k: 'weak', l: '苦手', d: cnt('weak') },
+      { k: 'due', l: '今日の復習', d: cnt('due') },
+      { k: 'new', l: '未学習', d: cnt('new') },
+      ...LEVELS.map((lv) => ({ k: lv.k, l: lv.name, d: cnt(lv.k) })),
+    ];
+    const set = (k, v) => setReelCfg((c) => ({ ...c, [k]: v }));
+    const target = buildListenList({ ...reelCfg, from: '', to: '' }).length;
+    return (
+      <ScrollView>
+        <Header title="リールの設定" back="study" />
+        <View style={{ paddingHorizontal: SP[4], paddingTop: SP[4], paddingBottom: SP[5], gap: SP[4] }}>
+          <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
+            上にスワイプするだけで、単語が次々に流れます。意味は少し待つと自動で出ます。
+            苦手な語はダブルタップで、あとからもう一度出せます。覚え具合は変わりません。
+          </Text>
+          <View>
+            <SectionTitle>どの単語</SectionTitle>
+            {chips(levelOpts, reelCfg.level, (v) => set('level', v), true)}
+          </View>
+          <View>
+            <SectionTitle>並び順</SectionTitle>
+            {chips(
+              [
+                { k: 'low', l: '覚えていない順' },
+                { k: 'high', l: '覚えている順' },
+                { k: 'deck', l: '単語帳の順' },
+                { k: 'random', l: 'ランダム' },
+              ],
+              reelCfg.order,
+              (v) => set('order', v)
+            )}
+          </View>
+          <View>
+            <SectionTitle>最初に出す語数</SectionTitle>
+            {chips(
+              [20, 50, 100, 9999].map((n) => ({ k: n, l: n === 9999 ? '全' : String(n) })),
+              reelCfg.count,
+              (v) => set('count', v)
+            )}
+          </View>
+          <View>
+            <SectionTitle>イラスト</SectionTitle>
+            {chips(
+              [
+                { k: true, l: 'ON（絵文字を出す）' },
+                { k: false, l: 'OFF' },
+              ],
+              reelPics,
+              changeReelPics
+            )}
+          </View>
+          <Btn label={`リールを開始（${target} 語）`} icon="albums-outline" onPress={startReel} disabled={target === 0} />
+          <Text className="text-xs text-ink-soft" style={{ lineHeight: 18 }}>
+            最後まで行くと、同じ条件でもう一周が続きます。始めたあとも、右上のボタンでイラストを切り替えられます。
+          </Text>
+        </View>
+      </ScrollView>
     );
   };
 
@@ -4879,15 +5010,163 @@ export default function App() {
           {scr === 'speed' && renderSpeed()}
           {scr === 'results' && renderResults()}
           {scr === 'listen' && renderListen()}
+          {scr === 'reel' && renderReel()}
           {scr === 'words' && renderWords()}
           {scr === 'shelf' && renderShelf()}
           {scr === 'stats' && renderStats()}
         </View>
 
         <Toast text={toast} />
-        <TabBar active={aTab} onSelect={setScr} />
+        {/* リールを流している間は下タブを隠して画面いっぱいにする */}
+        {!(scr === 'reel' && reelList) && <TabBar active={aTab} onSelect={setScr} />}
       </SafeAreaView>
     </SafeAreaProvider>
+  );
+}
+
+/* リール。1語1画面の縦ページ送り。操作は上スワイプだけで、ボタンを押す必要は無い。
+   - 画面に出て 1.3 秒で意味（とイラスト ON なら絵文字）が自動で出る。タップで即表示。
+   - ダブルタップ＝もう一回。3枚先に同じ語が戻る（20秒に1回まで）。
+   - 覚え具合（progress / due）には触らない。単語帳は読むだけ。
+   App() の外に置いてあるのは、中に置くと App が再描画されるたびに作り直されてスクロール位置が飛ぶため。 */
+const REEL_BG = '#0E0B1C';
+const REEL_ACCENTS = [C.navyMid, C.accent, C.success, C.ochre, '#9333EA', '#0EA5E9'];
+let reelSeq = 0;
+const mkReelItems = (ws, again = false) => ws.map((w) => ({ key: `r${reelSeq++}`, w, again }));
+
+function ReelFeed({ initial, more, pics, onPics, onExit }) {
+  const [h, setH] = useState(0);
+  const [items, setItems] = useState(() => mkReelItems(initial));
+  const [active, setActive] = useState(0);
+  const [shown, setShown] = useState({});
+  const [seen, setSeen] = useState(() => new Set());
+  const lastTap = useRef(0);
+  const againIds = useRef(new Set());
+
+  const reveal = (it) => {
+    setShown((s) => (s[it.key] ? s : { ...s, [it.key]: true }));
+    setSeen((s) => (s.has(it.w.id) ? s : new Set(s).add(it.w.id)));
+  };
+
+  // 画面に出て 1.3 秒たったら意味を出す
+  useEffect(() => {
+    const it = items[active];
+    if (!it || shown[it.key]) return undefined;
+    const t = setTimeout(() => reveal(it), 1300);
+    return () => clearTimeout(t);
+  }, [active, items, shown]);
+
+  const again = (it) => {
+    if (againIds.current.has(it.w.id)) return;
+    againIds.current.add(it.w.id);
+    setTimeout(() => againIds.current.delete(it.w.id), 20000);
+    setItems((arr) => {
+      const i = arr.findIndex((x) => x.key === it.key);
+      const next = arr.slice();
+      next.splice(Math.min(arr.length, i + 4), 0, ...mkReelItems([it.w], true));
+      return next;
+    });
+  };
+
+  const onTap = (it) => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) again(it);
+    lastTap.current = now;
+    reveal(it);
+  };
+
+  const onViewable = useRef(({ viewableItems }) => {
+    const v = viewableItems.find((x) => x.isViewable && x.index != null);
+    if (v) setActive(v.index);
+  }).current;
+  const viewCfg = useRef({ itemVisiblePercentThreshold: 60 }).current;
+
+  const loadMore = () => {
+    const ws = more();
+    if (ws.length) setItems((arr) => [...arr, ...mkReelItems(ws)]);
+  };
+
+  const renderItem = ({ item, index }) => {
+    const w = item.w;
+    const acc = REEL_ACCENTS[index % REEL_ACCENTS.length];
+    const open = !!shown[item.key];
+    const emo = pics ? emojiFor(w) : '';
+    const long = w.en.length > 14;
+    return (
+      <Pressable
+        onPress={() => onTap(item)}
+        accessibilityLabel={`${w.en}。${open ? w.ja : 'タップで意味を見る'}`}
+        style={{ height: h, paddingHorizontal: SP[5], justifyContent: 'center', backgroundColor: REEL_BG }}
+      >
+        <View style={{ alignSelf: 'flex-start', backgroundColor: acc, paddingHorizontal: SP[2], paddingVertical: 3, borderRadius: 4, marginBottom: SP[3] }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }}>
+            {item.again ? 'もう一回' : `定着度 ${w.progress || 0}%`}
+          </Text>
+        </View>
+        {emo ? <Text style={{ fontSize: 84, lineHeight: 100, marginBottom: SP[1] }}>{emo}</Text> : null}
+        <Text style={{ fontFamily: F.enBold, fontSize: long ? 36 : 56, lineHeight: long ? 44 : 64, color: '#F5F3FF' }}>{w.en}</Text>
+        <View style={{ minHeight: 110, marginTop: SP[4] }}>
+          {open ? (
+            <Text style={{ fontSize: w.ja.length > 14 ? 22 : 30, lineHeight: w.ja.length > 14 ? 32 : 40, fontWeight: '700', color: acc === C.ochre || acc === C.success ? acc : C.navyTint }}>
+              {w.ja}
+            </Text>
+          ) : (
+            <Text style={{ fontSize: 14, color: '#8F8AB0' }}>タップで意味を見る</Text>
+          )}
+        </View>
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: REEL_BG }} onLayout={(e) => setH(Math.round(e.nativeEvent.layout.height))}>
+      {h > 0 ? (
+        <FlatList
+          data={items}
+          keyExtractor={(it) => it.key}
+          renderItem={renderItem}
+          extraData={{ pics, shown, h }}
+          pagingEnabled
+          disableIntervalMomentum
+          decelerationRate="fast"
+          showsVerticalScrollIndicator={false}
+          getItemLayout={(_, i) => ({ length: h, offset: h * i, index: i })}
+          onViewableItemsChanged={onViewable}
+          viewabilityConfig={viewCfg}
+          onEndReached={loadMore}
+          onEndReachedThreshold={2}
+          initialNumToRender={3}
+          windowSize={5}
+        />
+      ) : null}
+      {/* 上の操作は最初に1回だけ触れば済むものだけ。流している間は触らなくていい */}
+      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: SP[2], padding: SP[3] }}>
+        <TouchableOpacity
+          onPress={onExit}
+          accessibilityLabel="リールをやめて設定に戻る"
+          activeOpacity={0.75}
+          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' }}
+        >
+          <Icon name="close" size={22} color="#F5F3FF" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity
+          onPress={() => onPics(!pics)}
+          accessibilityRole="button"
+          accessibilityLabel={`イラスト ${pics ? 'ON' : 'OFF'}。押して切り替え`}
+          activeOpacity={0.75}
+          style={{ minHeight: 44, paddingHorizontal: SP[3], borderRadius: 22, justifyContent: 'center', backgroundColor: pics ? C.accent : 'rgba(255,255,255,0.12)' }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>イラスト {pics ? 'ON' : 'OFF'}</Text>
+        </TouchableOpacity>
+        <View style={{ minHeight: 44, paddingHorizontal: SP[3], borderRadius: 22, justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' }}>
+          <Text style={[NUM, { color: '#FFFFFF', fontSize: 13, fontWeight: '700' }]}>{seen.size} 語</Text>
+        </View>
+      </View>
+      <Text pointerEvents="none" style={{ position: 'absolute', bottom: SP[3], left: 0, right: 0, textAlign: 'center', color: '#8F8AB0', fontSize: 12 }}>
+        上にスワイプで次へ ／ ダブルタップでもう一回
+      </Text>
+    </View>
   );
 }
 
