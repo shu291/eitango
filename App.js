@@ -492,7 +492,7 @@ export default function App() {
         const quota = String(e?.name || e?.message || '').toLowerCase().includes('quota');
         // 何が容量を食っているかは場合によるので、写真と決めつけない。
         // 実際の内訳は「データ管理」の保存データの大きさで見られる
-        setToast(quota ? '保存領域がいっぱいです。データ管理で大きさを確認してください' : '保存に失敗しました');
+        setToast(quota ? '保存領域がいっぱいです。データ管理で大きさを確認してください' : '保存に失敗しました。アプリを開き直してください');
       });
     }, 500);
     return () => clearTimeout(t);

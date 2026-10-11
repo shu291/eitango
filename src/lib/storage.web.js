@@ -40,7 +40,14 @@ const openDb = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      // iPhone はアプリが裏に回ったときなどに接続を閉じることがある。閉じた接続を
+      // 使い回すと以降の書き込みが全部失敗するので、捨てて次回開き直す
+      db.onclose = () => { if (dbPromise) dbPromise = null; };
+      db.onversionchange = () => { db.close(); dbPromise = null; };
+      resolve(db);
+    };
     req.onerror = () => reject(req.error || new Error('IndexedDB を開けません'));
     // 別のタブが古いバージョンで開いていると進まないので、待たずに諦める
     req.onblocked = () => reject(new Error('IndexedDB が別のタブで使用中です'));
@@ -51,6 +58,11 @@ const openDb = () => {
   });
   return dbPromise;
 };
+
+const isQuota = (e) => String(e?.name || '').toLowerCase().includes('quota');
+
+/** localStorage に逃がしてよい最大の長さ（文字数）。上限は約5MBなので余裕を見る */
+const LOCAL_FALLBACK_MAX = 2 * 1024 * 1024;
 
 /** IndexedDB を試してよいか */
 const canUseIdb = () => hasIdb && !idbFailed;
@@ -124,13 +136,28 @@ export const setItem = async (key, value) => {
       return;
     } catch (e) {
       // 容量オーバーは localStorage に落としても同じかそれ以下なので、そのまま伝える
-      if (String(e?.name || '').toLowerCase().includes('quota')) throw e;
+      if (isQuota(e)) throw e;
       console.log('idb set err', e);
+      // 接続が切れていただけのことが多い。開き直して1回だけやり直す
+      dbPromise = null;
+      try {
+        await idbSet(key, value);
+        return;
+      } catch (e2) {
+        if (isQuota(e2)) throw e2;
+        console.log('idb set retry err', e2);
+      }
     }
   }
-  if (hasLocal) {
+  // localStorage は約5MB しか入らない。大きいデータを落とすと、本当の容量は余っているのに
+  // QuotaExceededError になり「保存領域がいっぱいです」と誤って出る。なので小さいときだけ使う
+  if (hasLocal && value.length <= LOCAL_FALLBACK_MAX) {
     localStorage.setItem(key, value);
     return;
+  }
+  if (hasLocal) {
+    // 'quota' を名前にも文面にも入れない（呼ぶ側が容量不足と見分けるため）
+    throw new Error('IndexedDB に書き込めませんでした');
   }
   throw new Error('保存領域が使えません');
 };
