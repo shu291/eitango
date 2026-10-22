@@ -51,14 +51,62 @@ let volume = 1;
 /** @param {number} v 0〜1 */
 export const setSpeechVolume = (v) => {
   volume = Math.max(0, Math.min(1, Number(v) || 0));
-  if (player) player.volume = volume;
+  applyVolume();
 };
+
+// iOS（Safari も Chrome も中身は WebKit）は <audio>.volume への代入を無視して常に最大で鳴らす。
+// そこで Audio 要素を Web Audio の GainNode 経由にして、音量はゲインで絞る。
+// 経路は最初のユーザー操作（unlock）の中で作る。作れなかった端末は従来どおり .volume を使う。
+let ctx = null;
+let gainNode = null;
+
+const ensureGraph = () => {
+  if (gainNode) return true;
+  const AC = hasDom && (window.AudioContext || window.webkitAudioContext);
+  const a = getPlayer();
+  if (!AC || !a) return false;
+  try {
+    ctx = new AC();
+    const src = ctx.createMediaElementSource(a);
+    gainNode = ctx.createGain();
+    src.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    applyVolume();
+    return true;
+  } catch {
+    ctx = null;
+    gainNode = null;
+    return false;
+  }
+};
+
+/** 経路が止まっている（iOS は中断しがち）と無音になるので、鳴らす前に必ず起こす */
+const resumeGraph = async () => {
+  if (ctx && ctx.state !== 'running') {
+    try {
+      await ctx.resume();
+    } catch {
+      // 起こせなくても再生は試みる
+    }
+  }
+};
+
+function applyVolume() {
+  if (gainNode) {
+    gainNode.gain.value = volume;
+    if (player) player.volume = 1; // 二重にかからないよう要素側は最大に固定
+  } else if (player) {
+    player.volume = volume;
+  }
+}
 
 /** 最初のユーザー操作で、音声と読み上げを解錠する */
 const unlock = () => {
   if (unlocked) return;
   unlocked = true;
 
+  ensureGraph();
+  if (ctx) ctx.resume().catch(() => {});
   const a = getPlayer();
   if (a) {
     a.src = SILENCE;
@@ -130,7 +178,8 @@ export const speakWord = async (word) => {
       a.pause();
       a.src = Asset.fromModule(mod).uri;
       a.currentTime = 0;
-      a.volume = volume;
+      applyVolume();
+      await resumeGraph();
       a.playbackRate = 1; // 聞き流しで変えた速度を引きずらない（要素を使い回しているため）
       await a.play();
       return;
@@ -212,7 +261,8 @@ export const sayWord = async (word, speed = 1) => {
     a.pause();
     a.src = Asset.fromModule(mod).uri;
     a.currentTime = 0;
-    a.volume = volume;
+    applyVolume();
+    await resumeGraph();
     a.playbackRate = speed;
     await new Promise((resolve, reject) => {
       let done = false;
