@@ -141,6 +141,95 @@ const Sheet = ({ children, className = '', mark, style }) => (
 );
 
 // カードの中の見出し。サイズ＋太さ＋色の3つで階層を作る（太字だけで差をつけない）
+/**
+ * 音量スライダー。追加ライブラリなしで PanResponder で作っている。
+ * バーの位置 p (0〜1) と実際の音量 v の関係は v = p^3。
+ * 人の耳は対数的なので、これで小さい側を細かく調節できる（p=0.1 でも v=0.001 ≒ -60dB）。
+ * @param {{value:number, onChange:(v:number)=>void, onRelease?:()=>void}} props
+ */
+const VOL_CURVE = 3;
+const volToPos = (v) => Math.pow(Math.max(0, Math.min(1, v)), 1 / VOL_CURVE);
+const posToVol = (p) => {
+  const v = Math.pow(Math.max(0, Math.min(1, p)), VOL_CURVE);
+  return v < 0.0005 ? 0 : v; // 左端まで下げたら消音
+};
+const VolumeSlider = ({ value, onChange, onRelease }) => {
+  const [w, setW] = useState(0);
+  const wRef = useRef(0);
+  const cb = useRef({ onChange, onRelease });
+  cb.current = { onChange, onRelease };
+  const pos = volToPos(value);
+  const THUMB = 28;
+  const update = (x) => {
+    if (!wRef.current) return;
+    cb.current.onChange(posToVol((x - THUMB / 2) / (wRef.current - THUMB)));
+  };
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: (e) => update(e.nativeEvent.locationX),
+      onPanResponderMove: (e) => update(e.nativeEvent.locationX),
+      onPanResponderRelease: () => cb.current.onRelease && cb.current.onRelease(),
+    })
+  ).current;
+  const label = value === 0 ? '消音' : `${Math.max(1, Math.round(pos * 100))}`;
+  return (
+    <View>
+      <View className="flex-row items-center" style={{ gap: SP[2] }}>
+        <Icon name="volume-mute" size={18} color={C.muted} />
+        <View
+          style={{ flex: 1, height: 44, justifyContent: 'center' }}
+          onLayout={(e) => {
+            wRef.current = e.nativeEvent.layout.width;
+            setW(e.nativeEvent.layout.width);
+          }}
+          accessibilityRole="adjustable"
+          accessibilityLabel="発音の音量"
+          accessibilityValue={{ min: 0, max: 100, now: Math.round(pos * 100) }}
+          accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+          onAccessibilityAction={(e) => {
+            const d = e.nativeEvent.actionName === 'increment' ? 0.05 : -0.05;
+            onChange(posToVol(pos + d));
+          }}
+          {...pan.panHandlers}
+        >
+          <View pointerEvents="none" style={{ height: 6, borderRadius: 3, backgroundColor: C.border }} />
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: 0,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: C.primary,
+              width: w ? THUMB / 2 + pos * (w - THUMB) : 0,
+            }}
+          />
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: pos * Math.max(0, w - THUMB),
+              width: THUMB,
+              height: THUMB,
+              borderRadius: THUMB / 2,
+              backgroundColor: C.primary,
+              borderWidth: 2,
+              borderColor: C.surface,
+            }}
+          />
+        </View>
+        <Icon name="volume-high" size={18} color={C.muted} />
+      </View>
+      <Text className="text-xs text-ink-soft" style={{ textAlign: 'center', marginTop: SP[1] }}>
+        {label}
+      </Text>
+    </View>
+  );
+};
+
 const SectionTitle = ({ children, right, icon, iconColor, className = '' }) => (
   <View className={`flex-row items-center justify-between ${className}`} style={{ marginBottom: SP[3] }}>
     <View className="flex-row items-center" style={{ gap: SP[2] }}>
@@ -1918,61 +2007,24 @@ export default function App() {
 
           {/*
             発音の音量。iPhone 本体の音量は変えず、アプリの中だけで下げられる。
-            スライダーは追加ライブラリが要るので、押すだけで決まる4段階にしてある。
-            選択中だけ藍のベタ塗り＝いまどれを選んでいるかを色の面で言う。
+            バーを指でなぞって連続的に調節する。端が極端に小さくなるよう、
+            バーの位置の3乗を実際の音量にしている（本体が最大でもほぼ無音まで下げられる）。
           */}
           <Sheet className="p-4">
             <SectionTitle right={<Text className="text-xs text-ink-soft">端末の音量は変わりません</Text>}>
               発音の音量
             </SectionTitle>
-            {/* 4つから1つ選ぶ帯。<Btn> ではなく設定画面（出題モード）と同じ書き方にそろえてある。
-                Btn は読み上げ名が label 固定で「音量 大」と読ませられず、押すたびに「大」としか言えないため */}
-            <View className="flex-row" style={{ gap: SP[2] }}>
-              {[
-                { v: 0, i: 'volume-mute', l: '消音' },
-                { v: 0.3, i: 'volume-low', l: '小' },
-                { v: 0.6, i: 'volume-medium', l: '中' },
-                { v: 1, i: 'volume-high', l: '大' },
-              ].map((o) => {
-                const active = Math.abs(volume - o.v) < 0.01;
-                return (
-                  <TouchableOpacity
-                    key={o.l}
-                    onPress={() => {
-                      setVolume(o.v);
-                      // 変えた音量ですぐ聞けるように、見本を1語鳴らす（消音のときは鳴らさない）
-                      if (o.v > 0) {
-                        setSpeechVolume(o.v);
-                        speakWord(words[0] ? words[0].en : 'sample');
-                      }
-                    }}
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
-                    accessibilityLabel={`音量 ${o.l}`}
-                    accessibilityState={{ selected: active }}
-                    className="flex-1 items-center justify-center rounded"
-                    style={{
-                      backgroundColor: active ? C.primary : C.surface,
-                      borderWidth: 1,
-                      borderColor: active ? C.primary : C.border,
-                      paddingVertical: SP[2],
-                      paddingHorizontal: SP[1],
-                      minHeight: 44,
-                      gap: SP[1],
-                    }}
-                  >
-                    <Icon name={o.i} size={16} color={active ? C.onPrimary : C.muted} />
-                    <Text
-                      className="text-xs font-bold"
-                      style={{ color: active ? C.onPrimary : C.text }}
-                      numberOfLines={1}
-                    >
-                      {o.l}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <VolumeSlider
+              value={volume}
+              onChange={(v) => {
+                setVolume(v);
+                setSpeechVolume(v);
+              }}
+              onRelease={() => {
+                // 変えた音量ですぐ聞けるように、離したとき見本を1語鳴らす（消音のときは鳴らさない）
+                if (volume > 0) speakWord(words[0] ? words[0].en : 'sample');
+              }}
+            />
           </Sheet>
 
           <Sheet className="p-4">
