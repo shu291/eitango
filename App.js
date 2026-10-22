@@ -143,15 +143,17 @@ const Sheet = ({ children, className = '', mark, style }) => (
 // カードの中の見出し。サイズ＋太さ＋色の3つで階層を作る（太字だけで差をつけない）
 /**
  * 音量スライダー。追加ライブラリなしで PanResponder で作っている。
- * バーの位置 p (0〜1) と実際の音量 v の関係は v = p^3。
- * 人の耳は対数的なので、これで小さい側を細かく調節できる（p=0.1 でも v=0.001 ≒ -60dB）。
+ * バーの位置 p (0〜1) と実際の音量 v の関係は dB で直線: v = 10^(-DB*(1-p)/20)。
+ * 人の耳は対数的なので、右端(0dB)から左へ進むほど等しい割合で小さくなり、
+ * 小さい側まで細かく調節できる。左端のすぐ手前（p<MUTE_POS）は消音。
  * @param {{value:number, onChange:(v:number)=>void, onRelease?:()=>void}} props
  */
-const VOL_CURVE = 3;
-const volToPos = (v) => Math.pow(Math.max(0, Math.min(1, v)), 1 / VOL_CURVE);
+const VOL_DB = 80;
+const MUTE_POS = 0.03;
+const volToPos = (v) => (v <= 0 ? 0 : Math.max(0, Math.min(1, 1 + (20 * Math.log10(v)) / VOL_DB)));
 const posToVol = (p) => {
-  const v = Math.pow(Math.max(0, Math.min(1, p)), VOL_CURVE);
-  return v < 0.0005 ? 0 : v; // 左端まで下げたら消音
+  const q = Math.max(0, Math.min(1, p));
+  return q < MUTE_POS ? 0 : Math.pow(10, (-VOL_DB * (1 - q)) / 20);
 };
 const VolumeSlider = ({ value, onChange, onRelease }) => {
   const [w, setW] = useState(0);
@@ -2008,7 +2010,7 @@ export default function App() {
           {/*
             発音の音量。iPhone 本体の音量は変えず、アプリの中だけで下げられる。
             バーを指でなぞって連続的に調節する。端が極端に小さくなるよう、
-            バーの位置の3乗を実際の音量にしている（本体が最大でもほぼ無音まで下げられる）。
+            バーの位置を dB の直線にして実音量に変換している（本体が最大でもほぼ無音まで下げられる）。
           */}
           <Sheet className="p-4">
             <SectionTitle right={<Text className="text-xs text-ink-soft">端末の音量は変わりません</Text>}>
