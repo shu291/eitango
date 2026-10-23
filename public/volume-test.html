@@ -16,11 +16,11 @@
 </head>
 <body>
 <h1>音量テスト</h1>
-<p>端末の音量は、いつも使う大きさ（最大など）にしてから押してください。上から順に押して、<b>前より小さくなったか</b>を聞き比べます。同じに聞こえ始めた所と、聞こえなくなった所を教えてください。</p>
+<p>端末の音量は、いつも使う大きさ（最大など）にしてから押してください。上から順に押して、<b>前より小さくなったか</b>を聞き比べます。<b>いちばん小さくて、まだ聞こえるボタン</b>と、聞こえなくなった最初のボタンを教えてください。</p>
 <div id="list"></div>
-<button id="all" style="margin-top:16px;border-color:#888;color:#444">上から順に全部（約25秒）</button>
+<button id="all" style="margin-top:16px;border-color:#888;color:#444">上から順に全部（約40秒）</button>
 <script>
-  const VOLS = [1, 0.5, 0.25, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001];
+  const VOLS = [0.1, 0.05, 0.03, 0.02, 0.015, 0.012, 0.01, 0.008, 0.006, 0.005, 0.004, 0.003, 0.002, 0.001];
   const synth = window.speechSynthesis;
   const speak = (v) => new Promise((resolve) => {
     synth.cancel();
@@ -33,7 +33,7 @@
   const list = document.getElementById('list');
   VOLS.forEach((v) => {
     const b = document.createElement('button');
-    b.textContent = '音量 ' + v + '（' + (20 * Math.log10(v)).toFixed(0) + ' dB）';
+    b.textContent = '音量 ' + v;
     b.onclick = () => speak(v);
     list.appendChild(b);
   });
