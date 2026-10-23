@@ -146,9 +146,10 @@ const Sheet = ({ children, className = '', mark, style }) => (
  * バーの位置 p (0〜1) と実際の音量 v の関係は dB で直線: v = 10^(-DB*(1-p)/20)。
  * 人の耳は対数的なので、右端(0dB)から左へ進むほど等しい割合で小さくなり、
  * 小さい側まで細かく調節できる。左端のすぐ手前（p<MUTE_POS）は消音。
+ * 幅を広げすぎると、iPhone の読み上げは -40dB 付近より下が無音になり、バーの左半分が消音になる（本人の iPhone での報告）。
  * @param {{value:number, onChange:(v:number)=>void, onRelease?:()=>void}} props
  */
-const VOL_DB = 80;
+const VOL_DB = 36;
 const MUTE_POS = 0.03;
 const volToPos = (v) => (v <= 0 ? 0 : Math.max(0, Math.min(1, 1 + (20 * Math.log10(v)) / VOL_DB)));
 const posToVol = (p) => {
