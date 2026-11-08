@@ -944,3 +944,31 @@ localStorage 側は**消しません**。移行がうまくいかなかったと
 - アプリ内の JSON エクスポート機能でバックアップを取れます。復元も同じくアプリ内から
 - ⚠️ 「保存できません」が出たら、**そのとき画面にある内容はまだ保存されていません。**
   先に「保存」で JSON を書き出してからアプリを閉じること
+
+---
+
+## 複数端末の同期（Firebase）
+
+メールアドレスでログインすると、端末をまたいで進捗が合わさる。Firebase の設定が無いビルドでは画面にも出ず、
+今までどおり端末の中だけで動く。
+
+- 同期するもの: 単語・習熟度・復習の予定・連続日数・学習時間。**表紙写真と設定（音量など）は同期しない**
+- 保存先: Firestore `users/{uid}/meta/main` と `users/{uid}/decks/{単語帳}_{n}`（1000語ずつ）
+- 合わせ方（`src/lib/syncMerge.js`）: 単語帳は名前、単語は英単語で同じものとみなし、**新しく学習した側が勝つ**。
+  片方にしか無い単語・単語帳は足す。学習した日付は両方の和集合
+- ⚠️ **削除は伝わらない。** 端末Aで消した単語や単語帳が、端末Bに残っていれば戻ってくる（記録が消えるより安全なため）
+- タイミング: ログイン直後・アプリに戻ったとき・学習が止まって15秒後。1問ごとには送らない
+- 無料枠（Spark）で足りる見込み。1人・3000語・毎日300語の復習で、保存は約1MB、書き込みは1日数十〜数百回
+
+### 初めて使うときの設定（1回だけ）
+
+1. [Firebase コンソール](https://console.firebase.google.com/)でプロジェクトを作る（Analytics は不要）
+2. Authentication → ログイン方法 → **メール/パスワード** を有効にする
+3. Firestore Database → データベースを作成 → 本番モード。ルールに `firestore.rules` の中身を貼って公開する
+4. プロジェクトの設定 → マイアプリ → **ウェブアプリ**を追加。出てくる `apiKey` / `authDomain` / `projectId` / `appId` を控える
+5. Authentication → 設定 → 承認済みドメイン に `shu291.github.io` を追加する
+6. GitHub の Settings → Secrets and variables → Actions → **Variables** に次の4つを登録して、Deploy を流す
+   `FIREBASE_API_KEY` / `FIREBASE_AUTH_DOMAIN` / `FIREBASE_PROJECT_ID` / `FIREBASE_APP_ID`
+7. ローカルで試すときは `.env.example` を `.env` にコピーして埋める（`EXPO_PUBLIC_FIREBASE_*`）
+
+⚠️ iPhone では、Safari で開いたものと「ホーム画面に追加」したアプリは保存領域が別。それぞれでログインが要る。
