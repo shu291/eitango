@@ -13,6 +13,7 @@ import {
   PanResponder,
   Animated,
   Platform,
+  AppState,
   StatusBar,
   KeyboardAvoidingView,
   useWindowDimensions } from 'react-native';
@@ -24,6 +25,7 @@ import { IBMPlexMono_400Regular, IBMPlexMono_600SemiBold } from '@expo-google-fo
 // 色・角丸・余白の値。tailwind.config.js もこれを読んでいる
 import { C, R, SP, F as RAW_F } from './src/theme';
 import * as Storage from './src/lib/storage';
+import * as Sync from './src/lib/sync';
 // ファイル入出力・確認ダイアログ・発音はネイティブ／Web で実装が分かれる（.web.js を Metro が解決する）
 import { saveBackup, pickBackup } from './src/lib/backup';
 import { confirmDestructive } from './src/lib/confirm';
@@ -337,6 +339,75 @@ const EmptyState = ({ title, body, actionLabel, onAction, icon = 'create-outline
   </View>
 );
 
+/**
+ * クラウド同期の設定欄（ログイン／ログアウト）。
+ * Firebase の設定が無いビルドでは何も出さない（今までどおり端末の中だけで動く）。
+ */
+const SyncSheet = ({ user, busy, msg, onSignIn, onSignUp, onSyncNow, onSignOut, onReset }) => {
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  if (!Sync.isSyncConfigured) return null;
+  return (
+    <Sheet className="p-4">
+      <SectionTitle icon="cloud-outline">複数端末で同期</SectionTitle>
+      {user ? (
+        <View>
+          <Text className="text-sm text-ink" style={{ lineHeight: 20 }}>
+            ログイン中：<Text style={NUM}>{user.email}</Text>
+          </Text>
+          <Text className="text-xs text-ink-soft" style={{ marginTop: SP[2], lineHeight: 19 }}>
+            進捗は自動で同期されます。同じアカウントでログインした端末と、学習の記録が合わさります。
+            表紙写真は同期しません。単語や単語帳を削除しても、ほかの端末に残っていれば戻ってきます。
+          </Text>
+          <View className="flex-row" style={{ gap: SP[2], marginTop: SP[3] }}>
+            <Btn label={busy ? '同期中…' : '今すぐ同期'} tone="line" icon="sync-outline" onPress={onSyncNow} disabled={busy} className="flex-1" />
+            <Btn label="ログアウト" tone="line" icon="log-out-outline" onPress={onSignOut} className="flex-1" />
+          </View>
+        </View>
+      ) : (
+        <View>
+          <Text className="text-xs text-ink-soft" style={{ lineHeight: 19, marginBottom: SP[3] }}>
+            メールアドレスでログインすると、iPhone・iPad・パソコンで同じ進捗を使えます。初めてなら「新規登録」を押してください。
+          </Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="メールアドレス"
+            placeholderTextColor={C.muted2}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="username"
+            className="bg-sheet border border-rule rounded px-3 py-3 text-base"
+            style={{ color: C.text, minHeight: 44 }}
+            accessibilityLabel="メールアドレス"
+          />
+          <TextInput
+            value={pw}
+            onChangeText={setPw}
+            placeholder="パスワード（6文字以上）"
+            placeholderTextColor={C.muted2}
+            secureTextEntry
+            autoCapitalize="none"
+            textContentType="password"
+            className="bg-sheet border border-rule rounded px-3 py-3 text-base"
+            style={{ color: C.text, minHeight: 44, marginTop: SP[2] }}
+            accessibilityLabel="パスワード"
+          />
+          <View className="flex-row" style={{ gap: SP[2], marginTop: SP[3] }}>
+            <Btn label="ログイン" tone="line" icon="log-in-outline" onPress={() => onSignIn(email.trim(), pw)} disabled={busy} className="flex-1" />
+            <Btn label="新規登録" tone="line" icon="person-add-outline" onPress={() => onSignUp(email.trim(), pw)} disabled={busy} className="flex-1" />
+          </View>
+          <TouchableOpacity onPress={() => onReset(email.trim())} accessibilityRole="button" style={{ marginTop: SP[3], minHeight: 36, justifyContent: 'center' }}>
+            <Text className="text-xs text-ink-soft" style={{ textDecorationLine: 'underline' }}>パスワードを忘れた</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {!!msg && <Text className="text-xs text-ink" style={{ marginTop: SP[3], lineHeight: 19 }}>{msg}</Text>}
+    </Sheet>
+  );
+};
+
 export default function App() {
   // ===== 本棚 =====
   // 単語帳は複数持てる。既存の画面はすべて「選択中の1冊」だけを見ればよいように、
@@ -589,6 +660,92 @@ export default function App() {
     }, 500);
     return () => clearTimeout(t);
   }, [decks, activeId, streak, lastDate, dblTap, volume, timeLog, loaded]);
+
+  // ===== クラウド同期 =====
+  // ログインしている間だけ動く。流れは src/lib/sync.js の冒頭を参照。
+  // 手元の最新値は ref で持つ（同期は非同期なので、await の間に学習が進んでも古い値で上書きしない）。
+  const [syncUser, setSyncUser] = useState(null);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+  const latest = useRef({});
+  latest.current = { decks, activeId, streak, lastDate, timeLog };
+  const syncing = useRef(false);
+
+  const runSync = useCallback(async (uid, quiet = true) => {
+    if (syncing.current) return;
+    syncing.current = true;
+    setSyncBusy(true);
+    try {
+      const before = latest.current;
+      const { state, changed } = await Sync.syncOnce(uid, {
+        decks: before.decks, s: before.streak, ld: before.lastDate, time: before.timeLog });
+      // 同期中に学習が進んでいたら、手元には反映しない（クラウドには送れているので次の回でまとまる）
+      const now = latest.current;
+      const untouched = now.decks === before.decks && now.streak === before.streak &&
+        now.lastDate === before.lastDate && now.timeLog === before.timeLog;
+      if (changed && untouched) {
+        setDecks(state.decks);
+        if (!state.decks.some((d) => d.id === before.activeId)) setActiveId(state.decks[0].id);
+        setStreak(state.s);
+        setLastDate(state.ld);
+        setTimeLog(state.time);
+        if (state.adopted) setToast('クラウドの進捗を読み込みました');
+      }
+      setSyncMsg(`最終同期 ${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`);
+    } catch (e) {
+      console.log('sync err', e);
+      // 自動のときは黙って次回に回す（電波が無い場所での学習を邪魔しない）。手動のときだけ知らせる
+      if (!quiet) setToast('同期できませんでした。通信を確認してください');
+      setSyncMsg('同期できませんでした（学習の記録は端末に保存されています）');
+    } finally {
+      syncing.current = false;
+      setSyncBusy(false);
+    }
+  }, []);
+
+  // ログイン状態の監視
+  useEffect(() => Sync.onUser((u) => setSyncUser(u ? { uid: u.uid, email: u.email } : null)), []);
+
+  // 読み込み完了＋ログイン済みになったら、まず1回同期する
+  useEffect(() => {
+    if (loaded && syncUser) runSync(syncUser.uid);
+  }, [loaded, syncUser, runSync]);
+
+  // 学習が進んだら、15秒ほど落ち着いてからまとめて同期する（1問ごとには送らない）
+  useEffect(() => {
+    if (!loaded || !syncUser) return;
+    const t = setTimeout(() => runSync(syncUser.uid), 15000);
+    return () => clearTimeout(t);
+  }, [decks, streak, lastDate, timeLog, loaded, syncUser, runSync]);
+
+  // アプリに戻ってきたとき（別の端末で進めたぶんを取り込む）
+  useEffect(() => {
+    if (!syncUser) return;
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') runSync(syncUser.uid); });
+    return () => sub.remove();
+  }, [syncUser, runSync]);
+
+  const syncAuth = async (fn, email, pw) => {
+    if (!email || !pw) return setSyncMsg('メールアドレスとパスワードを入力してください');
+    setSyncBusy(true);
+    setSyncMsg('');
+    try {
+      await fn(email, pw);
+    } catch (e) {
+      setSyncMsg(Sync.authMessage(e));
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+  const syncReset = async (email) => {
+    if (!email) return setSyncMsg('上にメールアドレスを入力してから押してください');
+    try {
+      await Sync.resetPassword(email);
+      setSyncMsg('パスワード再設定のメールを送りました');
+    } catch (e) {
+      setSyncMsg(Sync.authMessage(e));
+    }
+  };
 
   // 本棚を離れたら並べ替えモードは解除する。
   // 付けっぱなしで戻ってくると、タップしても単語帳が切り替わらず戸惑うため
@@ -2075,6 +2232,18 @@ export default function App() {
               </View>
             )}
           </Sheet>
+
+          {Sync.isSyncConfigured && <View style={{ height: SP[3] }} />}
+          <SyncSheet
+            user={syncUser}
+            busy={syncBusy}
+            msg={syncMsg}
+            onSignIn={(e, p) => syncAuth(Sync.signIn, e, p)}
+            onSignUp={(e, p) => syncAuth(Sync.signUp, e, p)}
+            onSyncNow={() => syncUser && runSync(syncUser.uid, false)}
+            onSignOut={() => Sync.signOut().then(() => setSyncMsg(''))}
+            onReset={syncReset}
+          />
         </View>
       </ScrollView>
     );
