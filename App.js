@@ -1034,7 +1034,16 @@ export default function App() {
       return;
     }
     const n = cfgMode === 'matching' ? Math.min(6, pool.length) : Math.min(numQ, pool.length);
-    const sel = weightedPick(pool, n);
+    let sel;
+    if (cfgMode === 'flashcard' && wordSel !== 'due') {
+      // フラッシュカードは、次の復習日がまだ決まっていない単語（due なし）を先に出す。
+      // 数が足りなければ、残りを従来どおりの選び方で埋める。
+      const unscheduled = shuffleArr(pool.filter((w) => !w.due));
+      const rest = pool.filter((w) => w.due);
+      sel = [...unscheduled.slice(0, n), ...weightedPick(rest, n - Math.min(n, unscheduled.length))];
+    } else {
+      sel = weightedPick(pool, n);
+    }
     setSMode(cfgMode);
     setSWords(sel);
     setSIdx(0);
