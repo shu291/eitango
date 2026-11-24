@@ -1034,7 +1034,22 @@ export default function App() {
       return;
     }
     const n = cfgMode === 'matching' ? Math.min(6, pool.length) : Math.min(numQ, pool.length);
-    const sel = weightedPick(pool, n);
+    let sel;
+    if (cfgMode === 'flashcard' && wordSel !== 'due') {
+      // フラッシュカードは、次の復習日がまだ決まっていない単語（due なし）を先に出す。
+      // 数が足りなければ、残りを従来どおりの選び方で埋める。
+      // さらに、今日すでに触れた単語は後回しにする（今日まだの単語 → 今日触れた単語の順）。
+      const td = getToday();
+      const pickTier = (list, k) => {
+        if (k <= 0) return [];
+        const un = shuffleArr(list.filter((w) => !w.due)).slice(0, k);
+        return [...un, ...weightedPick(list.filter((w) => w.due), k - un.length)];
+      };
+      const fresh = pickTier(pool.filter((w) => w.lastReviewed !== td), n);
+      sel = [...fresh, ...pickTier(pool.filter((w) => w.lastReviewed === td), n - fresh.length)];
+    } else {
+      sel = weightedPick(pool, n);
+    }
     setSMode(cfgMode);
     setSWords(sel);
     setSIdx(0);
